@@ -1,0 +1,225 @@
+/* VictorAI chat trigger + panel. Ported verbatim from the Claude Design
+   artboards (the accessibility-complete version, from AboutMe.dc.html) so
+   the look stays pixel-identical across all 3 routes that now share this
+   component. */
+
+.chat-btn {
+  all: unset;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #CCCCCC;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  transition: color 0.15s ease;
+}
+.chat-btn:hover { color: #9E9E9E; }
+.chat-btn:active { color: #0066FF; }
+.chat-btn svg { display: block; }
+
+.chat-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 10, 10, 0.55);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+  z-index: 40;
+}
+.chat-scrim.is-open { opacity: 1; pointer-events: auto; }
+
+.chat-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  width: 480px;
+  max-width: 92vw;
+  display: flex;
+  flex-direction: column;
+  background: #0A0A0A;
+  border-left: 1px solid #2A2A2A;
+  transform: translateX(100%);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 41;
+}
+.chat-panel.is-open { transform: translateX(0); }
+
+.chat-header {
+  position: relative;
+  flex: none;
+  height: 72px;
+  padding: 0 24px 0 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #151414;
+  border-bottom: 1px solid #2A2A2A;
+}
+.chat-header-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #F5F5F5;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.08em;
+}
+.chat-header-title svg { display: block; }
+.chat-header-title .info-wrap { margin-left: 12px; }
+.chat-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.icon-btn {
+  all: unset;
+  cursor: pointer;
+  display: inline-flex;
+  color: #CCCCCC;
+  transition: color 0.15s ease;
+}
+.icon-btn:hover { color: #9E9E9E; }
+.icon-btn:active { color: #0066FF; }
+.icon-btn.is-pressed { color: #0066FF; }
+.icon-btn svg { display: block; width: 20px; height: 20px; }
+
+.info-wrap { position: relative; display: inline-flex; }
+
+.chat-tooltip {
+  position: absolute;
+  top: 32px;
+  left: 0;
+  width: 240px;
+  background: #1E1E1E;
+  border: 1px solid #2A2A2A;
+  border-radius: 12px;
+  padding: 14px 16px;
+  font-family: 'Manrope', sans-serif;
+  font-weight: 400;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #CCCCCC;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+  z-index: 42;
+}
+
+.chat-body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 28px 28px 44px;
+  overflow-y: auto;
+  gap: 20px;
+}
+
+.chat-greeting h3 {
+  font-family: 'Pavanam', 'Manrope', sans-serif;
+  font-weight: 400;
+  font-size: 28px;
+  line-height: 1.3;
+  color: #F5F5F5;
+  margin: 0 0 20px;
+}
+
+.chat-suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.suggestion-btn {
+  all: unset;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: rgba(204, 204, 204, 0.8);
+  font-family: 'Manrope', sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1.4;
+  transition: color 0.15s ease;
+}
+.suggestion-btn:hover { color: #9E9E9E; }
+.suggestion-btn:active { color: #0066FF; }
+.suggestion-btn svg { flex: none; margin-top: 2px; width: 16px; height: 16px; }
+
+.chat-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.chat-footer {
+  flex: none;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 20px 28px 28px;
+  background: #0A0A0A;
+}
+.chat-input {
+  flex: 1 1 auto;
+  min-height: 56px;
+  max-height: 160px;
+  background: #151414;
+  border: 1px solid #2A2A2A;
+  border-radius: 999px;
+  padding: 16px 20px;
+  color: #F5F5F5;
+  font-family: 'Manrope', sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1.4;
+  caret-color: #0066FF;
+  resize: none;
+  overflow-y: auto;
+}
+.chat-input::placeholder { color: #8A8A8A; }
+.chat-input:focus { outline: none; border-color: #0066FF; }
+
+.send-btn {
+  flex: none;
+  box-sizing: border-box;
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  background: #151414;
+  border: 1px solid #2A2A2A;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.send-btn svg { width: 18px; height: 18px; }
+.send-btn.is-filled { color: #F5F5F5; }
+.send-btn.is-filled:active { color: #0066FF; }
+.chat-footer.is-limit-reached .chat-input,
+.chat-footer.is-limit-reached .send-btn,
+.chat-footer.is-loading .chat-input,
+.chat-footer.is-loading .send-btn {
+  opacity: 0.35;
+  pointer-events: none;
+}
+.typing-dots {
+  display: inline-flex;
+  gap: 4px;
+  padding: 6px 0;
+}
+.typing-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #8A8A8A;
+  display: inline-block;
+  animation: typing-bounce 1.2s infinite ease-in-out;
+}
+.typing-dots span:nth-child(2) { animation-delay: 0.15s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes typing-bounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}

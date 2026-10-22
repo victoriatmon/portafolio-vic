@@ -1,0 +1,65 @@
+:where(html.cursor-ready) *,
+:where(html.cursor-ready) *::before,
+:where(html.cursor-ready) *::after {
+  cursor: none !important;
+}
+
+.cursor-dot {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #0066FF;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  transform: translate3d(-50%, -50%, 0);
+  transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1), height 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    border-radius 0.25s cubic-bezier(0.16, 1, 0.3, 1), padding 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 0.2s ease, opacity 0.15s ease;
+  will-change: transform;
+}
+.cursor-dot.is-hovering {
+  width: 40px;
+  height: 40px;
+  background: rgba(0, 102, 255, 0.18);
+}
+.cursor-dot.is-labeling {
+  height: 32px;
+  border-radius: 16px;
+  padding: 0 16px;
+  background: #0066FF;
+}
+.cursor-dot-label {
+  display: block;
+  white-space: nowrap;
+  color: #F5F5F5;
+  font-family: 'Manrope', sans-serif;
+  font-weight: 500;
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity 0.15s ease 0.05s;
+}
+.cursor-dot.is-labeling .cursor-dot-label {
+  opacity: 1;
+}
+.cursor-dot-measure {
+  position: fixed;
+  top: -9999px;
+  left: -9999px;
+  visibility: hidden;
+  white-space: nowrap;
+  font-family: 'Manrope', sans-serif;
+  font-weight: 500;
+  font-size: 12px;
+  pointer-events: none;
+}
+@media (hover: none), (pointer: coarse) {
+  .cursor-dot { display: none; }
+}

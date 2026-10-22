@@ -1299,6 +1299,12 @@ function ProyectosDesktopInner() {
     <>
       <Navbar current="proyectos" />
       <CursorDot />
+      {/* Scope wrapper: isolates proyectos.css's selectors (e.g. .page,
+          .stage-wrap) from ProyectosMobile's proyectos-mobile.css, which
+          Next.js bundles into this route's client CSS regardless of which
+          variant actually renders -- see proyectos-desktop-scope /
+          proyectos-mobile-scope in the matching .css files. */}
+      <div className="proyectos-desktop-scope">
       <main data-page className="page proyectos-desktop">
         <div className="stage-wrap">
           <div className="x-stage">
@@ -1649,6 +1655,7 @@ function ProyectosDesktopInner() {
           </div>
         </div>
       </main>
+      </div>
       <ChatPanel />
       <Footer />
     </>

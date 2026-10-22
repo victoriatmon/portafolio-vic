@@ -1005,6 +1005,11 @@ function ProyectosMobileInner() {
   return (
     <>
       <Navbar current="proyectos" variant="mobile" />
+      {/* Scope wrapper: see ProyectosDesktop.js -- isolates
+          proyectos-mobile.css from proyectos.css, both of which Next.js
+          bundles into this route's client CSS regardless of which variant
+          renders. */}
+      <div className="proyectos-mobile-scope">
       <main data-page className="page proyectos-mobile">
         <section className="projects-view" id="projects">
           <div className={'proj-bar ' + barClass}>
@@ -1094,6 +1099,7 @@ function ProyectosMobileInner() {
           </article>
         </section>
       </main>
+      </div>
       {arriveCoverGradient && <div className="arrive-cover" style={{ background: arriveCoverGradient }} aria-hidden="true" />}
       <ChatPanel />
       <Footer />

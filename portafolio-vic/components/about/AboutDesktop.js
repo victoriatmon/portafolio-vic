@@ -467,6 +467,12 @@ export default function AboutDesktop() {
       <Navbar current="about" />
       <CursorDot />
 
+      {/* Scope wrapper: isolates about.css's selectors (e.g. .page,
+          .about-grid) from AboutMobile's about-mobile.css, which Next.js
+          bundles into this route's client CSS regardless of which variant
+          actually renders -- see about-desktop-scope / about-mobile-scope
+          in the matching .css files. */}
+      <div className="about-desktop-scope">
       <main data-page className={pageClass}>
         <section className="about-hero">
           <div className="about-hero-left">
@@ -738,6 +744,7 @@ export default function AboutDesktop() {
           </div>
         </section>
       </main>
+      </div>
 
       <ChatPanel />
       <Footer />

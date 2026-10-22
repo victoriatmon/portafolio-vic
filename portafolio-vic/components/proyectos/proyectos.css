@@ -693,8 +693,16 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
 
 /* ---- scoped under .proyectos-desktop to avoid colliding with the other
    viewport variant's CSS, since both are bundled into the same route ---- */
-.proyectos-desktop {
-.page {
+.proyectos-desktop-scope .proyectos-desktop {
+&.page {
+  /* Fixed: was nested as plain ".page", which CSS nesting compiles to a
+     DESCENDANT selector (".proyectos-desktop .page"). But .page and
+     .proyectos-desktop are both on the very same <main> element (see
+     ProyectosDesktop.js), not ancestor/descendant, so that rule never
+     matched anything and .page's flex/height layout was dead -- which is
+     why .stage-wrap below (a true descendant, so IT did match) collapsed
+     to 0 height: its "flex: 1 1 auto" had no flex container to grow
+     inside. "&" makes this a same-element compound selector instead. */
   /* Fills whatever real viewport this ends up in (a plain browser tab, or the
      smaller area left over once claude.ai's own chrome has taken its slice).
      Stacked as 3 flex rows: navbar and footer sit full-bleed at their native

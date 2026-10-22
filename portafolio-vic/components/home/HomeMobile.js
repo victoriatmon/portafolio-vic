@@ -286,6 +286,10 @@ export default function HomeMobile() {
   return (
     <VictorAIChatProvider topics={TOPICS} starters={STARTERS}>
       <Navbar current="home" variant="mobile" />
+      {/* Scope wrapper: see HomeDesktop.js -- isolates home-mobile.css from
+          home.css, both of which Next.js bundles into this route's client
+          CSS regardless of which variant renders. */}
+      <div className="home-mobile-scope">
       <main data-page className="page">
         <section className={`stage2${entered ? ' is-entered' : ''}`} id="home">
           <div className="intro2">
@@ -318,6 +322,7 @@ export default function HomeMobile() {
           </div>
         </section>
       </main>
+      </div>
       <ChatPanel />
       <Footer />
     </VictorAIChatProvider>

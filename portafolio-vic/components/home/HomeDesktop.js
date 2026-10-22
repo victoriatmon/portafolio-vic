@@ -362,6 +362,12 @@ export default function HomeDesktop() {
     <VictorAIChatProvider topics={TOPICS} starters={STARTERS}>
       <Navbar current="home" />
       <CursorDot />
+      {/* Scope wrapper: isolates home.css's selectors (e.g. .page, .stage-wrap)
+          from HomeMobile's home-mobile.css, which Next.js bundles into this
+          same route's client CSS regardless of which variant actually
+          renders -- see home-desktop-scope / home-mobile-scope in the
+          matching .css files. */}
+      <div className="home-desktop-scope">
       <main data-page className="page">
         <div className="stage-wrap" ref={wrapRef}>
           <div className="x-stage" ref={stageRef}>
@@ -403,6 +409,7 @@ export default function HomeDesktop() {
           </div>
         </div>
       </main>
+      </div>
       <ChatPanel />
       <Footer />
     </VictorAIChatProvider>

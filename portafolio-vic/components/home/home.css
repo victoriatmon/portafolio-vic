@@ -11,19 +11,19 @@
    no scroll" sizing is done in JS instead (see the _fitApply effect in
    HomeDesktop.js), by setting .stage-wrap's own height directly. */
 
-.page {
+.home-desktop-scope .page {
   width: 100%;
   background: #0A0A0A;
   color: #F5F5F5;
   position: relative;
 }
 
-.stage-wrap {
+.home-desktop-scope .stage-wrap {
   position: relative;
   overflow: hidden;
 }
 
-.x-stage {
+.home-desktop-scope .x-stage {
   /* The original fixed-size (1440 wide) design, centered inside .stage-wrap
      and scaled by JS (see _fitApply in HomeDesktop.js) so it always fits
      without a scrollbar. The 1440px below is only the fallback before JS
@@ -41,25 +41,25 @@
 }
 
 /* ===== Landing: flat arc carousel ===== */
-.stage2 { position: relative; height: 890px; flex: none; overflow: hidden; contain: paint; }
-.intro2 { position: absolute; top: 92px; left: 50%; transform: translateX(-50%); width: 1000px; text-align: center; z-index: 5; }
-.intro2-title { margin: 0 auto; white-space: nowrap; font-family: 'Pavanam', 'Manrope', sans-serif; font-weight: 400; font-size: 44px; line-height: 1.14; color: #E8E8E8; }
-.intro2-title .accent-italic { font-family: 'Spectral', 'Pavanam', serif; font-style: italic; font-size: 48px; line-height: 1; }
-.intro2-sub { margin: 20px auto 0; width: 640px; font-size: 15px; line-height: 1.6; color: rgba(232,232,232,0.8); }
-.car2 { position: absolute; left: 0; right: 0; top: 314px; height: 540px; touch-action: pan-y; user-select: none; -webkit-user-select: none; cursor: grab; }
-.car2:active { cursor: grabbing; }
-.car2-ring { position: absolute; left: 50%; top: 240px; width: 0; height: 0; }
-.car2-ticks { position: absolute; left: calc(50% - 1410px); top: calc(240px - 10px); width: 2820px; height: 2820px; border-radius: 50%; pointer-events: none;
+.home-desktop-scope .stage2 { position: relative; height: 890px; flex: none; overflow: hidden; contain: paint; }
+.home-desktop-scope .intro2 { position: absolute; top: 92px; left: 50%; transform: translateX(-50%); width: 1000px; text-align: center; z-index: 5; }
+.home-desktop-scope .intro2-title { margin: 0 auto; white-space: nowrap; font-family: 'Pavanam', 'Manrope', sans-serif; font-weight: 400; font-size: 44px; line-height: 1.14; color: #E8E8E8; }
+.home-desktop-scope .intro2-title .accent-italic { font-family: 'Spectral', 'Pavanam', serif; font-style: italic; font-size: 48px; line-height: 1; }
+.home-desktop-scope .intro2-sub { margin: 20px auto 0; width: 640px; font-size: 15px; line-height: 1.6; color: rgba(232,232,232,0.8); }
+.home-desktop-scope .car2 { position: absolute; left: 0; right: 0; top: 314px; height: 540px; touch-action: pan-y; user-select: none; -webkit-user-select: none; cursor: grab; }
+.home-desktop-scope .car2:active { cursor: grabbing; }
+.home-desktop-scope .car2-ring { position: absolute; left: 50%; top: 240px; width: 0; height: 0; }
+.home-desktop-scope .car2-ticks { position: absolute; left: calc(50% - 1410px); top: calc(240px - 10px); width: 2820px; height: 2820px; border-radius: 50%; pointer-events: none;
   background: repeating-conic-gradient(from -0.04deg at 50% 50%, rgba(255,255,255,0.30) 0deg 0.08deg, transparent 0.08deg 0.75deg);
   -webkit-mask-image: radial-gradient(circle closest-side, transparent 1389px, #000 1390px, #000 1410px, transparent 1411px);
   mask-image: radial-gradient(circle closest-side, transparent 1389px, #000 1390px, #000 1410px, transparent 1411px);
   transform: translateZ(0); will-change: transform; backface-visibility: hidden; }
 
-.card-slot {
+.home-desktop-scope .card-slot {
   position: absolute;
   will-change: transform, opacity;
 }
-.card-face {
+.home-desktop-scope .card-face {
   all: unset;
   box-sizing: border-box;
   display: flex;
@@ -77,12 +77,12 @@
   -webkit-user-select: none;
   touch-action: none;
 }
-.card-face:hover {
+.home-desktop-scope .card-face:hover {
   transform: translateY(-10px) scale(1.03);
   filter: brightness(1.08);
   box-shadow: 0 50px 90px -15px rgba(0,0,0,0.72), 0 20px 34px rgba(0,0,0,0.5);
 }
-.card-face:active {
+.home-desktop-scope .card-face:active {
   transform: translateY(-2px) scale(0.97);
   filter: brightness(0.82);
 }
@@ -92,12 +92,12 @@
    (Mapfre's tile mosaic, Pulso's sliding circles, Phantom's spinning star,
    UNDP's glitch swap, victorai's "boiling" stars, AXA's marquee text) --
    see the note at the top of HomeDesktop.js for why that was dropped. */
-.card-art {
+.home-desktop-scope .card-art {
   position: absolute;
   inset: 0;
   z-index: 0;
 }
-.card-tag {
+.home-desktop-scope .card-tag {
   position: relative;
   z-index: 1;
   display: block;
@@ -110,7 +110,7 @@
   text-align: left;
 }
 
-.btn-primary {
+.home-desktop-scope .btn-primary {
   all: unset;
   cursor: pointer;
   display: inline-flex;
@@ -124,35 +124,35 @@
   font-size: 14px;
   transition: color 0.15s ease, background 0.15s ease;
 }
-.btn-primary:hover { color: #9E9E9E; }
-.btn-primary:active { background: #0A1130; color: #0066FF; }
-.btn-discover { position: absolute; left: 50%; top: calc(100% + 18px); transform: translateX(-50%); background: #2A2A2A; font-size: 12px; line-height: 1; padding: 10px 20px; gap: 8px; white-space: nowrap; }
-.btn-discover:active { background: #2A2A2A; }
+.home-desktop-scope .btn-primary:hover { color: #9E9E9E; }
+.home-desktop-scope .btn-primary:active { background: #0A1130; color: #0066FF; }
+.home-desktop-scope .btn-discover { position: absolute; left: 50%; top: calc(100% + 18px); transform: translateX(-50%); background: #2A2A2A; font-size: 12px; line-height: 1; padding: 10px 20px; gap: 8px; white-space: nowrap; }
+.home-desktop-scope .btn-discover:active { background: #2A2A2A; }
 
 /* Load-driven reveal: a simplified stand-in for the original's cross-page
    XT choreography (see HomeDesktop.js note) -- the intro text and the
    carousel fade/blur in once on mount, cards staggered by their distance
    from the centre via the --d custom property set inline per card. */
-.intro2, .car2 {
+.home-desktop-scope .intro2, .home-desktop-scope .car2 {
   opacity: 0;
   filter: blur(8px);
   transition: opacity 0.7s ease, filter 0.7s ease;
 }
-.card-slot {
+.home-desktop-scope .card-slot {
   opacity: 0;
   transition: opacity 0.5s ease;
   transition-delay: calc(var(--d, 0) * 50ms);
 }
-.stage2.is-entered .intro2,
-.stage2.is-entered .car2 {
+.home-desktop-scope .stage2.is-entered .intro2,
+.home-desktop-scope .stage2.is-entered .car2 {
   opacity: 1;
   filter: blur(0);
 }
-.stage2.is-entered .card-slot {
+.home-desktop-scope .stage2.is-entered .card-slot {
   opacity: 1;
 }
 @media (prefers-reduced-motion: reduce) {
-  .intro2, .car2, .card-slot {
+  .home-desktop-scope .intro2, .home-desktop-scope .car2, .home-desktop-scope .card-slot {
     transition: none !important;
     opacity: 1 !important;
     filter: none !important;

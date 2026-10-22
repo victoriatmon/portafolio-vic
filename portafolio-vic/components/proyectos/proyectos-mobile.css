@@ -652,9 +652,12 @@ html.arrive .page { animation: xin 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
 
 /* ---- scoped under .proyectos-mobile to avoid colliding with the other
    viewport variant's CSS, since both are bundled into the same route ---- */
-.proyectos-mobile {
+.proyectos-mobile-scope .proyectos-mobile {
 
-.page {
+&.page {
+  /* Fixed: see the matching comment in proyectos.css -- nesting plain
+     ".page" here compiles to a descendant selector, but .page and
+     .proyectos-mobile are both classes on the same <main> element. */
   /* Mobile design width + natural scroll height (was duplicated further down
      with the real mobile numbers winning by cascade order -- merged into one
      rule here so there's only one place to edit). */

@@ -378,6 +378,10 @@ export default function AboutMobile() {
     <VictorAIChatProvider topics={TOPICS} starters={STARTERS}>
       <Navbar current="about" variant="mobile" />
 
+      {/* Scope wrapper: see AboutDesktop.js -- isolates about-mobile.css from
+          about.css, both of which Next.js bundles into this route's client
+          CSS regardless of which variant renders. */}
+      <div className="about-mobile-scope">
       <main data-page className={pageClass}>
         <section className="about-hero">
           <div className="about-hero-left">
@@ -642,6 +646,7 @@ export default function AboutMobile() {
           </>
         )}
       </main>
+      </div>
 
       <ChatPanel />
       <Footer />

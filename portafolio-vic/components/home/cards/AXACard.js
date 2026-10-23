@@ -171,7 +171,12 @@ export default function AXACard() {
       ptr.x = e.clientX;
       ptr.y = e.clientY;
       ptr.gone = false;
-      if (!faceOf(e) || reduce) return;
+      const matched = faceOf(e);
+      if (typeof window !== 'undefined') {
+        window.__axaDebug = window.__axaDebug || [];
+        window.__axaDebug.push({ event: 'over', matched: !!matched, reduce, lanesCount: lanes.length });
+      }
+      if (!matched || reduce) return;
       st.mode = 'run';
       st.lastCheck = performance.now();
       lanes.forEach((L) => {

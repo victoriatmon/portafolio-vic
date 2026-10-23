@@ -33,7 +33,24 @@ import ChatPanel from '@/components/chat/ChatPanel';
 import Navbar from '@/components/nav/Navbar';
 import { TOPICS, STARTERS } from '@/content/chatTopics';
 import { playCardOpenTransition, prefersReducedMotion, markArrival, hardNavigate } from '@/lib/cardTransition';
+import MapfreCard from './cards/MapfreCard';
+import PhantomCard from './cards/PhantomCard';
+import PulsoCard from './cards/PulsoCard';
+import AXACard from './cards/AXACard';
+import VictorCard from './cards/VictorCard';
+import UndpCard from './cards/UndpCard';
 import './home-mobile.css';
+
+// Same six bespoke card illustrations as HomeDesktop.js (see that file's
+// CARD_ART for the full background on each one), now ported here too.
+// Mobile has no :hover, so each card's CSS trigger in home-mobile.css
+// swaps :hover for .is-held -- the class this file's drag effect already
+// adds to a card-face on a brief press (see the holdOn/holdOff helpers
+// below), reusing the same touch affordance rather than inventing a
+// second one. The two JS-driven cards (AXA/UNDP) need no mobile-specific
+// code at all: they already listen for pointerover/pointerout, which
+// fire for touch pointers the same as mouse ones.
+const CARD_ART = [MapfreCard, PhantomCard, PulsoCard, AXACard, VictorCard, UndpCard];
 
 const LABELS = [
   'Driving 35% YoY growth',
@@ -321,7 +338,9 @@ export default function HomeMobile() {
           <div className="car2" ref={carRef}>
             <div className="car2-ticks" style={ticksStyle} />
             <div className="car2-ring">
-              {cards.map((card) => (
+              {cards.map((card) => {
+                const Art = CARD_ART[card.index];
+                return (
                 <div className="card-slot" style={card.wrapperStyle} key={card.index}>
                   <Link
                     className="card-face"
@@ -330,8 +349,14 @@ export default function HomeMobile() {
                     aria-label={`Open project: ${card.label}`}
                     onClick={(e) => handleCardOpen(e, card)}
                   >
-                    <div className="card-art" style={{ background: card.gradient }} aria-hidden="true" />
-                    <span className="card-tag">{card.label}</span>
+                    {Art ? (
+                      <Art />
+                    ) : (
+                      <>
+                        <div className="card-art" style={{ background: card.gradient }} aria-hidden="true" />
+                        <span className="card-tag">{card.label}</span>
+                      </>
+                    )}
                   </Link>
                   <Link
                     className="btn-primary btn-discover"
@@ -342,7 +367,8 @@ export default function HomeMobile() {
                     Discover
                   </Link>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </section>

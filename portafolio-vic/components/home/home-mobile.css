@@ -143,3 +143,220 @@
     filter: none !important;
   }
 }
+
+/* ===== Reduced-motion: card-art-specific (mirrors home.css; touch trigger
+   is .is-held instead of :hover, same as the rest of this block) ===== */
+@media (prefers-reduced-motion: reduce) {
+  .home-mobile-scope .mp-tile, .home-mobile-scope .mp-word { transition: none !important; }
+  .home-mobile-scope .card-face.is-held .ph-star,
+  .home-mobile-scope .card-face:focus-visible .ph-star { animation-play-state: paused !important; }
+  .home-mobile-scope .card-face.is-held .pu-circles,
+  .home-mobile-scope .card-face:focus-visible .pu-circles { animation-play-state: paused !important; }
+  .home-mobile-scope .card-face.is-held .vs-star,
+  .home-mobile-scope .card-face:focus-visible .vs-star { animation-play-state: paused !important; }
+}
+
+/* The six card-art blocks below mirror home.css's "Mapfre card art" through
+   "UNDP card art" sections verbatim, rescoped under .home-mobile-scope, with
+   :hover swapped for .is-held (added to .card-face on a ~240ms press via
+   HomeMobile.js's holdOn(), see that file's header note -- a drag or a quick
+   tap never sets it, only a brief hold). :focus-visible is kept as-is so
+   keyboard/switch-control users on a touch device still get the same effect.
+   @keyframes are NOT redeclared here -- home.css's are already in this
+   route's bundle regardless of which variant renders (see page.js), so
+   reusing those names here just works. */
+/* ===== Mapfre card art (ported from the artifact, card index 0 --
+   "Driving 35% YoY growth") =====
+   Wrapper around the raw SVG from MapfreCard.js, positioned exactly like
+   the `.card-art` fallback it replaces for this one card. The tile mosaic
+   itself (.mp-tile/.mp-t0..mp-t19) and the word wipes (.mp-word/.mp-w0..
+   mp-w6) are pure CSS hover/focus transitions -- selectors copied verbatim
+   from the artifact's stylesheet, just rescoped under .home-mobile-scope
+   to match this file's convention. */
+.home-mobile-scope .mp-card-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+.home-mobile-scope .mp-card{ position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+.home-mobile-scope .mp-tile{ transform-box: fill-box; transform-origin: center; transition: transform 0.8s cubic-bezier(.77,0,.18,1); }
+.home-mobile-scope .mp-word{ transition: transform 0.7s cubic-bezier(.77,0,.18,1), opacity 0.35s ease; }
+.home-mobile-scope .mp-t0{transition-delay:0.051s}.home-mobile-scope .card-face.is-held .mp-t0,.home-mobile-scope .card-face:focus-visible .mp-t0{transform:translate(0.000px,0.000px) scale(1)}
+.home-mobile-scope .mp-t1{transition-delay:0.084s}.home-mobile-scope .card-face.is-held .mp-t1,.home-mobile-scope .card-face:focus-visible .mp-t1{transform:translate(0.000px,0.000px) scale(0)}
+.home-mobile-scope .mp-t2{transition-delay:0.117s}.home-mobile-scope .card-face.is-held .mp-t2,.home-mobile-scope .card-face:focus-visible .mp-t2{transform:translate(0.000px,0.000px) scale(0)}
+.home-mobile-scope .mp-t3{transition-delay:0.051s}.home-mobile-scope .card-face.is-held .mp-t3,.home-mobile-scope .card-face:focus-visible .mp-t3{transform:translate(0.000px,0.000px) scale(1)}
+.home-mobile-scope .mp-t4{transition-delay:0.084s}.home-mobile-scope .card-face.is-held .mp-t4,.home-mobile-scope .card-face:focus-visible .mp-t4{transform:translate(-53.022px,-53.899px) scale(1)}
+.home-mobile-scope .mp-t5{transition-delay:0.118s}.home-mobile-scope .card-face.is-held .mp-t5,.home-mobile-scope .card-face:focus-visible .mp-t5{transform:translate(52.976px,54.101px) scale(1)}
+.home-mobile-scope .mp-t6{transition-delay:0.151s}.home-mobile-scope .card-face.is-held .mp-t6,.home-mobile-scope .card-face:focus-visible .mp-t6{transform:translate(0.000px,0.000px) scale(1)}
+.home-mobile-scope .mp-t7{transition-delay:0.085s}.home-mobile-scope .card-face.is-held .mp-t7,.home-mobile-scope .card-face:focus-visible .mp-t7{transform:translate(0.000px,0.000px) scale(1)}
+.home-mobile-scope .mp-t8{transition-delay:0.118s}.home-mobile-scope .card-face.is-held .mp-t8,.home-mobile-scope .card-face:focus-visible .mp-t8{transform:translate(0.000px,0.000px) scale(1)}
+.home-mobile-scope .mp-t9{transition-delay:0.118s}.home-mobile-scope .card-face.is-held .mp-t9,.home-mobile-scope .card-face:focus-visible .mp-t9{transform:translate(0.000px,54.302px) scale(1)}
+.home-mobile-scope .mp-t10{transition-delay:0.152s}.home-mobile-scope .card-face.is-held .mp-t10,.home-mobile-scope .card-face:focus-visible .mp-t10{transform:translate(52.978px,-53.698px) scale(1)}
+.home-mobile-scope .mp-t11{transition-delay:0.185s}.home-mobile-scope .card-face.is-held .mp-t11,.home-mobile-scope .card-face:focus-visible .mp-t11{transform:translate(0.000px,0.000px) scale(1)}
+.home-mobile-scope .mp-t12{transition-delay:0.218s}.home-mobile-scope .card-face.is-held .mp-t12,.home-mobile-scope .card-face:focus-visible .mp-t12{transform:translate(0.000px,0.000px) scale(1)}
+.home-mobile-scope .mp-t13{transition-delay:0.219s}.home-mobile-scope .card-face.is-held .mp-t13,.home-mobile-scope .card-face:focus-visible .mp-t13{transform:translate(-53.153px,0.403px) scale(1)}
+.home-mobile-scope .mp-t14{transition-delay:0.252s}.home-mobile-scope .card-face.is-held .mp-t14,.home-mobile-scope .card-face:focus-visible .mp-t14{transform:translate(0.000px,0.000px) scale(0)}
+.home-mobile-scope .mp-t15{transition-delay:0.150s}.home-mobile-scope .card-face.is-held .mp-t15,.home-mobile-scope .card-face:focus-visible .mp-t15{transform:translate(0.000px,0.000px) scale(1)}
+.home-mobile-scope .mp-t16{transition-delay:0.184s}.home-mobile-scope .card-face.is-held .mp-t16,.home-mobile-scope .card-face:focus-visible .mp-t16{transform:translate(0.000px,0.000px) scale(1)}
+.home-mobile-scope .mp-t17{transition-delay:0.217s}.home-mobile-scope .card-face.is-held .mp-t17,.home-mobile-scope .card-face:focus-visible .mp-t17{transform:translate(0.000px,0.000px) scale(1)}
+.home-mobile-scope .mp-t18{transition-delay:0.251s}.home-mobile-scope .card-face.is-held .mp-t18,.home-mobile-scope .card-face:focus-visible .mp-t18{transform:translate(0.000px,0.000px) scale(1)}
+.home-mobile-scope .mp-t19{transition-delay:0.285s}.home-mobile-scope .card-face.is-held .mp-t19,.home-mobile-scope .card-face:focus-visible .mp-t19{transform:translate(0.000px,0.000px) scale(0)}
+.home-mobile-scope .mp-w0{transition-delay:0s}.home-mobile-scope .card-face.is-held .mp-w0,.home-mobile-scope .card-face:focus-visible .mp-w0{transform:translateX(-320px);opacity:0}
+.home-mobile-scope .mp-w1{transition-delay:0.06s}.home-mobile-scope .card-face.is-held .mp-w1,.home-mobile-scope .card-face:focus-visible .mp-w1{transform:translateX(320px);opacity:0}
+.home-mobile-scope .mp-w2{transition-delay:0.12s}.home-mobile-scope .card-face.is-held .mp-w2,.home-mobile-scope .card-face:focus-visible .mp-w2{transform:translateX(-320px);opacity:0}
+.home-mobile-scope .mp-w3{transform:translateX(320px);opacity:0;transition-delay:0.12s}.home-mobile-scope .card-face.is-held .mp-w3,.home-mobile-scope .card-face:focus-visible .mp-w3{transform:none;opacity:1}
+.home-mobile-scope .mp-w4{transform:translateX(-320px);opacity:0;transition-delay:0.18s}.home-mobile-scope .card-face.is-held .mp-w4,.home-mobile-scope .card-face:focus-visible .mp-w4{transform:none;opacity:1}
+.home-mobile-scope .mp-w5{transform:translateX(-320px);opacity:0;transition-delay:0.24s}.home-mobile-scope .card-face.is-held .mp-w5,.home-mobile-scope .card-face:focus-visible .mp-w5{transform:none;opacity:1}
+.home-mobile-scope .mp-w6{transform:translateX(320px);opacity:0;transition-delay:0.3s}.home-mobile-scope .card-face.is-held .mp-w6,.home-mobile-scope .card-face:focus-visible .mp-w6{transform:none;opacity:1}
+
+/* ===== Phantom card art (ported from the artifact, card index 1 --
+   "AI Cash Flow Predictor") =====
+   Wrapper around the raw SVG from PhantomCard.js, positioned like the
+   `.card-art` fallback it replaces for this card. The star's spin + pulse
+   are paused CSS animations, kept running only on .is-held/:focus-visible --
+   selectors copied verbatim from the artifact, rescoped under
+   .home-mobile-scope to match this file's convention. */
+.home-mobile-scope .ph-card-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+.home-mobile-scope .ph-card { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+.home-mobile-scope .ph-star { transform-box: fill-box; transform-origin: center; animation: ph-spin 14s linear infinite, ph-pulse 5s ease-in-out infinite; animation-play-state: paused; }
+.home-mobile-scope .card-face.is-held .ph-star, .home-mobile-scope .card-face:focus-visible .ph-star { animation-play-state: running; }
+
+/* ===== Pulso card art (ported from the artifact, card index 2 --
+   "Unlocking Health Access") =====
+   Wrapper around the raw SVG from PulsoCard.js, positioned like the
+   `.card-art` fallback it replaces for this card. Four circles drift
+   down a looping 7s cycle, paused until .is-held/:focus-visible --
+   selector copied verbatim from the artifact, rescoped under
+   .home-mobile-scope to match this file's convention. */
+.home-mobile-scope .pu-card-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+.home-mobile-scope .pu-card { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+.home-mobile-scope .pu-circles { animation: pu-slide 7s linear infinite; animation-play-state: paused; }
+.home-mobile-scope .card-face.is-held .pu-circles, .home-mobile-scope .card-face:focus-visible .pu-circles { animation-play-state: running; }
+
+/* ===== AXA card art (ported from the artifact, card index 3 --
+   "Scaling enterprise sales") =====
+   Wrapper around the raw SVG from AXACard.js, positioned like the
+   `.card-art` fallback it replaces for this card. Unlike the other ported
+   cards, AXA's edge-text motion is driven by JS (see AXACard.js's useEffect
+   -- a ported _axInit), not CSS keyframes, so there's nothing to pause
+   under prefers-reduced-motion here: AXACard.js checks
+   prefersReducedMotion() itself before starting the loop at all. */
+.home-mobile-scope .ax-card-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+.home-mobile-scope .ax-card {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+}
+
+/* ===== victorai card art (ported from the artifact, card index 4 --
+   "victorai") =====
+   Wrapper around the raw SVG from VictorCard.js, positioned like the
+   `.card-art` fallback it replaces for this card. Three stars "boil" in
+   stop-motion (step-end keyframes, slightly different durations/filters
+   per star) while .is-held/:focus-visible -- selectors copied verbatim from
+   the artifact, rescoped under .home-mobile-scope to match this file's
+   convention. */
+.home-mobile-scope .vs-card-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+.home-mobile-scope .vs-card { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+.home-mobile-scope .vs-star { transform-box: fill-box; transform-origin: center; }
+.home-mobile-scope .vs-s1 { animation: vs-s1-a 1500ms step-end infinite; animation-play-state: paused; }
+.home-mobile-scope .vs-s2 { animation: vs-s2-a 1250ms step-end infinite; animation-play-state: paused; }
+.home-mobile-scope .vs-s3 { animation: vs-s3-a 1750ms step-end infinite; animation-play-state: paused; }
+.home-mobile-scope .card-face.is-held .vs-star, .home-mobile-scope .card-face:focus-visible .vs-star { animation-play-state: running; }
+
+/* ===== UNDP card art (ported from the artifact, card index 5 --
+   "Inclusive finance architecture") =====
+   Wrapper around the raw SVG from UndpCard.js, positioned like the
+   `.card-art` fallback it replaces for this card. A JS-driven glitch swap
+   between two poster versions (.ud-a / .ud-b) while the card is hovered,
+   via the .ud-in/.ud-out classes toggled by UndpCard.js's useEffect (a
+   ported _udInit) -- not pure CSS, because the toggle needs to alternate
+   indefinitely on a timer while hovered and resolve to a single clean
+   state on pointer-out, which a .is-held-only rule can't track. The prefers-
+   reduced-motion fallback below is the artifact's own, since it's part of
+   the same ud-card selector block. */
+.home-mobile-scope .ud-card-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+/* UNDP card: glitch swap between two versions, driven by the ud-in / ud-out classes (see _udInit) */
+.home-mobile-scope .ud-card{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none}
+.home-mobile-scope .ud-card .ud-s{opacity:0}
+.home-mobile-scope .ud-card .ud-b{opacity:0}
+.home-mobile-scope .ud-card .ud-scan{opacity:0}
+.home-mobile-scope .ud-card .ud-bar{opacity:0}
+.home-mobile-scope .ud-card.ud-in .ud-a{animation-name:udBaseA;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-out .ud-a{animation-name:udBaseA;animation-direction:reverse;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-in .ud-b{animation-name:udBaseB;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-out .ud-b{animation-name:udBaseB;animation-direction:reverse;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-in .ud-stage{animation-name:udStage;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-out .ud-stage{animation-name:udStage;animation-direction:reverse;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-in .ud-scan{animation-name:udScan;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-out .ud-scan{animation-name:udScan;animation-direction:reverse;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-in .ud-sa0{animation-name:udA0;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-out .ud-sa0{animation-name:udA0;animation-direction:reverse;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-in .ud-sb0{animation-name:udB0;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-out .ud-sb0{animation-name:udB0;animation-direction:reverse;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-in .ud-sa1{animation-name:udA1;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-out .ud-sa1{animation-name:udA1;animation-direction:reverse;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-in .ud-sb1{animation-name:udB1;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-out .ud-sb1{animation-name:udB1;animation-direction:reverse;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-in .ud-sa2{animation-name:udA2;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-out .ud-sa2{animation-name:udA2;animation-direction:reverse;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-in .ud-sb2{animation-name:udB2;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-out .ud-sb2{animation-name:udB2;animation-direction:reverse;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-in .ud-sa3{animation-name:udA3;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-out .ud-sa3{animation-name:udA3;animation-direction:reverse;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-in .ud-sb3{animation-name:udB3;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-out .ud-sb3{animation-name:udB3;animation-direction:reverse;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-in .ud-sa4{animation-name:udA4;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-out .ud-sa4{animation-name:udA4;animation-direction:reverse;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-in .ud-sb4{animation-name:udB4;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-out .ud-sb4{animation-name:udB4;animation-direction:reverse;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-in .ud-sa5{animation-name:udA5;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-out .ud-sa5{animation-name:udA5;animation-direction:reverse;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-in .ud-sb5{animation-name:udB5;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-out .ud-sb5{animation-name:udB5;animation-direction:reverse;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-in .ud-sa6{animation-name:udA6;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-out .ud-sa6{animation-name:udA6;animation-direction:reverse;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-in .ud-sb6{animation-name:udB6;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-out .ud-sb6{animation-name:udB6;animation-direction:reverse;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-in .ud-sa7{animation-name:udA7;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-out .ud-sa7{animation-name:udA7;animation-direction:reverse;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-in .ud-sb7{animation-name:udB7;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-out .ud-sb7{animation-name:udB7;animation-direction:reverse;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-in .ud-sa8{animation-name:udA8;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-out .ud-sa8{animation-name:udA8;animation-direction:reverse;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-in .ud-sb8{animation-name:udB8;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-out .ud-sb8{animation-name:udB8;animation-direction:reverse;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-in .ud-sa9{animation-name:udA9;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-out .ud-sa9{animation-name:udA9;animation-direction:reverse;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-in .ud-sb9{animation-name:udB9;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-out .ud-sb9{animation-name:udB9;animation-direction:reverse;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-in .ud-sa10{animation-name:udA10;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-out .ud-sa10{animation-name:udA10;animation-direction:reverse;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-in .ud-sb10{animation-name:udB10;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-out .ud-sb10{animation-name:udB10;animation-direction:reverse;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
+.home-mobile-scope .ud-card.ud-in .ud-bar{animation:udBar 0.7s linear both;}
+.home-mobile-scope .ud-card.ud-out .ud-bar{animation:udBar 0.7s linear both;animation-direction:reverse;}
+@media (prefers-reduced-motion:reduce){.home-mobile-scope .ud-card *{animation:none!important}.home-mobile-scope .ud-card.ud-in .ud-a{opacity:0}.home-mobile-scope .ud-card.ud-in .ud-b{opacity:1}}

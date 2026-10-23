@@ -856,17 +856,25 @@ function ProyectosDesktopInner() {
       // fitApply). .page no longer forces height:100vh (see proyectos.css),
       // so without this .stage-wrap would collapse to 0 (flex:1 1 auto with
       // nothing sizing its flex container) -- and leaving it un-set here
-      // was the root cause of both the whole-page scroll bug (the browser
-      // picking some other intrinsic height for .page) and the too-wide
-      // ghost-card gap (scale computed from the right availH, but applied
-      // to a stage-wrap that wasn't actually that tall).
+      // was the root cause of the whole-page scroll bug (the browser
+      // picking some other intrinsic height for .page).
       wrap.style.height = Math.max(0, availH) + 'px';
       const availW = wrap.clientWidth || window.innerWidth;
       const scale = Math.min(availH / dh, 1.25);
       const stageW = Math.max(1440, availW / scale);
       stage.style.width = stageW + 'px';
       stage.style.transform = 'translate(-50%, -50%) scale(' + scale + ')';
-      const peekExtra = Math.max(0, (stageW - 1440) / 2);
+      // The raw (stageW - 1440) / 2 is the artifact's own formula (confirmed
+      // byte-identical to Projects.dc.html's _fitInit) -- it pushes the
+      // ghost (prev/next) cards further out as the stage stretches wider
+      // than 1440 to fill real desktop widths, which at a typical ~1440px
+      // browser window works out to ~117px of extra gap on top of the
+      // cards' own fixed -270px offset. Per the user's request for a
+      // tighter gap with more of the ghost cards peeking onto the screen,
+      // this is dampened to 45% of that: still grows on wider screens (so
+      // ghost cards reveal a bit more there, same intent as the artifact),
+      // just not as aggressively.
+      const peekExtra = Math.max(0, (stageW - 1440) / 2) * 0.45;
       stage.style.setProperty('--peek-extra', peekExtra + 'px');
     };
     // See the identical effect in HomeDesktop.js for why a single

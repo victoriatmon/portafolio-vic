@@ -42,16 +42,16 @@
    Main.dc.html. */
 .cursor-dot.is-drag,
 .cursor-dot.is-drag.is-hovering {
-  width: 84px;
-  height: 84px;
+  width: 64px;
+  height: 64px;
   background: #0066FF;
 }
 .cursor-dot.is-drag .cursor-dot-label {
   opacity: 1;
 }
 .cursor-dot.is-drag.is-dragging {
-  width: 70px;
-  height: 70px;
+  width: 52px;
+  height: 52px;
 }
 .cursor-dot-label {
   display: block;

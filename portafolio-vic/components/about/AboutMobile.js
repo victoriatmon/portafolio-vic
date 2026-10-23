@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { VictorAIChatProvider } from '@/components/chat/ChatContext';
 import ChatPanel from '@/components/chat/ChatPanel';
 import Navbar from '@/components/nav/Navbar';
-import Footer from '@/components/layout/Footer';
 import { TOPICS, STARTERS } from '@/content/chatTopics';
 import './about-mobile.css';
 
@@ -19,10 +18,10 @@ import './about-mobile.css';
 //
 // The original mobile page's hamburger/menu-sheet nav and scroll-to-hide
 // navbar are reproduced via the shared Navbar's variant="mobile" (see
-// components/nav/Navbar.js) -- its menu sheet links only to Home/Projects/
-// About (not the LinkedIn/Email/Resume links the old MainMobile.dc.html
-// also folded in there), since the shared Footer is now always rendered on
-// every route instead of being buried in the menu on mobile.
+// components/nav/Navbar.js) -- its menu sheet also carries the LinkedIn/
+// Email/Resume links + credit line (ported from MainMobile.dc.html, which
+// is where the artifact's own author moved them), so this page renders no
+// separate <Footer/>, matching the artifact.
 
 const COL_ORDER = ['backlog', 'progress', 'done'];
 const COL_TITLES = { backlog: 'Backlog', progress: 'In progress', done: 'Done' };
@@ -649,7 +648,6 @@ export default function AboutMobile() {
       </div>
 
       <ChatPanel />
-      <Footer />
     </VictorAIChatProvider>
   );
 }

@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { VictorAIChatProvider, useChatContext } from '@/components/chat/ChatContext';
 import ChatPanel from '@/components/chat/ChatPanel';
 import Navbar from '@/components/nav/Navbar';
-import Footer from '@/components/layout/Footer';
 import { TOPICS, STARTERS } from '@/content/chatTopics';
 import {
   PHANTOM_PROMPTS,
@@ -1102,7 +1101,6 @@ function ProyectosMobileInner() {
       </div>
       {arriveCoverGradient && <div className="arrive-cover" style={{ background: arriveCoverGradient }} aria-hidden="true" />}
       <ChatPanel />
-      <Footer />
     </>
   );
 }

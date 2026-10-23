@@ -8,16 +8,15 @@
 // a centered card, matching MainMobile.dc.html's own MOBILE=true branch).
 //
 // Also specific to the old mobile build: its hamburger "menu-sheet" nav
-// (which folded Home/Projects/About together with the LinkedIn/Email/
-// Resume links, since there was nowhere else to put a footer without
-// forcing a scroll) and the sticky navbar's hide-on-scroll behavior. Both
-// are reproduced via the shared Navbar's variant="mobile", but its menu
-// sheet only links Home/Projects/About -- the LinkedIn/Email/Resume links
-// live in the shared Footer, which (unlike the original) is always
-// rendered on every route, so the footer is a normal, always-visible row
-// at the bottom instead of being buried in the menu. No scale-to-fit here
-// (that was desktop only in the original too) -- the page flows normally
-// and scrolls if its content needs more height than the viewport.
+// (which folds Home/Projects/About together with the LinkedIn/Email/Resume
+// links and a small credit line, since there's nowhere else to put a
+// footer without forcing a scroll) and the sticky navbar's hide-on-scroll
+// behavior. Both are reproduced via the shared Navbar's variant="mobile" --
+// its menu sheet carries the contact links + credit line itself, so this
+// page (like AboutMobile/ProyectosMobile) renders no separate <Footer/>,
+// matching MainMobile.dc.html exactly. No scale-to-fit here (that was
+// desktop only in the original too) -- the page flows normally and scrolls
+// if its content needs more height than the viewport.
 //
 // Preserved: the same flat-arc carousel geometry and physics (sized for a
 // 390px-wide screen), its touch affordances -- a finger resting briefly on
@@ -32,7 +31,6 @@ import Link from 'next/link';
 import { VictorAIChatProvider } from '@/components/chat/ChatContext';
 import ChatPanel from '@/components/chat/ChatPanel';
 import Navbar from '@/components/nav/Navbar';
-import Footer from '@/components/layout/Footer';
 import { TOPICS, STARTERS } from '@/content/chatTopics';
 import { playCardOpenTransition, prefersReducedMotion, markArrival, hardNavigate } from '@/lib/cardTransition';
 import './home-mobile.css';
@@ -351,7 +349,6 @@ export default function HomeMobile() {
       </main>
       </div>
       <ChatPanel />
-      <Footer />
     </VictorAIChatProvider>
   );
 }

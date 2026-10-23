@@ -125,3 +125,33 @@
 .menu-link:hover { color: #9E9E9E; }
 .menu-link:active { color: #0066FF; }
 .menu-link.is-current { color: #0066FF; }
+
+/* Contact links (LinkedIn/Email/Resume) + credit line, ported from
+   MainMobile.dc.html -- see the comment in Navbar.js. Same .menu-link
+   typography/colors/hover/active as the site-nav list above; the extra
+   top margin alone reads the two groups as separate, no divider line. */
+.menu-links-contact { margin-top: 64px; }
+
+/* Credit line: same wording/icon as the desktop footer's .footer-credit,
+   but sized down to read as a quiet caption, not another tappable row --
+   small, muted, not part of the .menu-links stagger. margin-top:auto pins
+   it to the bottom of the sheet (a flex column) regardless of how tall the
+   two lists above it are. */
+.menu-credit {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 28px 28px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #6B6B6B;
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.35s ease, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.menu-credit svg { display: block; flex: none; }
+.menu-sheet.is-open .menu-credit { opacity: 1; transform: none; transition-delay: 0.54s; }
+@media (prefers-reduced-motion: reduce) { .menu-credit { transition: none !important; } }

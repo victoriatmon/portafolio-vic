@@ -256,3 +256,17 @@
 .home-desktop-scope .pu-circles { animation: pu-slide 7s linear infinite; animation-play-state: paused; }
 .home-desktop-scope .card-face:hover .pu-circles, .home-desktop-scope .card-face:focus-visible .pu-circles { animation-play-state: running; }
 @keyframes pu-slide { from { transform: translateY(0); } to { transform: translateY(247px); } }
+
+/* ===== AXA card art (ported from the artifact, card index 3 --
+   "Scaling enterprise sales") =====
+   Wrapper around the raw SVG from AXACard.js, positioned like the
+   `.card-art` fallback it replaces for this card. Unlike the other ported
+   cards, AXA's edge-text motion is driven by JS (see AXACard.js's useEffect
+   -- a ported _axInit), not CSS keyframes, so there's nothing to pause
+   under prefers-reduced-motion here: AXACard.js checks
+   prefersReducedMotion() itself before starting the loop at all. */
+.home-desktop-scope .ax-card-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}

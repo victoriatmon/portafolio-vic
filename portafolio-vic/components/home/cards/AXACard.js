@@ -154,8 +154,15 @@ export default function AXACard() {
       if (typeof window !== 'undefined') {
         window.__axaFrameLog = window.__axaFrameLog || [];
         if (window.__axaFrameLog.length < 20) {
-          window.__axaFrameLog.push({ mode: st.mode, active, pos0: lanes[0].pos, translate0: lanes[0].el.style.translate });
+          window.__axaFrameLog.push({
+            mode: st.mode,
+            active,
+            pos0: lanes[0].pos,
+            translate0: lanes[0].el.style.translate,
+            el0Connected: lanes[0].el.isConnected,
+          });
         }
+        window.__axaLane0El = lanes[0].el;
       }
     };
     const kick = () => {

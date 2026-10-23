@@ -86,18 +86,25 @@ export default function AXACard() {
     if (!card || !face) return undefined;
 
     const reduce = prefersReducedMotion();
-    const lanes = LANES.map((c) => {
-      const el = card.querySelector('.' + c.cls);
-      return el ? { el, dx: c.dx, dy: c.dy, P: c.P, v: c.v, pos: 0, vel: 0, plan: null } : null;
-    }).filter(Boolean);
-    if (lanes.length === 0) return undefined;
+    // Lanes are looked up live by class name on every apply() rather than
+    // captured once at mount: this card's SVG markup can be re-applied to
+    // the DOM by React after mount (it re-renders on every carousel-drag
+    // tick), which replaces the child nodes under .ax-card-wrap even though
+    // the wrapper div itself stays the same instance. A one-time captured
+    // element reference would silently go stale (isConnected: false) and
+    // all animation would write to a detached, invisible node.
+    const lanes = LANES.map((c) => ({
+      cls: c.cls, dx: c.dx, dy: c.dy, P: c.P, v: c.v, pos: 0, vel: 0, plan: null,
+    }));
 
     const ptr = { x: -1, y: -1, gone: true };
     const st = { mode: 'idle', raf: 0, last: 0, lastCheck: 0 };
 
     const apply = (L) => {
+      const el = wrap.querySelector('.' + L.cls);
+      if (!el) return;
       const off = ((L.pos % L.P) + L.P) % L.P;
-      L.el.style.translate = `${L.dx * off}px ${L.dy * off}px`;
+      el.style.translate = `${L.dx * off}px ${L.dy * off}px`;
     };
     const makePlan = (L, now) => {
       const T = SETTLE_MS / 1000;
@@ -151,25 +158,8 @@ export default function AXACard() {
       } else {
         st.mode = 'idle';
       }
-      if (typeof window !== 'undefined') {
-        window.__axaFrameLog = window.__axaFrameLog || [];
-        if (window.__axaFrameLog.length < 20) {
-          window.__axaFrameLog.push({
-            mode: st.mode,
-            active,
-            pos0: lanes[0].pos,
-            translate0: lanes[0].el.style.translate,
-            el0Connected: lanes[0].el.isConnected,
-          });
-        }
-        window.__axaLane0El = lanes[0].el;
-      }
     };
     const kick = () => {
-      if (typeof window !== 'undefined') {
-        window.__axaKickLog = window.__axaKickLog || [];
-        window.__axaKickLog.push({ rafWasTruthy: !!st.raf, rafValue: st.raf });
-      }
       if (st.raf) return;
       st.last = performance.now();
       st.raf = requestAnimationFrame(frame);
@@ -189,10 +179,6 @@ export default function AXACard() {
       ptr.y = e.clientY;
       ptr.gone = false;
       const matched = faceOf(e);
-      if (typeof window !== 'undefined') {
-        window.__axaDebug = window.__axaDebug || [];
-        window.__axaDebug.push({ event: 'over', matched: !!matched, reduce, lanesCount: lanes.length });
-      }
       if (!matched || reduce) return;
       st.mode = 'run';
       st.lastCheck = performance.now();

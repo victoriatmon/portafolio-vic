@@ -5,15 +5,29 @@ import { useChatContext } from './ChatContext';
 import './chat.css';
 
 // VictorAI's replies share project links as plain text -- a bare internal
-// path like "/proyectos#mapfre" or a full URL, per the "puedes darle click
-// aqui: {{link}}" format in the chatbot's tone doc -- but {m.text} below
-// used to render that straight to text, so the person had to copy/paste
-// the path instead of clicking it. This scans a reply for either shape and
-// turns the match into a real <a>, same plain-<a> convention as the rest
-// of the site's internal nav (see Navbar.js's hardNavigate note): a
-// relative path like /proyectos#mapfre already resolves against whatever
-// domain the page is served from, so no absolute/production URL is needed
-// here for it to work.
+// path like "/proyectos#mapfre", or sometimes the model writes out the full
+// production URL instead, per the "puedes darle click aqui: {{link}}"
+// format in the chatbot's tone doc -- but {m.text} below used to render
+// that straight to text, so the person had to copy/paste the path instead
+// of clicking it, AND once it was linkified the literal path/URL text read
+// as ugly link copy (Vic's own feedback). Fixed in two parts: turn the
+// match into a real <a> (same plain-<a> convention as the rest of the
+// site's internal nav, see Navbar.js's hardNavigate note -- a relative path
+// like /proyectos#mapfre already resolves against whatever domain the page
+// is served from, so no absolute/production URL is needed for it to work),
+// and show the project's own tagline as the link text instead of the raw
+// path/URL, same taglines already used as the Proyectos page's pill labels
+// and the Home cards' labels -- do not let this list drift from
+// PROJECT_SLUGS/PROJECT_LABELS in ProyectosDesktop.js/ProyectosMobile.js,
+// same order, same strings.
+const PROJECT_LINK_TEXT = {
+  mapfre: 'Driving 35% YoY growth',
+  'ai-cash-flow-predictor': 'AI Cash Flow Predictor',
+  pulso: 'Unlocking Health Access',
+  axa: 'Scaling enterprise sales',
+  victorai: 'VictorAI',
+  'onu-pnud': 'Inclusive finance architecture',
+};
 function linkifyMessage(text) {
   if (typeof text !== 'string') return text;
   const re = /(https?:\/\/[^\s)]+|\/proyectos#[\w-]+)/g;
@@ -24,13 +38,15 @@ function linkifyMessage(text) {
   while ((match = re.exec(text)) !== null) {
     if (match.index > lastIndex) nodes.push(text.slice(lastIndex, match.index));
     const href = match[0];
+    const slugMatch = href.match(/#([\w-]+)$/);
+    const linkText = (slugMatch && PROJECT_LINK_TEXT[slugMatch[1]]) || href;
     nodes.push(
       <a
         key={'lnk' + key++}
         href={href}
         style={{ color: '#0066FF', textDecoration: 'underline', wordBreak: 'break-word' }}
       >
-        {href}
+        {linkText}
       </a>
     );
     lastIndex = match.index + match[0].length;

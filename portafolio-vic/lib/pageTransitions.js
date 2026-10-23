@@ -122,14 +122,20 @@ export function attachNavTransition() {
     st.busy = true;
     try {
       window.sessionStorage.setItem(FLAG_KEY, JSON.stringify({ path: route, t: Date.now() }));
-      // Proyectos already has its own richer per-element entrance (the
-      // `arrive` CSS hooks in proyectos.css), currently only triggered by
-      // the home card-open flow via cardTransition.js's markArrival. Set
-      // that same flag here too so navbar navigation into Proyectos gets
-      // that existing flourish as well, instead of a second, plainer
-      // whole-page fade competing with it -- this page's own enter effect
-      // only plays the blue line (see ProyectosDesktop.js/ProyectosMobile.js).
-      if (route === '/proyectos') window.sessionStorage.setItem('xt', String(Date.now()));
+      // NOTE: this used to also set the 'xt' flag for route === '/proyectos',
+      // reusing Proyectos' card-open "arrive" choreography (the CSS hooks in
+      // proyectos.css) for plain navbar navigation too. That choreography
+      // assumes the is-current card/cover is already visually in place from
+      // cardTransition.js's zoom overlay (see markArrival there) -- without
+      // that overlay, it reads as a glitch instead of a flourish: the big
+      // is-current card box (desktop) or the full-bleed color cover
+      // (mobile) pops in with no originating element to explain it, while
+      // unrelated chrome staggers in on its own timing. 'xt' is now set only
+      // by markArrival() on the actual card-click path; navbar navigation
+      // into Proyectos gets the same generic whole-page fade as every other
+      // route (consumeEnterFlag()/playEnterContentFade(), wired in
+      // ProyectosDesktop.js/ProyectosMobile.js the same way About already
+      // does it).
     } catch (err) {
       /* ignore */
     }

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { consumeEnterFlag, playEnterContentFade } from '@/lib/pageTransitions';
 import { VictorAIChatProvider, useChatContext } from '@/components/chat/ChatContext';
 import ChatPanel from '@/components/chat/ChatPanel';
 import Navbar from '@/components/nav/Navbar';
@@ -705,6 +706,7 @@ function ProyectosDesktopInner() {
   const coverRef = useRef(null);
   const bcRef = useRef(null);
   const arriveRef = useRef(null);
+  const pendingNavEnterRef = useRef(null);
 
   // Arriving from the landing through the card transition. Computed once,
   // as early as possible on the client, so the 'arrive' class can go on
@@ -721,6 +723,16 @@ function ProyectosDesktopInner() {
     const isArrive = !!xt && Date.now() - parseInt(xt, 10) < 8000;
     arriveRef.current = isArrive;
     if (isArrive) document.documentElement.classList.add('arrive');
+  }
+
+  // Arriving from plain navbar navigation (not a card click): same generic
+  // whole-page fade every other route uses (see About). Mutually exclusive
+  // with arriveRef above in practice -- the card-click path preventDefaults
+  // before attachNavTransition's listener ever sets this flag -- but both
+  // are safe to compute unconditionally since each just reads its own,
+  // independent sessionStorage key.
+  if (pendingNavEnterRef.current === null) {
+    pendingNavEnterRef.current = typeof window !== 'undefined' && consumeEnterFlag();
   }
 
   // Auto-play the before state briefly, then settle on after (where the
@@ -835,6 +847,18 @@ function ProyectosDesktopInner() {
       clearTimeout(arriveFailsafeTRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Cross-page nav transition from a plain navbar click (see About's
+  // identical effect): the .is-pending-enter class on [data-page] (set via
+  // pendingNavEnterRef above, computed before first paint) keeps the page
+  // invisible until this removes it in the same synchronous call that
+  // starts the fade, so there's no flash of fully-visible content first.
+  useEffect(() => {
+    if (!pendingNavEnterRef.current) return;
+    const page = document.querySelector('[data-page]');
+    if (page) page.classList.remove('is-pending-enter');
+    playEnterContentFade();
   }, []);
 
   // Scales the fixed 1440x888 design (.x-stage) to fit whatever real
@@ -1323,7 +1347,7 @@ function ProyectosDesktopInner() {
           variant actually renders -- see proyectos-desktop-scope /
           proyectos-mobile-scope in the matching .css files. */}
       <div className="proyectos-desktop-scope">
-      <main data-page className="page proyectos-desktop">
+      <main data-page className={'page proyectos-desktop' + (pendingNavEnterRef.current ? ' is-pending-enter' : '')}>
         <div className="stage-wrap">
           <div className="x-stage">
             <section className="projects-view" id="projects">

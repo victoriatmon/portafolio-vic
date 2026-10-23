@@ -1,9 +1,11 @@
 'use client';
 
 // Ported from MainMobile.dc.html. See HomeDesktop.js's file header for the
-// two large, deliberate simplifications that apply here too: the six
-// illustrated project cards -> a flat gradient `.card-art` panel, and the
-// cross-page zoom transition (_xOpen) -> a plain <Link> to /proyectos.
+// illustrated-cards simplification, which applies here too (flat gradient
+// `.card-art` panel). The cross-page zoom transition (_xOpen) is re-ported
+// though, same as desktop: see handleCardOpen below + lib/cardTransition.js
+// (mobile's overlay just grows to fill the viewport instead of landing on
+// a centered card, matching MainMobile.dc.html's own MOBILE=true branch).
 //
 // Also specific to the old mobile build: its hamburger "menu-sheet" nav
 // (which folded Home/Projects/About together with the LinkedIn/Email/
@@ -32,6 +34,7 @@ import ChatPanel from '@/components/chat/ChatPanel';
 import Navbar from '@/components/nav/Navbar';
 import Footer from '@/components/layout/Footer';
 import { TOPICS, STARTERS } from '@/content/chatTopics';
+import { playCardOpenTransition, prefersReducedMotion, markArrival, hardNavigate } from '@/lib/cardTransition';
 import './home-mobile.css';
 
 const LABELS = [
@@ -283,6 +286,24 @@ export default function HomeMobile() {
   const cards = buildCards(pos);
   const ticksStyle = { transform: `rotate(${(-pos * STEP).toFixed(3)}deg)` };
 
+  // Ported from MainMobile.dc.html's _xOpen/_xGoTo -- see HomeDesktop.js's
+  // matching handleCardOpen and lib/cardTransition.js. The existing tap-
+  // vs-drag/hold guard (onCarClick, registered with capture above) already
+  // stops this from firing after a drag or a long-press release.
+  function handleCardOpen(e, card) {
+    if (prefersReducedMotion()) return; // plain Link navigation, no overlay, no arrive flag
+    e.preventDefault();
+    const slot = e.currentTarget.closest('.card-slot');
+    if (!slot) {
+      hardNavigate(card.href);
+      return;
+    }
+    playCardOpenTransition({ slot, gradient: card.gradient, mobile: true }).then(() => {
+      markArrival();
+      hardNavigate(card.href);
+    });
+  }
+
   return (
     <VictorAIChatProvider topics={TOPICS} starters={STARTERS}>
       <Navbar current="home" variant="mobile" />
@@ -309,11 +330,17 @@ export default function HomeMobile() {
                     href={card.href}
                     draggable="false"
                     aria-label={`Open project: ${card.label}`}
+                    onClick={(e) => handleCardOpen(e, card)}
                   >
                     <div className="card-art" style={{ background: card.gradient }} aria-hidden="true" />
                     <span className="card-tag">{card.label}</span>
                   </Link>
-                  <Link className="btn-primary btn-discover" href={card.href} draggable="false">
+                  <Link
+                    className="btn-primary btn-discover"
+                    href={card.href}
+                    draggable="false"
+                    onClick={(e) => handleCardOpen(e, card)}
+                  >
                     Discover
                   </Link>
                 </div>

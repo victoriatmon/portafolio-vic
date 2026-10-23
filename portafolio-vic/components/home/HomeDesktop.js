@@ -21,9 +21,12 @@
 //    full-viewport overlay and animated it into place on Projects.dc.html,
 //    synchronized across the desktop/mobile duplicate tabs of the same
 //    logical page via BroadcastChannel + sessionStorage flags -- all
-//    machinery for the old multi static-HTML-file architecture. In
-//    Next.js, card clicks are now a plain <Link> to /proyectos#<index>,
-//    relying on normal App Router navigation instead.
+//    machinery for the old multi static-HTML-file architecture. Re-ported
+//    (see handleCardOpen below + lib/cardTransition.js) as a plain
+//    DOM/WAAPI helper, dropping only the BroadcastChannel sync (no more
+//    duplicate desktop/mobile tabs to keep in step) and the SVG id-dodge
+//    (these cards have no inline SVG ids to collide). It still ends with a
+//    real top-level navigation, same as the original's hidden <a>+.click().
 //
 // Preserved: the flat-arc carousel's drag/flick/wheel physics and its
 // scale-to-fit viewport behavior (_fitInit/_fitApply, desktop only, capped
@@ -44,6 +47,7 @@ import Navbar from '@/components/nav/Navbar';
 import Footer from '@/components/layout/Footer';
 import CursorDot from '@/components/layout/CursorDot';
 import { TOPICS, STARTERS } from '@/content/chatTopics';
+import { playCardOpenTransition, prefersReducedMotion, markArrival, hardNavigate } from '@/lib/cardTransition';
 import './home.css';
 
 const LABELS = [
@@ -358,6 +362,26 @@ export default function HomeDesktop() {
   const cards = buildCards(pos);
   const ticksStyle = { transform: `rotate(${(-pos * STEP).toFixed(3)}deg)` };
 
+  // Ported from Main.dc.html's _xOpen/_xGoTo (see file header note #2 and
+  // lib/cardTransition.js). Shared by the card-face and Discover links --
+  // the original's onOpen always animated the slot's .card-face regardless
+  // of which of the two triggered it. The existing drag-suppression
+  // (onCarClick, registered with capture above) already stops this from
+  // firing right after a drag/flick release.
+  function handleCardOpen(e, card) {
+    if (prefersReducedMotion()) return; // plain Link navigation, no overlay, no arrive flag
+    e.preventDefault();
+    const slot = e.currentTarget.closest('.card-slot');
+    if (!slot) {
+      hardNavigate(card.href);
+      return;
+    }
+    playCardOpenTransition({ slot, gradient: card.gradient, mobile: false }).then(() => {
+      markArrival();
+      hardNavigate(card.href);
+    });
+  }
+
   return (
     <VictorAIChatProvider topics={TOPICS} starters={STARTERS}>
       <Navbar current="home" />
@@ -394,11 +418,17 @@ export default function HomeDesktop() {
                         href={card.href}
                         draggable="false"
                         aria-label={`Open project: ${card.label}`}
+                        onClick={(e) => handleCardOpen(e, card)}
                       >
                         <div className="card-art" style={{ background: card.gradient }} aria-hidden="true" />
                         <span className="card-tag">{card.label}</span>
                       </Link>
-                      <Link className="btn-primary btn-discover" href={card.href} draggable="false">
+                      <Link
+                        className="btn-primary btn-discover"
+                        href={card.href}
+                        draggable="false"
+                        onClick={(e) => handleCardOpen(e, card)}
+                      >
                         Discover
                       </Link>
                     </div>

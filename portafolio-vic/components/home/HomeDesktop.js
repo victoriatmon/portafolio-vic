@@ -58,15 +58,15 @@ import MapfreCard from './cards/MapfreCard';
 import PhantomCard from './cards/PhantomCard';
 import PulsoCard from './cards/PulsoCard';
 import AXACard from './cards/AXACard';
+import VictorCard from './cards/VictorCard';
 import './home.css';
 
 // Per-card bespoke illustration components, indexed to match LABELS below.
-// Indices 0 (Mapfre), 1 (Phantom), 2 (Pulso) and 3 (AXA) are ported so
-// far; the rest fall back to the flat gradient `.card-art` panel until
-// their own cards are ported in follow-up commits (see HomeDesktop.js's
-// top-of-file notes for the full list and why this is being done
+// Indices 0 (Mapfre), 1 (Phantom), 2 (Pulso), 3 (AXA) and 4 (victorai) are
+// ported so far; only UNDP is left on the flat gradient `.card-art` panel
+// (see HomeDesktop.js's top-of-file notes for why this is being done
 // incrementally).
-const CARD_ART = [MapfreCard, PhantomCard, PulsoCard, AXACard, null, null];
+const CARD_ART = [MapfreCard, PhantomCard, PulsoCard, AXACard, VictorCard, null];
 
 const LABELS = [
   'Driving 35% YoY growth',

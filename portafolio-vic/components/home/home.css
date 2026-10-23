@@ -176,6 +176,12 @@
   .home-desktop-scope .card-face:focus-visible .pu-circles {
     animation-play-state: paused !important;
   }
+  /* victorai card art: stop the "boiling" stars outright (matches the
+     artifact's own reduced-motion rule for .vs-star). */
+  .home-desktop-scope .card-face:hover .vs-star,
+  .home-desktop-scope .card-face:focus-visible .vs-star {
+    animation-play-state: paused !important;
+  }
 }
 
 /* ===== Mapfre card art (ported from the artifact, card index 0 --
@@ -270,3 +276,26 @@
   inset: 0;
   z-index: 0;
 }
+
+/* ===== victorai card art (ported from the artifact, card index 4 --
+   "victorai") =====
+   Wrapper around the raw SVG from VictorCard.js, positioned like the
+   `.card-art` fallback it replaces for this card. Three stars "boil" in
+   stop-motion (step-end keyframes, slightly different durations/filters
+   per star) while :hover/:focus-visible -- selectors copied verbatim from
+   the artifact, rescoped under .home-desktop-scope to match this file's
+   convention. */
+.home-desktop-scope .vs-card-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+.home-desktop-scope .vs-card { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+.home-desktop-scope .vs-star { transform-box: fill-box; transform-origin: center; }
+@keyframes vs-s1-a { 0.0% { rotate: 0deg; scale: 1; translate: 0px 0px; filter: none; } 8.333% { rotate: -4.0deg; scale: 1.037; translate: 0.4px -0.1px; filter: url(#vsBoil1); } 16.667% { rotate: 0.1deg; scale: 0.973; translate: -1.6px -0.4px; filter: url(#vsBoil2); } 25.0% { rotate: -3.2deg; scale: 0.946; translate: 1.6px 0.8px; filter: url(#vsBoil3); } 33.333% { rotate: 4.5deg; scale: 1.026; translate: -1.5px -0.5px; filter: url(#vsBoil1); } 41.667% { rotate: -0.0deg; scale: 0.956; translate: 1.4px -0.4px; filter: url(#vsBoil2); } 50.0% { rotate: -4.1deg; scale: 1.054; translate: -1.2px 1.4px; filter: url(#vsBoil3); } 58.333% { rotate: -0.6deg; scale: 1.017; translate: -0.5px -0.0px; filter: url(#vsBoil1); } 66.667% { rotate: -3.8deg; scale: 0.945; translate: 1.2px -0.8px; filter: url(#vsBoil2); } 75.0% { rotate: 3.4deg; scale: 0.969; translate: 1.5px 1.3px; filter: url(#vsBoil3); } 83.333% { rotate: -4.5deg; scale: 1.007; translate: 1.0px -1.0px; filter: url(#vsBoil1); } 91.667% { rotate: 5.1deg; scale: 1.064; translate: -0.3px -0.4px; filter: url(#vsBoil2); } }
+.home-desktop-scope .vs-s1 { animation: vs-s1-a 1500ms step-end infinite; animation-play-state: paused; }
+@keyframes vs-s2-a { 0.0% { rotate: 0deg; scale: 1; translate: 0px 0px; filter: none; } 10.0% { rotate: -5.7deg; scale: 0.953; translate: 0.7px 1.6px; filter: url(#vsBoil1); } 20.0% { rotate: -0.0deg; scale: 1.009; translate: 0.2px 0.8px; filter: url(#vsBoil2); } 30.0% { rotate: -3.3deg; scale: 1.025; translate: 0.2px 0.4px; filter: url(#vsBoil3); } 40.0% { rotate: 2.2deg; scale: 1.035; translate: 1.3px 1.5px; filter: url(#vsBoil1); } 50.0% { rotate: -1.1deg; scale: 1.078; translate: 1.5px 0.3px; filter: url(#vsBoil2); } 60.0% { rotate: 4.6deg; scale: 1.009; translate: -0.4px -0.8px; filter: url(#vsBoil3); } 70.0% { rotate: -2.9deg; scale: 0.981; translate: -0.3px -1.1px; filter: url(#vsBoil1); } 80.0% { rotate: 3.0deg; scale: 1.007; translate: -0.8px 1.5px; filter: url(#vsBoil2); } 90.0% { rotate: 0.3deg; scale: 1.042; translate: -1.5px -0.9px; filter: url(#vsBoil3); } }
+.home-desktop-scope .vs-s2 { animation: vs-s2-a 1250ms step-end infinite; animation-play-state: paused; }
+@keyframes vs-s3-a { 0.0% { rotate: 0deg; scale: 1; translate: 0px 0px; filter: none; } 7.143% { rotate: 4.1deg; scale: 1.051; translate: 1.2px 0.3px; filter: url(#vsBoil1); } 14.286% { rotate: -0.9deg; scale: 1.021; translate: 1.1px -0.6px; filter: url(#vsBoil2); } 21.429% { rotate: 2.2deg; scale: 1.074; translate: -1.5px 0.3px; filter: url(#vsBoil3); } 28.571% { rotate: -1.1deg; scale: 1.074; translate: 1.3px -1.2px; filter: url(#vsBoil1); } 35.714% { rotate: -4.9deg; scale: 0.953; translate: -1.5px -0.2px; filter: url(#vsBoil2); } 42.857% { rotate: 0.5deg; scale: 0.985; translate: -0.0px -0.9px; filter: url(#vsBoil3); } 50.0% { rotate: -4.0deg; scale: 0.966; translate: -0.4px 0.7px; filter: url(#vsBoil1); } 57.143% { rotate: 0.6deg; scale: 0.946; translate: 0.7px 1.2px; filter: url(#vsBoil2); } 64.286% { rotate: 3.3deg; scale: 1.051; translate: -1.6px -0.1px; filter: url(#vsBoil3); } 71.429% { rotate: -5.2deg; scale: 1.047; translate: -1.0px 0.7px; filter: url(#vsBoil1); } 78.571% { rotate: -1.3deg; scale: 0.983; translate: 1.3px -0.7px; filter: url(#vsBoil2); } 85.714% { rotate: 1.2deg; scale: 1.011; translate: 0.8px 1.5px; filter: url(#vsBoil3); } 92.857% { rotate: -2.3deg; scale: 1.038; translate: 0.1px 0.2px; filter: url(#vsBoil1); } }
+.home-desktop-scope .vs-s3 { animation: vs-s3-a 1750ms step-end infinite; animation-play-state: paused; }
+.home-desktop-scope .card-face:hover .vs-star, .home-desktop-scope .card-face:focus-visible .vs-star { animation-play-state: running; }

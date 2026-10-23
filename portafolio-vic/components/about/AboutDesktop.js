@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { VictorAIChatProvider } from '@/components/chat/ChatContext';
 import ChatPanel from '@/components/chat/ChatPanel';
 import Navbar from '@/components/nav/Navbar';
@@ -63,13 +64,13 @@ export default function AboutDesktop() {
   const swapT1 = useRef(null);
   const swapT2 = useRef(null);
   const switchModeFitT = useRef(null);
-  const dragGhostT = useRef(null);
   const lastDropT = useRef(null);
   const confettiStartT = useRef(null);
   const kbRefocusT = useRef(null);
   const confettiRaf = useRef(null);
   const dragInfoRef = useRef(null);
   const fitApplyRef = useRef(null);
+  const scopeRef = useRef(null);
 
   // ---- Desktop fit-scaling: scales the fixed 1440-wide .page to the real
   // window width (capped at 1.25x), with a min-height compensation so the
@@ -132,7 +133,6 @@ export default function AboutDesktop() {
       clearTimeout(swapT1.current);
       clearTimeout(swapT2.current);
       clearTimeout(switchModeFitT.current);
-      clearTimeout(dragGhostT.current);
       clearTimeout(lastDropT.current);
       clearTimeout(confettiStartT.current);
       clearTimeout(kbRefocusT.current);
@@ -212,15 +212,6 @@ export default function AboutDesktop() {
     // rather than guessing a drop target from stale coordinates.
     document.addEventListener('pointerleave', handleDragCancel);
     window.addEventListener('blur', handleDragCancel);
-    // The ghost card is rendered inside the scaled [data-page] -- escape it
-    // to <body> once it mounts so it tracks the real cursor, not the
-    // scaled box. It's plain output (no handlers, pointer-events:none), so
-    // moving it carries none of the risk that keeps the chat panel/navbar
-    // as markup-level siblings of [data-page] instead.
-    dragGhostT.current = setTimeout(() => {
-      const ghost = document.querySelector('.task-card.is-floating');
-      if (ghost && ghost.parentNode !== document.body) document.body.appendChild(ghost);
-    }, 40);
   }
 
   const removeDragListeners = useCallback(() => {
@@ -323,10 +314,6 @@ export default function AboutDesktop() {
   function startConfetti() {
     const cv = document.querySelector('.confetti-canvas');
     if (!cv) return;
-    // Same escape as the ghost drag-card above: .confetti-canvas is nested
-    // inside the scaled [data-page], so move it to <body> to size/clear it
-    // in real viewport pixels.
-    if (cv.parentNode !== document.body) document.body.appendChild(cv);
     stopConfetti();
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const W = window.innerWidth;
@@ -472,7 +459,7 @@ export default function AboutDesktop() {
           bundles into this route's client CSS regardless of which variant
           actually renders -- see about-desktop-scope / about-mobile-scope
           in the matching .css files. */}
-      <div className="about-desktop-scope">
+      <div className="about-desktop-scope" ref={scopeRef}>
       <main data-page className={pageClass}>
         <section className="about-hero">
           <div className="about-hero-left">
@@ -673,14 +660,34 @@ export default function AboutDesktop() {
                       </div>
                     ))}
                   </div>
-                  {allDone && <canvas className="confetti-canvas" aria-hidden="true" />}
+                  {/* The ghost drag-card and the confetti canvas both need
+                      position:fixed in real viewport pixels, which means
+                      escaping the scaled [data-page] box (see the fit-scale
+                      effect above). They used to be rendered here and then
+                      moved to document.body by hand with appendChild -- but
+                      document.body sits outside .about-desktop-scope, so
+                      that both stripped their CSS (scoped under that class)
+                      and, worse, crashed React: once the card/canvas
+                      condition went false again, React tried to remove the
+                      node from the parent it originally mounted it under,
+                      not the body it had been manually moved to, throwing
+                      "Failed to execute 'removeChild' on 'Node'" and taking
+                      down the whole page. A portal into .about-desktop-scope
+                      itself (a sibling of [data-page], so still unscaled)
+                      fixes both: React owns the move, and the scoped CSS
+                      still applies. */}
+                  {allDone && scopeRef.current && createPortal(
+                    <canvas className="confetti-canvas" aria-hidden="true" />,
+                    scopeRef.current
+                  )}
                   <div className="sr-only" aria-live="polite">{moveAnnouncement}</div>
                 </div>
-                {dragged && (
+                {dragged && scopeRef.current && createPortal(
                   <div className="task-card is-floating" style={{ left: drag.x, top: drag.y, width: drag.w }}>
                     <div className="task-title">{dragged.title}</div>
                     <span className={`task-pill is-${dragged.priority.toLowerCase()}`}>{dragged.priority}</span>
-                  </div>
+                  </div>,
+                  scopeRef.current
                 )}
                 <div className="board-progress" aria-label="Progress">
                   <div className="board-progress-track">

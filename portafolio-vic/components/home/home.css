@@ -164,6 +164,12 @@
   .home-desktop-scope .mp-tile, .home-desktop-scope .mp-word {
     transition: none !important;
   }
+  /* Phantom card art: stop the spin/pulse animation outright (matches the
+     artifact's own reduced-motion rule for .ph-star). */
+  .home-desktop-scope .card-face:hover .ph-star,
+  .home-desktop-scope .card-face:focus-visible .ph-star {
+    animation-play-state: paused !important;
+  }
 }
 
 /* ===== Mapfre card art (ported from the artifact, card index 0 --
@@ -209,3 +215,21 @@
 .home-desktop-scope .mp-w4{transform:translateX(-320px);opacity:0;transition-delay:0.18s}.home-desktop-scope .card-face:hover .mp-w4,.home-desktop-scope .card-face:focus-visible .mp-w4{transform:none;opacity:1}
 .home-desktop-scope .mp-w5{transform:translateX(-320px);opacity:0;transition-delay:0.24s}.home-desktop-scope .card-face:hover .mp-w5,.home-desktop-scope .card-face:focus-visible .mp-w5{transform:none;opacity:1}
 .home-desktop-scope .mp-w6{transform:translateX(320px);opacity:0;transition-delay:0.3s}.home-desktop-scope .card-face:hover .mp-w6,.home-desktop-scope .card-face:focus-visible .mp-w6{transform:none;opacity:1}
+
+/* ===== Phantom card art (ported from the artifact, card index 1 --
+   "AI Cash Flow Predictor") =====
+   Wrapper around the raw SVG from PhantomCard.js, positioned like the
+   `.card-art` fallback it replaces for this card. The star's spin + pulse
+   are paused CSS animations, kept running only on :hover/:focus-visible --
+   selectors copied verbatim from the artifact, rescoped under
+   .home-desktop-scope to match this file's convention. */
+.home-desktop-scope .ph-card-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+.home-desktop-scope .ph-card { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+.home-desktop-scope .ph-star { transform-box: fill-box; transform-origin: center; animation: ph-spin 14s linear infinite, ph-pulse 5s ease-in-out infinite; animation-play-state: paused; }
+.home-desktop-scope .card-face:hover .ph-star, .home-desktop-scope .card-face:focus-visible .ph-star { animation-play-state: running; }
+@keyframes ph-spin { from { rotate: 0deg; } to { rotate: 360deg; } }
+@keyframes ph-pulse { 0%, 100% { scale: 1; } 50% { scale: 1.35; } }

@@ -53,7 +53,6 @@ import Footer from '@/components/layout/Footer';
 import CursorDot from '@/components/layout/CursorDot';
 import { TOPICS, STARTERS } from '@/content/chatTopics';
 import { playCardOpenTransition, prefersReducedMotion, markArrival, hardNavigate } from '@/lib/cardTransition';
-import { consumeEnterFlag, playEnterLine } from '@/lib/pageTransitions';
 import MapfreCard from './cards/MapfreCard';
 import PhantomCard from './cards/PhantomCard';
 import PulsoCard from './cards/PulsoCard';
@@ -127,19 +126,6 @@ export default function HomeDesktop() {
   const wrapRef = useRef(null);
   const stageRef = useRef(null);
   const carRef = useRef(null);
-  const pendingNavLineRef = useRef(null);
-  if (pendingNavLineRef.current === null) {
-    pendingNavLineRef.current = typeof window !== 'undefined' && consumeEnterFlag();
-  }
-
-  // Blue-line sweep under the navbar when this page was reached via
-  // Navbar's attachNavTransition (see lib/pageTransitions.js) -- the
-  // content fade itself is the "entered" reveal just below, which already
-  // plays on every load, not just nav-driven ones.
-  useEffect(() => {
-    if (pendingNavLineRef.current) playEnterLine();
-  }, []);
-
   // Load-time reveal: a simplified stand-in for the original's cross-page
   // XT entrance choreography (see the file header note).
   useEffect(() => {
@@ -459,9 +445,11 @@ export default function HomeDesktop() {
                         {Art ? (
                           <Art />
                         ) : (
-                          <div className="card-art" style={{ background: card.gradient }} aria-hidden="true" />
+                          <>
+                            <div className="card-art" style={{ background: card.gradient }} aria-hidden="true" />
+                            <span className="card-tag">{card.label}</span>
+                          </>
                         )}
-                        <span className="card-tag">{card.label}</span>
                       </Link>
                       <Link
                         className="btn-primary btn-discover"

@@ -160,21 +160,14 @@ export function consumeEnterFlag() {
   return !!(flag && flag.path === window.location.pathname && Date.now() - flag.t < FLAG_MAX_AGE);
 }
 
-// The blue line sweeping away under the navbar -- wired into every page,
-// since this is the one piece that's always worth it regardless of
-// whatever else that page already does to reveal its own content.
-export function playEnterLine() {
-  if (reduced()) return;
-  const ln = makeLine();
-  ln.style.transform = 'scaleX(1)';
-  const la = ln.animate([{ transform: 'scaleX(1)' }, { transform: 'scaleX(0)' }], {
-    duration: 760,
-    delay: 60,
-    easing: EASE_IO,
-    fill: 'both',
-  });
-  la.onfinish = () => ln.remove();
-}
+// There used to be a matching playEnterLine() here -- the line shrinking
+// from full back to empty on the page you land on. Removed: the leave
+// animation above already fills the line to 100% before the real
+// navigation fires, so playing a *second* animation that un-fills it back
+// to 0% on the next page just reads as the transition reversing itself
+// ("se completa y luego se regresa"), not as a continuation of it. The
+// filled line is the whole piece of feedback, same as the artifact's
+// single sweep; nothing plays on arrival anymore.
 
 // The [data-page] fade/drift-in -- only worth wiring on a page that has no
 // reveal of its own (About). Home already fades its hero/carousel in on

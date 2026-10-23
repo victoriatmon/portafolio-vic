@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { consumeEnterFlag, playEnterLine, playEnterContentFade } from '@/lib/pageTransitions';
+import { consumeEnterFlag, playEnterContentFade } from '@/lib/pageTransitions';
 import { VictorAIChatProvider } from '@/components/chat/ChatContext';
 import ChatPanel from '@/components/chat/ChatPanel';
 import Navbar from '@/components/nav/Navbar';
@@ -89,7 +89,6 @@ export default function AboutMobile() {
     if (!pendingNavEnterRef.current) return;
     const page = document.querySelector('[data-page]');
     if (page) page.classList.remove('is-pending-enter');
-    playEnterLine();
     playEnterContentFade();
   }, []);
 

@@ -39,6 +39,16 @@
   padding: 0 20px;
   position: sticky;
   top: 0;
+  /* "cortado del lado derecho" report: this only had `top` set, so it was
+     pinned vertically but stayed in normal horizontal flow -- if the
+     document ever shifts sideways even briefly (iOS rubber-band bounce,
+     or any stray horizontal scroll), the whole bar shifts with it and the
+     right-anchored VictorAI button goes out of view. position:sticky can
+     pin on the inline axis too, independent of the top/bottom stickiness
+     above -- left:0/right:0 keeps this bar's horizontal position locked to
+     the viewport no matter what the document itself does horizontally. */
+  left: 0;
+  right: 0;
   z-index: 35;
   transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   will-change: transform;

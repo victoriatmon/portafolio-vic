@@ -542,7 +542,16 @@ function ProyectosMobileInner() {
     // only calling setBarHidden from the branches that have an actual
     // direction signal, and leaving state alone otherwise instead of
     // resampling a stale value every tick.
-    const onScroll = () => {
+    // rAF-throttled for the same reason as Navbar.js's own scroll-hide
+    // effect: a raw 'scroll' listener can fire several times per frame
+    // during an iOS momentum/fling scroll with non-monotonic in-between
+    // reads (elastic micro-corrections), which was still enough to trip
+    // the +-6px threshold back and forth mid-scroll even after the stale-
+    // closure fix above. Sampling once per frame collapses a same-
+    // direction burst into a single clean read.
+    let raf = null;
+    const sample = () => {
+      raf = null;
       const y = window.scrollY || 0;
       const dy = y - lastYRef.current;
       if (y < 12) {
@@ -555,6 +564,9 @@ function ProyectosMobileInner() {
         setBarHidden(false);
         lastYRef.current = y;
       }
+    };
+    const onScroll = () => {
+      if (raf === null) raf = requestAnimationFrame(sample);
     };
     window.addEventListener('scroll', onScroll, { passive: true });
 
@@ -613,6 +625,7 @@ function ProyectosMobileInner() {
 
     return () => {
       window.removeEventListener('scroll', onScroll);
+      if (raf !== null) cancelAnimationFrame(raf);
       if (pw) {
         pw.removeEventListener('pointerdown', pDown);
         window.removeEventListener('pointermove', pMove);

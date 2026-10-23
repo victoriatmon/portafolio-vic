@@ -51,7 +51,18 @@ export default function Navbar({ current, variant = 'desktop' }) {
   useEffect(() => {
     if (variant !== 'mobile') return;
     lastYRef.current = window.scrollY || 0;
-    const onScroll = () => {
+    // rAF-throttled: a raw 'scroll' listener on iOS can fire many times
+    // within a single frame during a momentum/fling scroll, and the
+    // in-between samples aren't monotonic (elastic micro-corrections,
+    // sub-pixel jitter) -- reading scrollY straight off each event made
+    // the +-6px hysteresis below flip back and forth mid-scroll ("pills
+    // keep appearing while scrolling down" report). Sampling once per
+    // animation frame instead collapses a burst of same-direction events
+    // into one clean read, so the threshold only ever sees real direction
+    // changes.
+    let raf = null;
+    const sample = () => {
+      raf = null;
       const y = window.scrollY || 0;
       const dy = y - lastYRef.current;
       setNavHidden((hide) => {
@@ -62,8 +73,14 @@ export default function Navbar({ current, variant = 'desktop' }) {
       });
       if (Math.abs(dy) > 6 || y < 12) lastYRef.current = y;
     };
+    const onScroll = () => {
+      if (raf === null) raf = requestAnimationFrame(sample);
+    };
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      if (raf !== null) cancelAnimationFrame(raf);
+    };
   }, [variant]);
 
   if (variant === 'mobile') {

@@ -170,6 +170,12 @@
   .home-desktop-scope .card-face:focus-visible .ph-star {
     animation-play-state: paused !important;
   }
+  /* Pulso card art: stop the drifting circles outright (matches the
+     artifact's own reduced-motion rule for .pu-circles). */
+  .home-desktop-scope .card-face:hover .pu-circles,
+  .home-desktop-scope .card-face:focus-visible .pu-circles {
+    animation-play-state: paused !important;
+  }
 }
 
 /* ===== Mapfre card art (ported from the artifact, card index 0 --
@@ -233,3 +239,20 @@
 .home-desktop-scope .card-face:hover .ph-star, .home-desktop-scope .card-face:focus-visible .ph-star { animation-play-state: running; }
 @keyframes ph-spin { from { rotate: 0deg; } to { rotate: 360deg; } }
 @keyframes ph-pulse { 0%, 100% { scale: 1; } 50% { scale: 1.35; } }
+
+/* ===== Pulso card art (ported from the artifact, card index 2 --
+   "Unlocking Health Access") =====
+   Wrapper around the raw SVG from PulsoCard.js, positioned like the
+   `.card-art` fallback it replaces for this card. Four circles drift
+   down a looping 7s cycle, paused until :hover/:focus-visible --
+   selector copied verbatim from the artifact, rescoped under
+   .home-desktop-scope to match this file's convention. */
+.home-desktop-scope .pu-card-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+.home-desktop-scope .pu-card { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+.home-desktop-scope .pu-circles { animation: pu-slide 7s linear infinite; animation-play-state: paused; }
+.home-desktop-scope .card-face:hover .pu-circles, .home-desktop-scope .card-face:focus-visible .pu-circles { animation-play-state: running; }
+@keyframes pu-slide { from { transform: translateY(0); } to { transform: translateY(247px); } }

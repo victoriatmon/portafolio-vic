@@ -851,6 +851,16 @@ function ProyectosDesktopInner() {
       const navH = navbar ? navbar.offsetHeight : 0;
       const footH = footerEl ? footerEl.offsetHeight : 0;
       const availH = window.innerHeight - navH - footH;
+      // Set .stage-wrap's own height directly from the room actually left
+      // between navbar and footer (identical fix to HomeDesktop.js's
+      // fitApply). .page no longer forces height:100vh (see proyectos.css),
+      // so without this .stage-wrap would collapse to 0 (flex:1 1 auto with
+      // nothing sizing its flex container) -- and leaving it un-set here
+      // was the root cause of both the whole-page scroll bug (the browser
+      // picking some other intrinsic height for .page) and the too-wide
+      // ghost-card gap (scale computed from the right availH, but applied
+      // to a stage-wrap that wasn't actually that tall).
+      wrap.style.height = Math.max(0, availH) + 'px';
       const availW = wrap.clientWidth || window.innerWidth;
       const scale = Math.min(availH / dh, 1.25);
       const stageW = Math.max(1440, availW / scale);

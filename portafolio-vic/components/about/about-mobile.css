@@ -636,7 +636,11 @@ html::-webkit-scrollbar-thumb { background: #2A2A2A; border-radius: 999px; }
 /* ===== ABOUT (mobile-first) overrides -- same selectors as above, later
    in this file so they win the cascade without needing a media query. ===== */
 .about-mobile-scope .page {
-  width: 390px;
+  /* Fixed: was a literal "width: 390px" (the design canvas width), which
+     overflows any real viewport narrower than 390px and produces a slight
+     page-wide horizontal scroll -- same bug and same fix as proyectos-mobile.css. */
+  width: 100%;
+  max-width: 100vw;
   min-height: 100vh;
   height: auto;
   overflow-y: visible;

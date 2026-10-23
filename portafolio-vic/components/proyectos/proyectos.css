@@ -703,16 +703,25 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
      why .stage-wrap below (a true descendant, so IT did match) collapsed
      to 0 height: its "flex: 1 1 auto" had no flex container to grow
      inside. "&" makes this a same-element compound selector instead. */
-  /* Fills whatever real viewport this ends up in (a plain browser tab, or the
-     smaller area left over once claude.ai's own chrome has taken its slice).
-     Stacked as 3 flex rows: navbar and footer sit full-bleed at their native
-     size (edge to edge, not scaled), and .stage-wrap takes whatever vertical
-     space is left between them for the scaled project view -- see _fitInit
-     for how .x-stage also fills .stage-wrap's width on wide screens, instead
-     of staying boxed at the fixed 1440px design width (same as Main.dc.html). */
-  width: 100vw;
-  height: 100vh;
-  height: 100dvh;
+  /* In the original artifact, navbar/footer were flex children INSIDE this
+     same 100vh .page column, so "height: 100vh" + flex:none navbar/footer +
+     flex:1 stage-wrap always summed to exactly 100vh. The Next.js port made
+     Navbar/Footer true DOM siblings of .page instead (shared layout
+     contract -- see the comment in HomeDesktop.js's fitApply effect), so a
+     literal "height: 100vh" here double-counts: navbar (64px) + this page
+     (100vh) + footer (72px) added up to 100vh+136px, overflowing the real
+     viewport and forcing the whole document to scroll (bug: scroll should
+     only happen inside the open project card's .proj-card-scroll). Home
+     solved this correctly by dropping the forced height here entirely and
+     having its fitApply effect set .stage-wrap's height directly from
+     (window.innerHeight - navH - footH); this page now does the same (see
+     the matching apply() effect in ProyectosDesktop.js), so .page's own
+     height is just whatever .stage-wrap ends up needing -- never more than
+     the room actually left between navbar and footer. This also fixes the
+     ghost (prev/next) card gap being too wide: that was this same height
+     mismatch feeding a too-small `scale` into _fitApply, which inflated
+     --peek-extra and pushed the side cards out further than the artifact. */
+  width: 100%;
   display: flex;
   flex-direction: column;
   position: relative;

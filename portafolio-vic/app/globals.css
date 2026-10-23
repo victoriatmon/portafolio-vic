@@ -6,6 +6,17 @@ body {
   margin: 0;
   font-family: 'Manrope', sans-serif;
   background: #0A0A0A;
+  /* Safety net against any stray element wider than the viewport (mobile
+     especially -- see the proyectos-mobile/about-mobile .page width fixes).
+     Deliberately on body rather than a page wrapper div: when html doesn't
+     set its own overflow, the UA propagates body's overflow to the
+     viewport itself instead of making body a scrolling element in the DOM
+     tree, so this clips stray horizontal overflow without turning body
+     into a "nearest scrolling ancestor" that would hijack any
+     position:sticky descendant's containing block (which is exactly what
+     broke .proj-bar's sticky offset on mobile Projects -- see the comment
+     in proyectos-mobile.css). */
+  overflow-x: hidden;
 }
 * {
   box-sizing: border-box;

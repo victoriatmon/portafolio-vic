@@ -660,16 +660,29 @@ html.arrive .page { animation: xin 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
      .proyectos-mobile are both classes on the same <main> element. */
   /* Mobile design width + natural scroll height (was duplicated further down
      with the real mobile numbers winning by cascade order -- merged into one
-     rule here so there's only one place to edit). */
-  width: 390px;
+     rule here so there's only one place to edit).
+     Fixed: this used to be a literal "width: 390px" (the design canvas's own
+     width), which overflows any real viewport narrower than 390 (e.g. the
+     375px/414px phones most people actually have), producing a slight
+     page-wide horizontal scroll. Fluid width matches the fix already applied
+     to Home (see home-mobile.css's .page) -- nothing here is positioned
+     assuming an exact 390px box, so this is a safe change.
+     Also dropped "overflow-x: hidden" + "overflow-y: visible" entirely:
+     pairing a non-visible overflow-x with a visible overflow-y makes the
+     browser treat *this* element (not the real viewport) as the nearest
+     scrolling ancestor for any sticky-positioned descendant -- which is
+     exactly what made .proj-bar's "position: sticky; top: 56px" stick 56px
+     below *this* element's own top instead of 56px below the navbar,
+     doubling the gap above the project pills. Horizontal clipping now lives
+     on body (see globals.css) instead, which doesn't have this side effect. */
+  width: 100%;
+  max-width: 100vw;
   min-height: 100vh;
   height: auto;
   display: flex;
   flex-direction: column;
   background: #0A0A0A;
   color: #F5F5F5;
-  overflow-x: hidden;
-  overflow-y: visible;
 }
 /* Projects — expanded carousel */
 .projects-view {

@@ -151,8 +151,18 @@ export default function AXACard() {
       } else {
         st.mode = 'idle';
       }
+      if (typeof window !== 'undefined') {
+        window.__axaFrameLog = window.__axaFrameLog || [];
+        if (window.__axaFrameLog.length < 20) {
+          window.__axaFrameLog.push({ mode: st.mode, active, pos0: lanes[0].pos, translate0: lanes[0].el.style.translate });
+        }
+      }
     };
     const kick = () => {
+      if (typeof window !== 'undefined') {
+        window.__axaKickLog = window.__axaKickLog || [];
+        window.__axaKickLog.push({ rafWasTruthy: !!st.raf, rafValue: st.raf });
+      }
       if (st.raf) return;
       st.last = performance.now();
       st.raf = requestAnimationFrame(frame);

@@ -532,15 +532,29 @@ function ProyectosMobileInner() {
     }
 
     lastYRef.current = window.scrollY || 0;
+    // Fixed: this used to read `barHidden` from the outer scope as the
+    // fallback ("else stays as it was") -- but this effect only runs once
+    // (mount-only deps below), so that read is a permanently stale closure
+    // over whatever barHidden was AT MOUNT, not its current value. Every
+    // scroll tick whose delta didn't cross the +-6px threshold fell through
+    // to that stale value and snapped the bar back to it, which is exactly
+    // the hide/show glitching reported during a continuous scroll. Fixed by
+    // only calling setBarHidden from the branches that have an actual
+    // direction signal, and leaving state alone otherwise instead of
+    // resampling a stale value every tick.
     const onScroll = () => {
       const y = window.scrollY || 0;
       const dy = y - lastYRef.current;
-      let hide = barHidden;
-      if (y < 12) hide = false;
-      else if (dy > 6) hide = true;
-      else if (dy < -6) hide = false;
-      if (Math.abs(dy) > 6 || y < 12) lastYRef.current = y;
-      setBarHidden((prev) => (hide !== prev ? hide : prev));
+      if (y < 12) {
+        setBarHidden(false);
+        lastYRef.current = y;
+      } else if (dy > 6) {
+        setBarHidden(true);
+        lastYRef.current = y;
+      } else if (dy < -6) {
+        setBarHidden(false);
+        lastYRef.current = y;
+      }
     };
     window.addEventListener('scroll', onScroll, { passive: true });
 

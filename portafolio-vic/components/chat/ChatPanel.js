@@ -4,6 +4,41 @@ import { useEffect, useRef } from 'react';
 import { useChatContext } from './ChatContext';
 import './chat.css';
 
+// VictorAI's replies share project links as plain text -- a bare internal
+// path like "/proyectos#mapfre" or a full URL, per the "puedes darle click
+// aqui: {{link}}" format in the chatbot's tone doc -- but {m.text} below
+// used to render that straight to text, so the person had to copy/paste
+// the path instead of clicking it. This scans a reply for either shape and
+// turns the match into a real <a>, same plain-<a> convention as the rest
+// of the site's internal nav (see Navbar.js's hardNavigate note): a
+// relative path like /proyectos#mapfre already resolves against whatever
+// domain the page is served from, so no absolute/production URL is needed
+// here for it to work.
+function linkifyMessage(text) {
+  if (typeof text !== 'string') return text;
+  const re = /(https?:\/\/[^\s)]+|\/proyectos#[\w-]+)/g;
+  const nodes = [];
+  let lastIndex = 0;
+  let match;
+  let key = 0;
+  while ((match = re.exec(text)) !== null) {
+    if (match.index > lastIndex) nodes.push(text.slice(lastIndex, match.index));
+    const href = match[0];
+    nodes.push(
+      <a
+        key={'lnk' + key++}
+        href={href}
+        style={{ color: '#0066FF', textDecoration: 'underline', wordBreak: 'break-word' }}
+      >
+        {href}
+      </a>
+    );
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < text.length) nodes.push(text.slice(lastIndex));
+  return nodes;
+}
+
 // Renders as a sibling AFTER <nav data-nav> (not inside it) -- see note in
 // ChatContext.js. Keyboard/focus behavior (inert on the rest of the page
 // while open, focus moved to the composer on open, returned to whatever
@@ -194,7 +229,7 @@ export default function ChatPanel() {
                           }
                     }
                   >
-                    {m.text}
+                    {m.role === 'user' ? m.text : linkifyMessage(m.text)}
                   </div>
                 </div>
               ))}

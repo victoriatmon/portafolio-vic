@@ -18,6 +18,20 @@ body {
      in proyectos-mobile.css). */
   overflow-x: hidden;
 }
+html {
+  /* Separate from body's overflow-x:hidden above (which only clips a
+     stray wider-than-viewport element -- real scrollWidth overflow, which
+     testing found none of on Home/About/Proyectos). What's still visible
+     on real phones is iOS Safari's own horizontal rubber-band/overscroll
+     bounce: a sideways pan past the content edge that scrollWidth checks
+     never catch because nothing actually overflows, the browser is just
+     letting the viewport itself pan and snap back. overscroll-behavior
+     doesn't make an element a scrolling ancestor the way overflow does
+     (unlike overflow-x, it's safe on html without the .proj-bar sticky
+     regression documented on body's rule above), so it can suppress that
+     side-to-side bounce without touching position:sticky anywhere. */
+  overscroll-behavior-x: none;
+}
 * {
   box-sizing: border-box;
 }

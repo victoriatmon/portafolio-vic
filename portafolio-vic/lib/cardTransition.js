@@ -14,18 +14,66 @@
 // sessionStorage('xt')-driven "arrive" fade-in has been waiting on: it reads
 // that flag once, on mount, assuming a fresh page load.
 //
-// Simplifications vs the original: our cards are a flat gradient `.card-art`
-// panel (no hand-illustrated inline SVG), so the clone carries no element
-// `id`s and needs none of the original's id-collision dodge; and only the
-// card/Discover click opens this way (the navbar's "PROJECTS" link, which
-// the original also special-cased by first re-centering the carousel, stays
-// a plain nav link here).
+// Simplifications vs the original: only the card/Discover click opens this
+// way (the navbar's "PROJECTS" link, which the original also special-cased
+// by first re-centering the carousel, stays a plain nav link here).
+//
+// One of the cards (Mapfre) DOES carry inline SVG with element `id`s (an
+// alpha mask + clipPaths, e.g. `id="m"`), referenced locally via
+// `mask="url(#m)"`/`clip-path="url(#...)"`. cloneNode(true) copies those
+// ids verbatim, so once the clone is in the document there are two elements
+// with the same id -- the original (still present, just `visibility:hidden`
+// on its ancestor `slot`) and the clone's own copy. `url(#id)` references
+// resolve to the FIRST matching id in document order, which is the
+// original, not the clone -- so the clone's mask/clip-path silently paints
+// against the wrong (and, depending on timing/hover state, not necessarily
+// identical) element instead of its own. Symptom: every computed style on
+// the clone looks correct (opacity, visibility, fill) but it renders as a
+// solid dark box, because the alpha mask it's actually resolving to isn't
+// its own. uniquifyIds() below rewrites every id in the clone (and every
+// local url(#id) reference to it, in attributes and in inline style
+// strings) so the clone's SVG resources always resolve to themselves.
 
 const DURATION = 820;
 const EASE = 'cubic-bezier(0.76, 0, 0.18, 1)';
 
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Rewrites every `id` inside `root` to a unique value, and rewrites every
+// local `url(#id)` reference to one of those ids -- both in attributes
+// (mask, clip-path, fill, filter, href/xlink:href, ...) and inside inline
+// `style="..."` attribute strings -- so they keep pointing at the clone's
+// own copy instead of colliding with (and silently resolving to) whatever
+// element elsewhere in the document happens to share that id. Safe to call
+// on a clone with no ids at all (no-op).
+let uidCounter = 0;
+function uniquifyIds(root) {
+  const idMap = new Map();
+  const withId = root.querySelectorAll('[id]');
+  withId.forEach((el) => {
+    const oldId = el.id;
+    const newId = oldId + '-ct' + Date.now().toString(36) + (uidCounter++).toString(36);
+    idMap.set(oldId, newId);
+    el.id = newId;
+  });
+  if (idMap.size === 0) return;
+  const urlRef = /url\((['"]?)#([^'")]+)\1\)/g;
+  const rewriteUrl = (value) =>
+    value.replace(urlRef, (m, quote, id) => (idMap.has(id) ? 'url(' + quote + '#' + idMap.get(id) + quote + ')' : m));
+  const all = root.querySelectorAll('*');
+  all.forEach((el) => {
+    for (const attr of Array.from(el.attributes)) {
+      if (attr.value.indexOf('#') === -1) continue;
+      if (attr.name === 'href' || attr.name === 'xlink:href') {
+        const id = attr.value.startsWith('#') ? attr.value.slice(1) : null;
+        if (id && idMap.has(id)) el.setAttribute(attr.name, '#' + idMap.get(id));
+      } else if (attr.value.indexOf('url(') !== -1) {
+        el.setAttribute(attr.name, rewriteUrl(attr.value));
+      }
+    }
+  });
 }
 
 export function prefersReducedMotion() {
@@ -97,6 +145,7 @@ export function playCardOpenTransition({ slot, gradient, mobile }) {
         'transform:translate(-50%,-50%) scale(' + sc + ');';
 
       const clone = face.cloneNode(true);
+      uniquifyIds(clone);
       clone.removeAttribute('href');
       const cs = getComputedStyle(face);
       clone.style.transition = 'none';

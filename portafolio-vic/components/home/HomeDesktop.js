@@ -1,21 +1,26 @@
 'use client';
 
-// Ported from Main.dc.html (desktop). Two deliberate, large simplifications
-// were made given this page's size -- see README-style notes inline below
+// Ported from Main.dc.html (desktop). One deliberate, large simplification
+// is being resolved incrementally -- see README-style notes inline below
 // and the summary this conversion reports back:
 //
-// 1. The six project cards each carried a bespoke, hand-illustrated inline
+// 1. The six project cards each carry a bespoke, hand-illustrated inline
 //    SVG (Mapfre's tile mosaic, Pulso's sliding circles, Phantom's spinning
 //    star, UNDP's glitch swap, victorai's "boiling" stars, AXA's marquee
-//    text), several embedding multi-hundred-KB base64 raster images and
-//    dozens of hand-tuned keyframe/filter declarations. Porting that
-//    verbatim would mean multi-megabyte JS files and thousands of
-//    hand-converted SVG attributes with no reliable way to verify
-//    correctness here. They're replaced with a flat gradient `.card-art`
-//    panel (same gradient each card used as its CSS fallback) plus the
-//    project label, which was hidden in the original. The per-card hover
-//    micro-interactions tied to that artwork (_udInit/_axInit) are dropped
-//    along with it.
+//    text), confirmed against the artifact's own card-data array (the
+//    `isMapfre`/`isPulso`/etc. flags in `Main.dc.html`) as:
+//      0 Driving 35% YoY growth      -> Mapfre  (tile mosaic)
+//      1 AI Cash Flow Predictor      -> Phantom (spinning star + pulse)
+//      2 Unlocking Health Access     -> Pulso   (sliding circles)
+//      3 Scaling enterprise sales    -> AXA     (edge-text slide)
+//      4 victorai                    -> victorai (boiling stars)
+//      5 Inclusive finance arch.     -> UNDP    (glitch swap)
+//    Several embed multi-hundred-KB base64 raster images and dozens of
+//    hand-tuned keyframe/filter declarations, so each is being ported as
+//    its own component under ./cards (SVG markup preserved, base64 images
+//    extracted to /public/cards/*), one card and one commit at a time (see
+//    CARD_ART below). Any index not yet ported still falls back to the
+//    flat gradient `.card-art` panel used as the original's CSS fallback.
 // 2. The original's cross-page "card expands into the open project" zoom
 //    transition (_xOpen/_xGoTo/_xInit) cloned the clicked card's DOM into a
 //    full-viewport overlay and animated it into place on Projects.dc.html,
@@ -49,7 +54,15 @@ import Footer from '@/components/layout/Footer';
 import CursorDot from '@/components/layout/CursorDot';
 import { TOPICS, STARTERS } from '@/content/chatTopics';
 import { playCardOpenTransition, prefersReducedMotion, markArrival, hardNavigate } from '@/lib/cardTransition';
+import MapfreCard from './cards/MapfreCard';
 import './home.css';
+
+// Per-card bespoke illustration components, indexed to match LABELS below.
+// Only index 0 (Mapfre) is ported so far; the rest fall back to the flat
+// gradient `.card-art` panel until their own cards are ported in follow-up
+// commits (see HomeDesktop.js's top-of-file notes for the full list and
+// why this is being done incrementally).
+const CARD_ART = [MapfreCard, null, null, null, null, null];
 
 const LABELS = [
   'Driving 35% YoY growth',
@@ -416,7 +429,9 @@ export default function HomeDesktop() {
               <div className="car2" ref={carRef}>
                 <div className="car2-ticks" style={ticksStyle} />
                 <div className="car2-ring">
-                  {cards.map((card) => (
+                  {cards.map((card) => {
+                    const Art = CARD_ART[card.index];
+                    return (
                     <div className="card-slot" style={card.wrapperStyle} key={card.index}>
                       <Link
                         className="card-face"
@@ -425,7 +440,11 @@ export default function HomeDesktop() {
                         aria-label={`Open project: ${card.label}`}
                         onClick={(e) => handleCardOpen(e, card)}
                       >
-                        <div className="card-art" style={{ background: card.gradient }} aria-hidden="true" />
+                        {Art ? (
+                          <Art />
+                        ) : (
+                          <div className="card-art" style={{ background: card.gradient }} aria-hidden="true" />
+                        )}
                         <span className="card-tag">{card.label}</span>
                       </Link>
                       <Link
@@ -437,7 +456,8 @@ export default function HomeDesktop() {
                         Discover
                       </Link>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </section>

@@ -2,8 +2,10 @@
    navbar and footer selectors are intentionally NOT here -- they live in the
    shared components (ChatPanel/ChatTriggerButton, CursorDot, Navbar, Footer)
    and their own CSS files. See HomeDesktop.js for what else was simplified
-   (the six illustrated project cards -> a plain gradient `.card-art` panel,
-   and the cross-page zoom transition -> a normal Next.js navigation).
+   (the cross-page zoom transition -> a normal Next.js navigation). The six
+   illustrated project cards are being ported card-by-card from a flat
+   gradient `.card-art` fallback to their real bespoke artwork -- see the
+   "Mapfre card art" block near the end of this file for the first one.
 
    The old `.page` (which used to contain the navbar and footer too, as a
    100vh flex column) is now just the stage: Navbar/Footer render as true
@@ -87,11 +89,10 @@
   filter: brightness(0.82);
 }
 
-/* Simplified card art: a flat gradient panel standing in for the bespoke
-   illustrated/animated artwork each project card had in the original
-   (Mapfre's tile mosaic, Pulso's sliding circles, Phantom's spinning star,
-   UNDP's glitch swap, victorai's "boiling" stars, AXA's marquee text) --
-   see the note at the top of HomeDesktop.js for why that was dropped. */
+/* Fallback card art: a flat gradient panel standing in for cards whose
+   bespoke illustration hasn't been ported yet (see CARD_ART in
+   HomeDesktop.js and the "Mapfre card art" block below for the one that
+   has). */
 .home-desktop-scope .card-art {
   position: absolute;
   inset: 0;
@@ -157,4 +158,54 @@
     opacity: 1 !important;
     filter: none !important;
   }
+  /* Mapfre card art: the tile mosaic and word-wipe hover transitions,
+     disabled the same way the rest of this file handles reduced motion
+     (the end state still applies on hover/focus, it just isn't animated). */
+  .home-desktop-scope .mp-tile, .home-desktop-scope .mp-word {
+    transition: none !important;
+  }
 }
+
+/* ===== Mapfre card art (ported from the artifact, card index 0 --
+   "Driving 35% YoY growth") =====
+   Wrapper around the raw SVG from MapfreCard.js, positioned exactly like
+   the `.card-art` fallback it replaces for this one card. The tile mosaic
+   itself (.mp-tile/.mp-t0..mp-t19) and the word wipes (.mp-word/.mp-w0..
+   mp-w6) are pure CSS hover/focus transitions -- selectors copied verbatim
+   from the artifact's stylesheet, just rescoped under .home-desktop-scope
+   to match this file's convention. */
+.home-desktop-scope .mp-card-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+.home-desktop-scope .mp-card{ position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+.home-desktop-scope .mp-tile{ transform-box: fill-box; transform-origin: center; transition: transform 0.8s cubic-bezier(.77,0,.18,1); }
+.home-desktop-scope .mp-word{ transition: transform 0.7s cubic-bezier(.77,0,.18,1), opacity 0.35s ease; }
+.home-desktop-scope .mp-t0{transition-delay:0.051s}.home-desktop-scope .card-face:hover .mp-t0,.home-desktop-scope .card-face:focus-visible .mp-t0{transform:translate(0.000px,0.000px) scale(1)}
+.home-desktop-scope .mp-t1{transition-delay:0.084s}.home-desktop-scope .card-face:hover .mp-t1,.home-desktop-scope .card-face:focus-visible .mp-t1{transform:translate(0.000px,0.000px) scale(0)}
+.home-desktop-scope .mp-t2{transition-delay:0.117s}.home-desktop-scope .card-face:hover .mp-t2,.home-desktop-scope .card-face:focus-visible .mp-t2{transform:translate(0.000px,0.000px) scale(0)}
+.home-desktop-scope .mp-t3{transition-delay:0.051s}.home-desktop-scope .card-face:hover .mp-t3,.home-desktop-scope .card-face:focus-visible .mp-t3{transform:translate(0.000px,0.000px) scale(1)}
+.home-desktop-scope .mp-t4{transition-delay:0.084s}.home-desktop-scope .card-face:hover .mp-t4,.home-desktop-scope .card-face:focus-visible .mp-t4{transform:translate(-53.022px,-53.899px) scale(1)}
+.home-desktop-scope .mp-t5{transition-delay:0.118s}.home-desktop-scope .card-face:hover .mp-t5,.home-desktop-scope .card-face:focus-visible .mp-t5{transform:translate(52.976px,54.101px) scale(1)}
+.home-desktop-scope .mp-t6{transition-delay:0.151s}.home-desktop-scope .card-face:hover .mp-t6,.home-desktop-scope .card-face:focus-visible .mp-t6{transform:translate(0.000px,0.000px) scale(1)}
+.home-desktop-scope .mp-t7{transition-delay:0.085s}.home-desktop-scope .card-face:hover .mp-t7,.home-desktop-scope .card-face:focus-visible .mp-t7{transform:translate(0.000px,0.000px) scale(1)}
+.home-desktop-scope .mp-t8{transition-delay:0.118s}.home-desktop-scope .card-face:hover .mp-t8,.home-desktop-scope .card-face:focus-visible .mp-t8{transform:translate(0.000px,0.000px) scale(1)}
+.home-desktop-scope .mp-t9{transition-delay:0.118s}.home-desktop-scope .card-face:hover .mp-t9,.home-desktop-scope .card-face:focus-visible .mp-t9{transform:translate(0.000px,54.302px) scale(1)}
+.home-desktop-scope .mp-t10{transition-delay:0.152s}.home-desktop-scope .card-face:hover .mp-t10,.home-desktop-scope .card-face:focus-visible .mp-t10{transform:translate(52.978px,-53.698px) scale(1)}
+.home-desktop-scope .mp-t11{transition-delay:0.185s}.home-desktop-scope .card-face:hover .mp-t11,.home-desktop-scope .card-face:focus-visible .mp-t11{transform:translate(0.000px,0.000px) scale(1)}
+.home-desktop-scope .mp-t12{transition-delay:0.218s}.home-desktop-scope .card-face:hover .mp-t12,.home-desktop-scope .card-face:focus-visible .mp-t12{transform:translate(0.000px,0.000px) scale(1)}
+.home-desktop-scope .mp-t13{transition-delay:0.219s}.home-desktop-scope .card-face:hover .mp-t13,.home-desktop-scope .card-face:focus-visible .mp-t13{transform:translate(-53.153px,0.403px) scale(1)}
+.home-desktop-scope .mp-t14{transition-delay:0.252s}.home-desktop-scope .card-face:hover .mp-t14,.home-desktop-scope .card-face:focus-visible .mp-t14{transform:translate(0.000px,0.000px) scale(0)}
+.home-desktop-scope .mp-t15{transition-delay:0.150s}.home-desktop-scope .card-face:hover .mp-t15,.home-desktop-scope .card-face:focus-visible .mp-t15{transform:translate(0.000px,0.000px) scale(1)}
+.home-desktop-scope .mp-t16{transition-delay:0.184s}.home-desktop-scope .card-face:hover .mp-t16,.home-desktop-scope .card-face:focus-visible .mp-t16{transform:translate(0.000px,0.000px) scale(1)}
+.home-desktop-scope .mp-t17{transition-delay:0.217s}.home-desktop-scope .card-face:hover .mp-t17,.home-desktop-scope .card-face:focus-visible .mp-t17{transform:translate(0.000px,0.000px) scale(1)}
+.home-desktop-scope .mp-t18{transition-delay:0.251s}.home-desktop-scope .card-face:hover .mp-t18,.home-desktop-scope .card-face:focus-visible .mp-t18{transform:translate(0.000px,0.000px) scale(1)}
+.home-desktop-scope .mp-t19{transition-delay:0.285s}.home-desktop-scope .card-face:hover .mp-t19,.home-desktop-scope .card-face:focus-visible .mp-t19{transform:translate(0.000px,0.000px) scale(0)}
+.home-desktop-scope .mp-w0{transition-delay:0s}.home-desktop-scope .card-face:hover .mp-w0,.home-desktop-scope .card-face:focus-visible .mp-w0{transform:translateX(-320px);opacity:0}
+.home-desktop-scope .mp-w1{transition-delay:0.06s}.home-desktop-scope .card-face:hover .mp-w1,.home-desktop-scope .card-face:focus-visible .mp-w1{transform:translateX(320px);opacity:0}
+.home-desktop-scope .mp-w2{transition-delay:0.12s}.home-desktop-scope .card-face:hover .mp-w2,.home-desktop-scope .card-face:focus-visible .mp-w2{transform:translateX(-320px);opacity:0}
+.home-desktop-scope .mp-w3{transform:translateX(320px);opacity:0;transition-delay:0.12s}.home-desktop-scope .card-face:hover .mp-w3,.home-desktop-scope .card-face:focus-visible .mp-w3{transform:none;opacity:1}
+.home-desktop-scope .mp-w4{transform:translateX(-320px);opacity:0;transition-delay:0.18s}.home-desktop-scope .card-face:hover .mp-w4,.home-desktop-scope .card-face:focus-visible .mp-w4{transform:none;opacity:1}
+.home-desktop-scope .mp-w5{transform:translateX(-320px);opacity:0;transition-delay:0.24s}.home-desktop-scope .card-face:hover .mp-w5,.home-desktop-scope .card-face:focus-visible .mp-w5{transform:none;opacity:1}
+.home-desktop-scope .mp-w6{transform:translateX(320px);opacity:0;transition-delay:0.3s}.home-desktop-scope .card-face:hover .mp-w6,.home-desktop-scope .card-face:focus-visible .mp-w6{transform:none;opacity:1}

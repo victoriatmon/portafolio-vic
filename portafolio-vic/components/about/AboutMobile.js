@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { consumeEnterFlag, playEnterLine, playEnterContentFade } from '@/lib/pageTransitions';
 import { VictorAIChatProvider } from '@/components/chat/ChatContext';
 import ChatPanel from '@/components/chat/ChatPanel';
 import Navbar from '@/components/nav/Navbar';
@@ -66,6 +67,10 @@ export default function AboutMobile() {
   const [lastDrop, setLastDrop] = useState(null);
   const [interacted, setInteracted] = useState(false);
   const [moveAnnouncement, setMoveAnnouncement] = useState('');
+  const pendingNavEnterRef = useRef(null);
+  if (pendingNavEnterRef.current === null) {
+    pendingNavEnterRef.current = typeof window !== 'undefined' && consumeEnterFlag();
+  }
 
   const swappingRef = useRef(false);
   const swapT1 = useRef(null);
@@ -75,6 +80,18 @@ export default function AboutMobile() {
   const kbRefocusT = useRef(null);
   const confettiRaf = useRef(null);
   const dragInfoRef = useRef(null);
+
+  // Cross-page nav transition (see lib/pageTransitions.js and the matching
+  // effect in AboutDesktop.js): no reveal of its own here, so both the
+  // blue line and a whole-page fade/drift-in play when reached via
+  // Navbar's attachNavTransition.
+  useEffect(() => {
+    if (!pendingNavEnterRef.current) return;
+    const page = document.querySelector('[data-page]');
+    if (page) page.classList.remove('is-pending-enter');
+    playEnterLine();
+    playEnterContentFade();
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -337,7 +354,11 @@ export default function AboutMobile() {
   const isPersonal = aboutMode !== 'professional';
   const tabPersonal = tabMode !== 'professional';
   const nudgeClass = tabPersonal ? 'is-nudging' : '';
-  const pageClass = 'page' + (isPersonal ? '' : ' is-pro') + (swap ? ' ' + swap : '');
+  const pageClass =
+    'page' +
+    (isPersonal ? '' : ' is-pro') +
+    (swap ? ' ' + swap : '') +
+    (pendingNavEnterRef.current ? ' is-pending-enter' : '');
 
   const dragId = drag ? drag.id : null;
   const boardCols = BOARD_COLS.map((c) => {

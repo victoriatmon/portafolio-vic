@@ -22,6 +22,7 @@ import {
   LifecycleDemo,
   DashboardDemo,
 } from './ProyectosDesktop';
+import { consumeEnterFlag, playEnterLine } from '@/lib/pageTransitions';
 import './proyectos-mobile.css';
 
 // ============================================================================
@@ -451,6 +452,18 @@ function ProyectosMobileInner() {
       setArriveCoverGradient(PROJECT_GRADIENTS[!isNaN(h) && h >= 0 && h < PROJECT_GRADIENTS.length ? h : 0]);
     }
   }
+
+  // Blue-line sweep under the navbar when reached via Navbar's
+  // attachNavTransition (lib/pageTransitions.js) -- separate from the
+  // 'arrive' flourish above, which already covers the content-reveal side
+  // for every path into this page.
+  const pendingNavLineRef = useRef(null);
+  if (pendingNavLineRef.current === null) {
+    pendingNavLineRef.current = typeof window !== 'undefined' && consumeEnterFlag();
+  }
+  useEffect(() => {
+    if (pendingNavLineRef.current) playEnterLine();
+  }, []);
 
   // Auto-play the before state briefly, then settle on after -- unless the
   // viewer already picked a side themselves.

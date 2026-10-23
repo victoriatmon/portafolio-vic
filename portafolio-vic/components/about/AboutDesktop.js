@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { consumeEnterFlag, playEnterLine, playEnterContentFade } from '@/lib/pageTransitions';
 import { VictorAIChatProvider } from '@/components/chat/ChatContext';
 import ChatPanel from '@/components/chat/ChatPanel';
 import Navbar from '@/components/nav/Navbar';
@@ -59,6 +60,10 @@ export default function AboutDesktop() {
   const [lastDrop, setLastDrop] = useState(null);
   const [interacted, setInteracted] = useState(false);
   const [moveAnnouncement, setMoveAnnouncement] = useState('');
+  const pendingNavEnterRef = useRef(null);
+  if (pendingNavEnterRef.current === null) {
+    pendingNavEnterRef.current = typeof window !== 'undefined' && consumeEnterFlag();
+  }
 
   const swappingRef = useRef(false);
   const swapT1 = useRef(null);
@@ -124,6 +129,22 @@ export default function AboutDesktop() {
       window.removeEventListener('resize', apply);
       fitApplyRef.current = null;
     };
+  }, []);
+
+  // Cross-page nav transition: this page has no reveal of its own (unlike
+  // Home's load-time fade or Proyectos' arrive), so when reached via
+  // Navbar's attachNavTransition both the blue line and a whole-page
+  // fade/drift-in play. The .is-pending-enter class on [data-page] (set
+  // via pendingNavEnterRef above, computed before first paint) keeps the
+  // page invisible until this effect removes it in the same synchronous
+  // call that starts the fade animation, so there's no flash of fully
+  // visible content first. See lib/pageTransitions.js.
+  useEffect(() => {
+    if (!pendingNavEnterRef.current) return;
+    const page = document.querySelector('[data-page]');
+    if (page) page.classList.remove('is-pending-enter');
+    playEnterLine();
+    playEnterContentFade();
   }, []);
 
   // ---- Clear every tracked timer/raf and any still-attached drag
@@ -413,7 +434,11 @@ export default function AboutDesktop() {
   const isPersonal = aboutMode !== 'professional';
   const tabPersonal = tabMode !== 'professional';
   const nudgeClass = tabPersonal ? 'is-nudging' : '';
-  const pageClass = 'page' + (isPersonal ? '' : ' is-pro') + (swap ? ' ' + swap : '');
+  const pageClass =
+    'page' +
+    (isPersonal ? '' : ' is-pro') +
+    (swap ? ' ' + swap : '') +
+    (pendingNavEnterRef.current ? ' is-pending-enter' : '');
 
   const dragId = drag ? drag.id : null;
   const boardCols = BOARD_COLS.map((c) => {

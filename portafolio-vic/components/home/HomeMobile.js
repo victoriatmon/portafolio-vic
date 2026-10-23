@@ -33,6 +33,7 @@ import ChatPanel from '@/components/chat/ChatPanel';
 import Navbar from '@/components/nav/Navbar';
 import { TOPICS, STARTERS } from '@/content/chatTopics';
 import { playCardOpenTransition, prefersReducedMotion, markArrival, hardNavigate } from '@/lib/cardTransition';
+import { consumeEnterFlag, playEnterLine } from '@/lib/pageTransitions';
 import './home-mobile.css';
 
 const LABELS = [
@@ -91,6 +92,10 @@ export default function HomeMobile() {
   const [pos, setPos] = useState(0);
   const [entered, setEntered] = useState(false);
   const carRef = useRef(null);
+  const pendingNavLineRef = useRef(null);
+  if (pendingNavLineRef.current === null) {
+    pendingNavLineRef.current = typeof window !== 'undefined' && consumeEnterFlag();
+  }
 
   useEffect(() => {
     const reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -100,6 +105,13 @@ export default function HomeMobile() {
     }
     const t = setTimeout(() => setEntered(true), 30);
     return () => clearTimeout(t);
+  }, []);
+
+  // Blue-line sweep under the navbar when reached via Navbar's
+  // attachNavTransition (see lib/pageTransitions.js) -- the content fade
+  // above already plays on every load, nav-driven or not.
+  useEffect(() => {
+    if (pendingNavLineRef.current) playEnterLine();
   }, []);
 
   useEffect(() => {

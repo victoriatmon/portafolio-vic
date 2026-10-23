@@ -21,3 +21,15 @@ body {
 * {
   box-sizing: border-box;
 }
+
+/* Cross-page nav transitions (lib/pageTransitions.js). Applied to
+   [data-page] for the single frame between hydration and the "enter"
+   effect running, so there's no flash of fully-visible content before the
+   fade-in plays; the effect removes this class in the same synchronous
+   tick it starts the animation, so the animation's own starting opacity
+   (0) picks up with no gap. Unscoped (not under a page's own
+   -desktop-scope/-mobile-scope class) since [data-page] itself is the
+   element this targets on every page variant. */
+.is-pending-enter {
+  opacity: 0;
+}

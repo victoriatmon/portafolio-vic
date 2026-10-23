@@ -8,6 +8,7 @@ import Navbar from '@/components/nav/Navbar';
 import Footer from '@/components/layout/Footer';
 import CursorDot from '@/components/layout/CursorDot';
 import { TOPICS, STARTERS } from '@/content/chatTopics';
+import { consumeEnterFlag, playEnterLine } from '@/lib/pageTransitions';
 import './proyectos.css';
 
 // ============================================================================
@@ -722,6 +723,18 @@ function ProyectosDesktopInner() {
     arriveRef.current = isArrive;
     if (isArrive) document.documentElement.classList.add('arrive');
   }
+
+  // Blue-line sweep under the navbar when reached via Navbar's
+  // attachNavTransition (lib/pageTransitions.js) -- separate from the
+  // 'arrive' flourish above (own flag, own effect below) since arrive
+  // already covers the content-reveal side for every path into this page.
+  const pendingNavLineRef = useRef(null);
+  if (pendingNavLineRef.current === null) {
+    pendingNavLineRef.current = typeof window !== 'undefined' && consumeEnterFlag();
+  }
+  useEffect(() => {
+    if (pendingNavLineRef.current) playEnterLine();
+  }, []);
 
   // Auto-play the before state briefly, then settle on after (where the
   // manual tab takes over) -- unless the viewer has already picked a side

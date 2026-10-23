@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import ChatTriggerButton from '../chat/ChatTriggerButton';
+import { attachNavTransition } from '@/lib/pageTransitions';
 import './navbar.css';
 
 // Shared navbar for all 3 routes. `current` picks which link gets
@@ -31,6 +32,14 @@ export default function Navbar({ current, variant = 'desktop' }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [navHidden, setNavHidden] = useState(false);
   const lastYRef = useRef(0);
+
+  // Ported from Main.dc.html's XT.mount() -- a single delegated click
+  // listener (one per page, Navbar being the one component every route
+  // shares) that intercepts clicks on links to the other 2 top-level
+  // routes, plays the blue-line-sweep + fade-out, then navigates. See
+  // lib/pageTransitions.js for why this is a real navigation rather than
+  // next/link's client router, same as cardTransition.js's hardNavigate.
+  useEffect(() => attachNavTransition(), []);
 
   useEffect(() => {
     if (variant !== 'mobile') return;

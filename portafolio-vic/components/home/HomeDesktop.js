@@ -16,11 +16,10 @@
 //      4 victorai                    -> victorai (boiling stars)
 //      5 Inclusive finance arch.     -> UNDP    (glitch swap)
 //    Several embed multi-hundred-KB base64 raster images and dozens of
-//    hand-tuned keyframe/filter declarations, so each is being ported as
-//    its own component under ./cards (SVG markup preserved, base64 images
+//    hand-tuned keyframe/filter declarations, so each was ported as its
+//    own component under ./cards (SVG markup preserved, base64 images
 //    extracted to /public/cards/*), one card and one commit at a time (see
-//    CARD_ART below). Any index not yet ported still falls back to the
-//    flat gradient `.card-art` panel used as the original's CSS fallback.
+//    CARD_ART below). All six are now ported.
 // 2. The original's cross-page "card expands into the open project" zoom
 //    transition (_xOpen/_xGoTo/_xInit) cloned the clicked card's DOM into a
 //    full-viewport overlay and animated it into place on Projects.dc.html,
@@ -59,14 +58,14 @@ import PhantomCard from './cards/PhantomCard';
 import PulsoCard from './cards/PulsoCard';
 import AXACard from './cards/AXACard';
 import VictorCard from './cards/VictorCard';
+import UndpCard from './cards/UndpCard';
 import './home.css';
 
 // Per-card bespoke illustration components, indexed to match LABELS below.
-// Indices 0 (Mapfre), 1 (Phantom), 2 (Pulso), 3 (AXA) and 4 (victorai) are
-// ported so far; only UNDP is left on the flat gradient `.card-art` panel
-// (see HomeDesktop.js's top-of-file notes for why this is being done
-// incrementally).
-const CARD_ART = [MapfreCard, PhantomCard, PulsoCard, AXACard, VictorCard, null];
+// All six cards are ported; none fall back to the flat gradient `.card-art`
+// panel any more (kept in the render loop below only as a defensive
+// fallback).
+const CARD_ART = [MapfreCard, PhantomCard, PulsoCard, AXACard, VictorCard, UndpCard];
 
 const LABELS = [
   'Driving 35% YoY growth',

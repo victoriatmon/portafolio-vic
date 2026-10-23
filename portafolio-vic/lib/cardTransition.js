@@ -113,7 +113,17 @@ export function playCardOpenTransition({ slot, gradient, mobile }) {
 
       ov.appendChild(art);
       ov.appendChild(gr);
-      document.body.appendChild(ov);
+      // Appending to document.body would drop the clone outside
+      // .home-desktop-scope/.home-mobile-scope, and every bit of the card
+      // art's CSS (the .mp-card/.mp-tile rules and their equivalents for
+      // the other five cards) is scoped under that class -- the clone would
+      // render with none of its visual styling, just an empty dark box.
+      // Appending it as a direct child of that scope element instead (not
+      // nested inside .stage2, which sets `contain: paint` and would clip a
+      // position:fixed descendant to its own bounds) keeps the clone
+      // styled while still behaving like a viewport-fixed overlay.
+      const scopeRoot = slot.closest('.home-desktop-scope, .home-mobile-scope') || document.body;
+      scopeRoot.appendChild(ov);
       slot.style.visibility = 'hidden';
 
       const cover = Math.max(tw / W, th / H);

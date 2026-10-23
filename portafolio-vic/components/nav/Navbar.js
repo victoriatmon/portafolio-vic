@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
 import ChatTriggerButton from '../chat/ChatTriggerButton';
 import { attachNavTransition } from '@/lib/pageTransitions';
 import './navbar.css';
@@ -39,6 +38,14 @@ export default function Navbar({ current, variant = 'desktop' }) {
   // routes, plays the blue-line-sweep + fade-out, then navigates. See
   // lib/pageTransitions.js for why this is a real navigation rather than
   // next/link's client router, same as cardTransition.js's hardNavigate.
+  //
+  // That's also why every internal route link below is a plain <a>, not
+  // next/link's <Link>: Link attaches its own onClick on the anchor that
+  // calls e.preventDefault() and does a client-side router.push() --
+  // attachNavTransition's listener checks `e.defaultPrevented` and bails
+  // out if it's already true, so with <Link> this whole transition (and
+  // the fresh-page-load assumptions in pageTransitions.js/cardTransition.js)
+  // silently never ran: no line, no fade, just an instant client nav.
   useEffect(() => attachNavTransition(), []);
 
   useEffect(() => {
@@ -102,19 +109,19 @@ export default function Navbar({ current, variant = 'desktop' }) {
           </div>
           <ul className="menu-links">
             <li style={{ '--i': 0 }}>
-              <Link className={`menu-link${current === 'home' ? ' is-current' : ''}`} href="/">
+              <a className={`menu-link${current === 'home' ? ' is-current' : ''}`} href="/">
                 Home
-              </Link>
+              </a>
             </li>
             <li style={{ '--i': 1 }}>
-              <Link className={`menu-link${current === 'proyectos' ? ' is-current' : ''}`} href="/proyectos">
+              <a className={`menu-link${current === 'proyectos' ? ' is-current' : ''}`} href="/proyectos">
                 Projects
-              </Link>
+              </a>
             </li>
             <li style={{ '--i': 2 }}>
-              <Link className={`menu-link${current === 'about' ? ' is-current' : ''}`} href="/about">
+              <a className={`menu-link${current === 'about' ? ' is-current' : ''}`} href="/about">
                 About
-              </Link>
+              </a>
             </li>
           </ul>
           <ul className="menu-links menu-links-contact">
@@ -166,27 +173,27 @@ export default function Navbar({ current, variant = 'desktop' }) {
     <nav className="navbar" data-nav>
       <ul className="nav-left">
         <li>
-          <Link className="nav-link" href="/" aria-current={current === 'home' ? 'page' : undefined}>
+          <a className="nav-link" href="/" aria-current={current === 'home' ? 'page' : undefined}>
             HOME
-          </Link>
+          </a>
         </li>
         <li>
-          <Link
+          <a
             className="nav-link"
             href="/proyectos"
             aria-current={current === 'proyectos' ? 'page' : undefined}
           >
             PROJECTS
-          </Link>
+          </a>
         </li>
         <li>
-          <Link
+          <a
             className="nav-link"
             href="/about"
             aria-current={current === 'about' ? 'page' : undefined}
           >
             ABOUT
-          </Link>
+          </a>
         </li>
       </ul>
       <ChatTriggerButton />

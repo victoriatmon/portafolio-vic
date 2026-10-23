@@ -95,50 +95,68 @@ export function useVictorAIChat({ topics, starters }) {
   const [usedByTopic, setUsedByTopic] = useState({});
   const [limitReached, setLimitReached] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  // Tracks the most recently detected conversation language ('en'/'es'/'nl'),
+  // so the NEXT render's follow-up suggestions are offered in whatever
+  // language the visitor is actually using -- see chatTopics.js's header
+  // comment for why this exists (a Dutch conversation was still showing
+  // English-only suggestion pills).
+  const [lang, setLang] = useState('en');
 
   const sessionIdRef = useRef(null);
   if (sessionIdRef.current === null && typeof window !== 'undefined') {
     sessionIdRef.current = getOrCreateSessionId();
   }
 
+  // Keyed by every language variant of every known question (lowercased) so
+  // a free-typed message matching a known question in any of the 3
+  // languages still resolves to the right topic. `key` is a stable,
+  // language-independent identifier for "used pool" tracking -- always the
+  // English text, regardless of which language variant was actually typed
+  // or displayed.
   const lookupRef = useRef(null);
   if (lookupRef.current === null) {
     const lookup = {};
-    starters.forEach((item) => {
-      lookup[item.q.toLowerCase()] = { a: item.a, topic: item.topic };
-    });
-    Object.keys(topics).forEach((topic) => {
-      topics[topic].forEach((item) => {
-        lookup[item.q.toLowerCase()] = { a: item.a, topic: item.opens || topic };
+    const indexItem = (item, topic) => {
+      const key = item.q.en;
+      Object.keys(item.q).forEach((itemLang) => {
+        const text = item.q[itemLang];
+        if (text) lookup[text.toLowerCase()] = { key, topic };
       });
+    };
+    starters.forEach((item) => indexItem(item, item.topic));
+    Object.keys(topics).forEach((topic) => {
+      topics[topic].forEach((item) => indexItem(item, item.opens || topic));
     });
     lookupRef.current = lookup;
   }
 
-  const pickFromPool = useCallback((text, topic) => {
+  const pickFromPool = useCallback((key, topic) => {
     setUsedByTopic((prev) => {
       const used = { ...prev };
       const set = new Set(used[topic] || []);
-      set.add(text);
+      set.add(key);
       used[topic] = Array.from(set);
       return used;
     });
   }, []);
 
   const answer = useCallback(
-    async (text, forcedTopic) => {
+    async (text, forcedTopic, sourceKey) => {
       if (limitReached || isLoading) return;
 
       const userMsg = { role: 'user', text };
       const hit = lookupRef.current[text.toLowerCase()];
       const nextTopic = forcedTopic || (hit && hit.topic) || currentTopic || 'Bio';
 
-      if (hit) {
-        const owningTopic = Object.keys(topics).find((t) =>
-          topics[t].some((it) => it.q === text)
-        );
-        if (owningTopic) pickFromPool(text, hit.topic);
-      }
+      // sourceKey is set when this came from clicking a follow-up pill (see
+      // followUps/starters below) -- marks that specific question as used
+      // in its own pool so it isn't immediately re-offered. A manually
+      // typed message that happens to match a known question's text isn't
+      // marked used; only its topic is inferred from `hit`, matching the
+      // original behavior.
+      if (sourceKey) pickFromPool(sourceKey, nextTopic);
+
+      setLang(detectLanguage(text));
 
       const history = messages.slice(-6).map((m) => ({ role: m.role, content: m.text }));
 
@@ -179,14 +197,14 @@ export function useVictorAIChat({ topics, starters }) {
       setIsLoading(false);
       setLimitReached(hitLimit);
     },
-    [limitReached, isLoading, currentTopic, messages, topics, pickFromPool]
+    [limitReached, isLoading, currentTopic, messages, pickFromPool]
   );
 
   const followUpsFor = useCallback(
     (topic) => {
       const pool = topics[topic] || topics.Bio;
       const used = new Set((usedByTopic || {})[topic] || []);
-      let unused = pool.filter((it) => !used.has(it.q));
+      let unused = pool.filter((it) => !used.has(it.q.en));
       if (unused.length === 0) unused = pool.slice();
       return unused.slice(0, 3);
     },
@@ -209,6 +227,7 @@ export function useVictorAIChat({ topics, starters }) {
     setTooltipOpen(false);
     setLimitReached(false);
     setIsLoading(false);
+    setLang('en');
   }, []);
 
   const triggerElRef = useRef(null);
@@ -227,10 +246,13 @@ export function useVictorAIChat({ topics, starters }) {
   const topic = currentTopic || 'Bio';
   const followUps =
     hasMessages && !limitReached && !isLoading
-      ? followUpsFor(topic).map((item) => ({
-          text: item.q,
-          pick: () => answer(item.q, item.opens || topic),
-        }))
+      ? followUpsFor(topic).map((item) => {
+          const text = item.q[lang] || item.q.en;
+          return {
+            text,
+            pick: () => answer(text, item.opens || topic, item.q.en),
+          };
+        })
       : [];
 
   return {
@@ -244,7 +266,7 @@ export function useVictorAIChat({ topics, starters }) {
     limitReached,
     isLoading,
     followUps,
-    starters: starters.map((item) => ({ text: item.q, pick: () => answer(item.q, item.topic) })),
+    starters: starters.map((item) => ({ text: item.q.en, pick: () => answer(item.q.en, item.topic) })),
     openChat,
     closeChat,
     resetChat,

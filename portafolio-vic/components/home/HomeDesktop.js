@@ -34,10 +34,11 @@
 // /proyectos, and a simplified load-time reveal (fade/blur in) standing in
 // for the dropped cross-page transition's entrance choreography.
 //
-// The custom cursor's extra "is-drag" pill treatment while hovering the
-// carousel (and its "Drag" label) is NOT reproduced: the shared CursorDot
-// component (which this page must use as-is) only implements the plain
-// hover-bloom state, not that drag affordance.
+// The custom cursor's "Drag" circle while hovering the carousel IS
+// reproduced: the shared CursorDot component blooms into an 84px "Drag"
+// circle over .car2 (see DRAG_ZONE_SELECTOR there), and this file toggles
+// its extra "is-dragging" shrink state directly from onDragStart/onWinUp
+// below, matching the artifact's own split between the two files.
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -179,6 +180,8 @@ export default function HomeDesktop() {
       window.removeEventListener('pointerup', onWinUp);
       window.removeEventListener('pointercancel', onWinUp);
       window.removeEventListener('blur', onWinUp);
+      const dot = document.querySelector('.cursor-dot');
+      if (dot) dot.classList.remove('is-dragging');
       let v = 0;
       if (samples.length > 1) {
         const a = samples[0];
@@ -200,6 +203,8 @@ export default function HomeDesktop() {
       startX = e.clientX;
       startPos = posVal;
       samples = [{ t: performance.now(), x: e.clientX }];
+      const dot = document.querySelector('.cursor-dot');
+      if (dot) dot.classList.add('is-dragging');
       window.addEventListener('pointermove', onWinMove);
       window.addEventListener('pointerup', onWinUp);
       window.addEventListener('pointercancel', onWinUp);

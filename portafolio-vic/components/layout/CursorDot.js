@@ -19,6 +19,14 @@ const HOVER_SELECTOR =
 const LABEL_SELECTOR = '[data-cursor-label]';
 const LABEL_PADDING = 32; // matches the 16px + 16px horizontal padding on .cursor-dot.is-labeling
 const EDGE_MARGIN = 16; // keeps the pill from ever touching the viewport edge
+// Home's flat-arc carousel (.car2 in HomeDesktop.js) blooms the dot into a
+// big "Drag" circle instead of the small hover-bloom -- ported from Main.dc.html's
+// _onCursorMove (`inCar = closest('.car2') && !closest('.btn-discover')`).
+// Hardcoded here rather than made a data-attribute like LABEL_SELECTOR
+// because the artifact itself hardcodes these two class names directly in
+// its cursor logic -- this is the only page that needs the drag affordance.
+const DRAG_ZONE_SELECTOR = '.car2';
+const DRAG_ZONE_EXCLUDE_SELECTOR = '.btn-discover';
 
 export default function CursorDot() {
   const activeLabelCellRef = useRef(null);
@@ -75,12 +83,23 @@ export default function CursorDot() {
         'translate3d(' + e.clientX + 'px,' + e.clientY + 'px,0) translate(-50%,-50%)';
       const hoverTarget = e.target.closest ? e.target.closest(HOVER_SELECTOR) : null;
       dot.classList.toggle('is-hovering', !!hoverTarget);
+
+      // is-drag and is-hovering are independent and can both be set at once
+      // (e.g. hovering a .card-face inside .car2) -- cursor.css's
+      // `.is-drag, .is-drag.is-hovering` rule covers that combination the
+      // same way the artifact's does, so the drag circle always wins
+      // visually over the smaller hover bloom.
+      const dragZoneTarget = e.target.closest ? e.target.closest(DRAG_ZONE_SELECTOR) : null;
+      const inDragZone =
+        !!dragZoneTarget && !(e.target.closest && e.target.closest(DRAG_ZONE_EXCLUDE_SELECTOR));
+      dot.classList.toggle('is-drag', inDragZone);
+      if (inDragZone && label) label.textContent = 'Drag';
     }
 
     function onLeaveDoc() {
       dot.style.opacity = '0';
       activeLabelCellRef.current = null;
-      dot.classList.remove('is-labeling', 'is-hovering');
+      dot.classList.remove('is-labeling', 'is-hovering', 'is-drag');
       dot.style.width = '';
     }
 

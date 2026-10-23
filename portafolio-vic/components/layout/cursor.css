@@ -36,6 +36,23 @@
   padding: 0 16px;
   background: #0066FF;
 }
+/* Home's carousel: a big blue "Drag" circle while hovering .car2, shrinking
+   slightly while actually being dragged. is-drag wins over is-hovering when
+   both are set (hovering a .card-face inside .car2) -- ported verbatim from
+   Main.dc.html. */
+.cursor-dot.is-drag,
+.cursor-dot.is-drag.is-hovering {
+  width: 84px;
+  height: 84px;
+  background: #0066FF;
+}
+.cursor-dot.is-drag .cursor-dot-label {
+  opacity: 1;
+}
+.cursor-dot.is-drag.is-dragging {
+  width: 70px;
+  height: 70px;
+}
 .cursor-dot-label {
   display: block;
   white-space: nowrap;

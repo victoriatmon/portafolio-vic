@@ -738,15 +738,18 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
 .x-stage {
   /* The original fixed-size (1440 wide) design, centered inside .stage-wrap
      and scaled by JS (see _fitInit) so it always fits without a scrollbar.
-     The 1440px below is only the fallback before JS runs -- _fitApply grows
-     this past 1440px on screens with width to spare (same technique as
-     Main.dc.html). Scroll inside the open project card (.proj-card-scroll)
-     still works exactly as before -- scaling is visual only, it doesn't
-     change what getBoundingClientRect reports. */
+     The 1450px below is only the fallback before JS runs (matches
+     STAGE_MIN_W in ProyectosDesktop.js's fit effect, since .is-current is
+     now 1450px wide and the stage must never render narrower than the
+     widest thing inside it) -- _fitApply grows this past that floor on
+     screens with width to spare (same technique as Main.dc.html). Scroll
+     inside the open project card (.proj-card-scroll) still works exactly
+     as before -- scaling is visual only, it doesn't change what
+     getBoundingClientRect reports. */
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 1440px;
+  width: 1450px;
   height: 888px;
   display: flex;
   flex-direction: column;
@@ -783,7 +786,7 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
 .project-card-lg.is-current {
   left: 50%;
   top: 0;
-  width: 1380px;
+  width: 1450px;
   height: 96%;
   transform: translateX(-50%);
   z-index: 3;
@@ -802,20 +805,21 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
   border: 1px solid #282828;
   box-shadow: 0 30px 70px -20px rgba(0,0,0,0.6);
 }
-/* -330px (was -270px, then -310px): each width bump on .is-current (1260 ->
-   1300 -> 1340 -> 1380px) eats into the gap between its edge and these peek
-   cards' visible sliver unless this moves too -- at 1380px-wide and the
-   stage at its 1440px base (no extra growth from --peek-extra), the center
-   card's own edge sits at x=30 (half of the 60px leftover on either side of
-   a 1380-wide card in a 1440-wide stage). -330 puts this peek card's visible
-   right edge at x=-10, keeping the same ~40px gap the design has held since
-   the 1340px width (growing the center card by 40px moves its own edge in
-   by 20px, so the peek offset only needs to move by that same 20px, not the
-   full 40). See ProyectosDesktop.js's fit effect for how --peek-extra (and
-   the width-aware scale) also keep these fully off-screen on narrow windows
-   instead of overlapping anything. */
-.project-card-lg.is-prev { left: calc(-330px - var(--peek-extra, 0px)); }
-.project-card-lg.is-next { left: auto; right: calc(-330px - var(--peek-extra, 0px)); }
+/* -365px (was -270px, then -310px, then -330px): each width bump on
+   .is-current (1260 -> 1300 -> 1340 -> 1380 -> 1450px) eats into the gap
+   between its edge and these peek cards' visible sliver unless this moves
+   too -- at 1450px-wide and the stage at its 1440px base (no extra growth
+   from --peek-extra), the center card's own edge sits at x=-5 (it now
+   slightly exceeds the 1440px base stage width on its own; see
+   ProyectosDesktop.js's fit-scale, which still keeps the actually-rendered
+   stage at least as wide as .is-current needs). -365 keeps the same ~40px
+   gap the design has held since the 1340px width (growing the center card
+   by 70px moves its own edge in by 35px, so the peek offset only needs to
+   move by that same 35px, not the full 70). See ProyectosDesktop.js's fit
+   effect for how --peek-extra (and the width-aware scale) also keep these
+   fully off-screen on narrow windows instead of overlapping anything. */
+.project-card-lg.is-prev { left: calc(-365px - var(--peek-extra, 0px)); }
+.project-card-lg.is-next { left: auto; right: calc(-365px - var(--peek-extra, 0px)); }
 .project-card-lg.is-prev:hover, .project-card-lg.is-next:hover {
   opacity: 1;
   transform: translateY(-54%) scale(0.98);
@@ -893,12 +897,12 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
    motion to see, just an instant swap that read as a flicker or a jump
    backward right before the ghost's own forward grow. */
 .projects-stage.deck-dir-next.deck-anim-current .project-card-lg.is-current {
-  left: calc(-330px - var(--peek-extra, 0px)); top: 50%; width: 320px; height: 70%;
+  left: calc(-365px - var(--peek-extra, 0px)); top: 50%; width: 320px; height: 70%;
   transform: translateY(-50%) scale(0.94);
   background: #202020 !important; box-shadow: 0 30px 70px -20px rgba(0,0,0,0.6);
 }
 .projects-stage.deck-dir-prev.deck-anim-current .project-card-lg.is-current {
-  left: calc(1450px + var(--peek-extra, 0px)); top: 50%; width: 320px; height: 70%;
+  left: calc(1495px + var(--peek-extra, 0px)); top: 50%; width: 320px; height: 70%;
   transform: translateY(-50%) scale(0.94);
   background: #202020 !important; box-shadow: 0 30px 70px -20px rgba(0,0,0,0.6);
 }
@@ -915,7 +919,7 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
   box-sizing: border-box;
   position: absolute;
   top: 50%;
-  left: calc(-330px - var(--peek-extra, 0px));
+  left: calc(-365px - var(--peek-extra, 0px));
   display: block;
   width: 320px;
   height: 70%;
@@ -938,9 +942,9 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
   opacity: 0;
 }
 .deck-ghost.deck-ghost-show { opacity: 1; }
-.deck-ghost.deck-ghost-at-prev { left: calc(-330px - var(--peek-extra, 0px)); width: 320px; height: 70%; transform: translateY(-50%) scale(0.94); background: #202020; box-shadow: 0 30px 70px -20px rgba(0,0,0,0.6); }
-.deck-ghost.deck-ghost-at-next { left: calc(1450px + var(--peek-extra, 0px)); width: 320px; height: 70%; transform: translateY(-50%) scale(0.94); background: #202020; box-shadow: 0 30px 70px -20px rgba(0,0,0,0.6); }
-.deck-ghost.deck-ghost-at-center { left: 50%; top: 0; width: 1380px; height: 96%; transform: translateX(-50%); background: #181818; box-shadow: 0 50px 100px -20px rgba(0,0,0,0.7), 0 20px 34px rgba(0,0,0,0.5); }
+.deck-ghost.deck-ghost-at-prev { left: calc(-365px - var(--peek-extra, 0px)); width: 320px; height: 70%; transform: translateY(-50%) scale(0.94); background: #202020; box-shadow: 0 30px 70px -20px rgba(0,0,0,0.6); }
+.deck-ghost.deck-ghost-at-next { left: calc(1495px + var(--peek-extra, 0px)); width: 320px; height: 70%; transform: translateY(-50%) scale(0.94); background: #202020; box-shadow: 0 30px 70px -20px rgba(0,0,0,0.6); }
+.deck-ghost.deck-ghost-at-center { left: 50%; top: 0; width: 1450px; height: 96%; transform: translateX(-50%); background: #181818; box-shadow: 0 50px 100px -20px rgba(0,0,0,0.7), 0 20px 34px rgba(0,0,0,0.5); }
 .deck-ghost.deck-ghost-at-prev::before,
 .deck-ghost.deck-ghost-at-next::before { opacity: 0.5; }
 .deck-ghost.deck-ghost-at-center::before { opacity: 0; }

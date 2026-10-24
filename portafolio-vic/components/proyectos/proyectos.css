@@ -802,8 +802,18 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
   border: 1px solid #282828;
   box-shadow: 0 30px 70px -20px rgba(0,0,0,0.6);
 }
-.project-card-lg.is-prev { left: calc(-270px - var(--peek-extra, 0px)); }
-.project-card-lg.is-next { left: auto; right: calc(-270px - var(--peek-extra, 0px)); }
+/* -310px (was -270px): the two width bumps on .is-current (1260 -> 1300 ->
+   1340px) ate into the gap between its edge and these peek cards' visible
+   sliver without this moving too -- at 1340px-wide and the stage at its
+   1440px base (no extra growth from --peek-extra), the center card's own
+   edge sits at x=50, and -270 put this card's visible right edge at
+   x=50 too (0px gap, touching). -310 pulls it back out to x=10, restoring
+   ~40px of breathing room between the two -- same gap the design originally
+   had before .is-current started growing. See ProyectosDesktop.js's fit
+   effect for how --peek-extra (and a new width-aware scale) also keep
+   these fully off-screen on narrow windows instead of overlapping anything. */
+.project-card-lg.is-prev { left: calc(-310px - var(--peek-extra, 0px)); }
+.project-card-lg.is-next { left: auto; right: calc(-310px - var(--peek-extra, 0px)); }
 .project-card-lg.is-prev:hover, .project-card-lg.is-next:hover {
   opacity: 1;
   transform: translateY(-54%) scale(0.98);
@@ -881,12 +891,12 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
    motion to see, just an instant swap that read as a flicker or a jump
    backward right before the ghost's own forward grow. */
 .projects-stage.deck-dir-next.deck-anim-current .project-card-lg.is-current {
-  left: calc(-270px - var(--peek-extra, 0px)); top: 50%; width: 320px; height: 70%;
+  left: calc(-310px - var(--peek-extra, 0px)); top: 50%; width: 320px; height: 70%;
   transform: translateY(-50%) scale(0.94);
   background: #202020 !important; box-shadow: 0 30px 70px -20px rgba(0,0,0,0.6);
 }
 .projects-stage.deck-dir-prev.deck-anim-current .project-card-lg.is-current {
-  left: calc(1390px + var(--peek-extra, 0px)); top: 50%; width: 320px; height: 70%;
+  left: calc(1430px + var(--peek-extra, 0px)); top: 50%; width: 320px; height: 70%;
   transform: translateY(-50%) scale(0.94);
   background: #202020 !important; box-shadow: 0 30px 70px -20px rgba(0,0,0,0.6);
 }
@@ -903,7 +913,7 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
   box-sizing: border-box;
   position: absolute;
   top: 50%;
-  left: calc(-270px - var(--peek-extra, 0px));
+  left: calc(-310px - var(--peek-extra, 0px));
   display: block;
   width: 320px;
   height: 70%;
@@ -926,8 +936,8 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
   opacity: 0;
 }
 .deck-ghost.deck-ghost-show { opacity: 1; }
-.deck-ghost.deck-ghost-at-prev { left: calc(-270px - var(--peek-extra, 0px)); width: 320px; height: 70%; transform: translateY(-50%) scale(0.94); background: #202020; box-shadow: 0 30px 70px -20px rgba(0,0,0,0.6); }
-.deck-ghost.deck-ghost-at-next { left: calc(1390px + var(--peek-extra, 0px)); width: 320px; height: 70%; transform: translateY(-50%) scale(0.94); background: #202020; box-shadow: 0 30px 70px -20px rgba(0,0,0,0.6); }
+.deck-ghost.deck-ghost-at-prev { left: calc(-310px - var(--peek-extra, 0px)); width: 320px; height: 70%; transform: translateY(-50%) scale(0.94); background: #202020; box-shadow: 0 30px 70px -20px rgba(0,0,0,0.6); }
+.deck-ghost.deck-ghost-at-next { left: calc(1430px + var(--peek-extra, 0px)); width: 320px; height: 70%; transform: translateY(-50%) scale(0.94); background: #202020; box-shadow: 0 30px 70px -20px rgba(0,0,0,0.6); }
 .deck-ghost.deck-ghost-at-center { left: 50%; top: 0; width: 1340px; height: 96%; transform: translateX(-50%); background: #181818; box-shadow: 0 50px 100px -20px rgba(0,0,0,0.7), 0 20px 34px rgba(0,0,0,0.5); }
 .deck-ghost.deck-ghost-at-prev::before,
 .deck-ghost.deck-ghost-at-next::before { opacity: 0.5; }

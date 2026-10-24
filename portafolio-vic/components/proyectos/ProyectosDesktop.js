@@ -874,7 +874,31 @@ function ProyectosDesktopInner() {
       // picking some other intrinsic height for .page).
       wrap.style.height = Math.max(0, availH) + 'px';
       const availW = wrap.clientWidth || window.innerWidth;
-      const scale = Math.min(availH / dh, 1.25);
+      // Scale was height-only (`availH / dh`) until Victoria asked for the
+      // open project card to adapt on narrower screens instead of getting
+      // clipped: with only a height term here, `stageW` below could never
+      // shrink below its own 1440 floor, so on any window narrower than
+      // that the (always >=1440-wide) canvas overflowed the real viewport
+      // and .stage-wrap's `overflow:hidden` silently cropped it -- real
+      // content (e.g. a project's left-rail metadata/section nav) could end
+      // up partly or fully off-screen with no scroll affordance to reach
+      // it. Adding `availW / 1440` as a third candidate means that on a
+      // narrow window, scale shrinks to whatever makes the UNSCALED 1440
+      // canvas exactly fill the available width instead of overflowing it
+      // -- at that point `stageW` below naturally resolves to exactly 1440
+      // (see its own comment), so the canvas's rendered width always
+      // matches the viewport exactly rather than exceeding it. The prev/
+      // next "ghost" peek cards live outside that 1440 canvas by design
+      // (positioned off its left/right edge so only a sliver pokes in --
+      // see their `calc(-310px ...)` offset below), so once the canvas
+      // stops overflowing, they fall fully outside the visible viewport
+      // and simply disappear -- which is the behavior Victoria asked for
+      // ("para esos casos los ghosts pueden desaparecer"), with no extra
+      // code needed to hide them explicitly. On a short-but-wide window
+      // (height is still the binding constraint, as at a typical 1440x900)
+      // this term is just smaller than the height term and has no effect,
+      // so that already-verified case is unchanged.
+      const scale = Math.min(availH / dh, availW / 1440, 1.25);
       const stageW = Math.max(1440, availW / scale);
       stage.style.width = stageW + 'px';
       stage.style.transform = 'translate(-50%, -50%) scale(' + scale + ')';
@@ -883,7 +907,7 @@ function ProyectosDesktopInner() {
       // ghost (prev/next) cards further out as the stage stretches wider
       // than 1440 to fill real desktop widths, which at a typical ~1440px
       // browser window works out to ~117px of extra gap on top of the
-      // cards' own fixed -270px offset. Per the user's request for a
+      // cards' own fixed -310px offset. Per the user's request for a
       // tighter gap with more of the ghost cards peeking onto the screen,
       // this is dampened to 45% of that: still grows on wider screens (so
       // ghost cards reveal a bit more there, same intent as the artifact),

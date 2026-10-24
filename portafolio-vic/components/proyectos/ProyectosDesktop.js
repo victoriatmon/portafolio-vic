@@ -890,7 +890,7 @@ function ProyectosDesktopInner() {
       // always matches the viewport exactly rather than exceeding it. The
       // prev/next "ghost" peek cards live outside that canvas by design
       // (positioned off its left/right edge so only a sliver pokes in --
-      // see their `calc(-365px ...)` offset below), so once the canvas
+      // see their `calc(-390px ...)` offset below), so once the canvas
       // stops overflowing, they fall fully outside the visible viewport
       // and simply disappear -- which is the behavior Victoria asked for
       // ("para esos casos los ghosts pueden desaparecer"), with no extra
@@ -899,14 +899,13 @@ function ProyectosDesktopInner() {
       // this term is just smaller than the height term and has no effect,
       // so that already-verified case is unchanged.
       //
-      // STAGE_MIN_W is 1450, not the original design's 1440, because
-      // .project-card-lg.is-current now measures 1450px wide (Victoria's
-      // request) -- using the old 1440 floor here would let the stage
-      // shrink to a box 10px *narrower* than the card it has to contain,
-      // clipping 5px off each side of the open card on narrow windows. The
-      // floor always has to be >= the widest fixed-width thing positioned
-      // inside the stage.
-      const STAGE_MIN_W = 1450;
+      // STAGE_MIN_W is 1550, not the original design's 1440, because
+      // .project-card-lg.is-current now measures 1550px wide (Victoria's
+      // request) -- using a smaller floor here would let the stage shrink
+      // to a box narrower than the card it has to contain, clipping real
+      // content off each side on narrow windows. The floor always has to
+      // be >= the widest fixed-width thing positioned inside the stage.
+      const STAGE_MIN_W = 1550;
       const scale = Math.min(availH / dh, availW / STAGE_MIN_W, 1.25);
       const stageW = Math.max(STAGE_MIN_W, availW / scale);
       stage.style.width = stageW + 'px';
@@ -915,17 +914,22 @@ function ProyectosDesktopInner() {
       // (originally confirmed byte-identical to Projects.dc.html's
       // _fitInit, back when the floor was still exactly 1440) -- it pushes
       // the ghost (prev/next) cards further out as the stage stretches
-      // wider than its own floor to fill real desktop widths, which at a
-      // typical ~1440px browser window works out to ~117px of extra gap on
-      // top of the cards' own fixed -365px offset. Per the user's request
-      // for a tighter gap with more of the ghost cards peeking onto the
-      // screen, this is dampened to 45% of that: still grows on wider
-      // screens (so ghost cards reveal a bit more there, same intent as the
-      // artifact), just not as aggressively. Measured from STAGE_MIN_W (not
-      // the old hardcoded 1440) so this is exactly 0 right at the floor,
+      // wider than its own floor to fill real desktop widths. That's the
+      // opposite of what Victoria asked for this round ("que las ghosts no
+      // desaparezcan más"): on a wide/short browser window (the common
+      // desktop case) this term used to shove them most of the way to the
+      // screen edge, far from the card. Dampened further here, from 45% to
+      // 25% of the raw formula, so the ghosts still reveal a little more on
+      // very wide screens (same intent as the original artifact) but stay
+      // much closer to the card instead of reading as "gone". Paired with
+      // the smaller base offset below (-390px instead of what the old
+      // "move by half the width increase" rule would have given, -415px),
+      // this keeps the ghosts visibly nearer the open card at both common
+      // desktop sizes and very wide ones. Measured from STAGE_MIN_W (not a
+      // hardcoded constant) so this is exactly 0 right at the floor,
       // instead of a stray few px of "growth" baked in just because the
       // floor itself moved up to fit the wider card.
-      const peekExtra = Math.max(0, (stageW - STAGE_MIN_W) / 2) * 0.45;
+      const peekExtra = Math.max(0, (stageW - STAGE_MIN_W) / 2) * 0.25;
       stage.style.setProperty('--peek-extra', peekExtra + 'px');
     };
     // See the identical effect in HomeDesktop.js for why a single

@@ -2,9 +2,23 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 72px;
+  /* flex-wrap + min-height (not a fixed height) instead of the original
+     `height: 72px` + implicit nowrap: at a desktop-UA window narrower than
+     ~900px (a real case -- a half-screen/snapped browser window, not just
+     a phone, which gets the separate Mobile component via UA instead), the
+     "Designed + vibe coded with ... by Vic" text no longer fits next to
+     LinkedIn/Email/Resume on one line. It still wrapped (browsers always
+     wrap text regardless of flex-wrap), but the fixed 72px height clipped
+     neither group -- instead the wrapped credit text grew taller than the
+     box while flex kept both groups vertically centered on the same
+     single-line baseline, so the overflowing lines visually overlapped the
+     LinkedIn/Email/Resume links instead of pushing them down. row-gap
+     covers the vertical spacing once two rows are allowed to exist. */
+  flex-wrap: wrap;
+  row-gap: 8px;
+  min-height: 72px;
   flex: none;
-  padding: 0 80px;
+  padding: 16px 80px;
   background: #151414;
   text-transform: uppercase;
   font-size: 14px;

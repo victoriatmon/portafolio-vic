@@ -436,18 +436,20 @@ function ProyectosMobileInner() {
   const arriveRef = useRef(null);
   const pillsWrapRef = useRef(null);
 
+  // Arriving from the landing through the card transition. The `arrive`
+  // class itself is set (or not) by the beforeInteractive script in
+  // app/layout.js, synchronously before the browser's first paint -- not
+  // here. This just reads that already-settled state once, on the client;
+  // the cover's gradient still has to be picked here (PROJECT_GRADIENTS is
+  // React-side data the layout script has no access to), but doing that
+  // during this render-phase check -- not an effect -- still lands in
+  // React's hydration commit before anything paints, same as before. See
+  // app/layout.js's ARRIVE_FLAG_SCRIPT comment for why the class itself
+  // can't be set from component render (too late, after first paint).
   if (arriveRef.current === null && typeof window !== 'undefined') {
-    let xt = '';
-    try {
-      xt = window.sessionStorage.getItem('xt') || '';
-      window.sessionStorage.removeItem('xt');
-    } catch (err) {
-      /* ignore */
-    }
-    const isArrive = !!xt && Date.now() - parseInt(xt, 10) < 8000;
+    const isArrive = document.documentElement.classList.contains('arrive');
     arriveRef.current = isArrive;
     if (isArrive) {
-      document.documentElement.classList.add('arrive');
       const h = parseInt(window.location.hash.replace('#', ''), 10);
       setArriveCoverGradient(PROJECT_GRADIENTS[!isNaN(h) && h >= 0 && h < PROJECT_GRADIENTS.length ? h : 0]);
     }

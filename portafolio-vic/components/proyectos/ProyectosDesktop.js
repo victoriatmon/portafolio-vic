@@ -707,21 +707,15 @@ function ProyectosDesktopInner() {
   const bcRef = useRef(null);
   const arriveRef = useRef(null);
 
-  // Arriving from the landing through the card transition. Computed once,
-  // as early as possible on the client, so the 'arrive' class can go on
-  // documentElement before first paint (same intent as the constructor in
-  // Projects.dc.html).
+  // Arriving from the landing through the card transition. The `arrive`
+  // class itself is set (or not) by the beforeInteractive script in
+  // app/layout.js, synchronously before the browser's first paint -- not
+  // here. This just reads that already-settled state once, on the client,
+  // so the rest of this component knows whether to arm the failsafe
+  // cleanup below. See app/layout.js's ARRIVE_FLAG_SCRIPT comment for why
+  // it can't be set from component render (too late, after first paint).
   if (arriveRef.current === null && typeof window !== 'undefined') {
-    let xt = '';
-    try {
-      xt = window.sessionStorage.getItem('xt') || '';
-      window.sessionStorage.removeItem('xt');
-    } catch (err) {
-      /* ignore */
-    }
-    const isArrive = !!xt && Date.now() - parseInt(xt, 10) < 8000;
-    arriveRef.current = isArrive;
-    if (isArrive) document.documentElement.classList.add('arrive');
+    arriveRef.current = document.documentElement.classList.contains('arrive');
   }
 
   // Auto-play the before state briefly, then settle on after (where the

@@ -61,6 +61,15 @@ export default function AboutMobile() {
   const [aboutMode, setAboutMode] = useState(initialAboutMode);
   const [tabMode, setTabMode] = useState(initialAboutMode);
   const [swap, setSwap] = useState('');
+  // See the matching declaration (and the long comment) in
+  // AboutDesktop.js: this has to be real React state, not an imperative
+  // classList.remove() on mount, because pageClass is recomputed on every
+  // re-render (isPersonal/swap change it) and React rewrites the DOM's
+  // class attribute whenever that computed string differs from the last
+  // render's -- so an unconditional ' is-pending-enter' suffix gets
+  // silently reapplied (and the page goes black, opacity:0) on the very
+  // first mode switch after mount, or any other state-driven re-render.
+  const [pendingEnter, setPendingEnter] = useState(true);
   const [tasks, setTasks] = useState(INITIAL_TASKS);
   const [drag, setDrag] = useState(null);
   const [overCol, setOverCol] = useState(null);
@@ -92,9 +101,8 @@ export default function AboutMobile() {
   // effect removes that mismatch entirely, for both the arrival case and a
   // plain direct load.
   useLayoutEffect(() => {
-    const page = document.querySelector('[data-page]');
     const arriving = consumeEnterFlag();
-    if (page) page.classList.remove('is-pending-enter');
+    setPendingEnter(false);
     if (arriving) playEnterContentFade();
   }, []);
 
@@ -363,10 +371,9 @@ export default function AboutMobile() {
     'page' +
     (isPersonal ? '' : ' is-pro') +
     (swap ? ' ' + swap : '') +
-    // Always on at first paint (both server and client) -- see the
-    // useLayoutEffect above for why this can't be conditional on a flag
-    // computed during render.
-    ' is-pending-enter';
+    // See `pendingEnter`'s declaration above for why this has to read
+    // from state instead of being an unconditional string suffix.
+    (pendingEnter ? ' is-pending-enter' : '');
 
   const dragId = drag ? drag.id : null;
   const boardCols = BOARD_COLS.map((c) => {

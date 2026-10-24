@@ -54,6 +54,28 @@ export default function AboutDesktop() {
   const [aboutMode, setAboutMode] = useState(initialAboutMode);
   const [tabMode, setTabMode] = useState(initialAboutMode);
   const [swap, setSwap] = useState('');
+  // Starts true on both server and client (a plain constant, no hydration
+  // mismatch) and is flipped to false exactly once, in the useLayoutEffect
+  // below. Why this needs to be state and not just an imperative
+  // `classList.remove('is-pending-enter')` on mount: pageClass is a
+  // *computed* string that already changes across re-renders for other
+  // reasons (isPersonal, swap) -- unlike Proyectos' static JSX literal
+  // (`className="page proyectos-desktop is-pending-enter"`), where the
+  // string value never changes, so React never rewrites that attribute
+  // once the one-time effect has removed it by hand. Here, any later
+  // re-render -- e.g. clicking Personal/Professional, which touches
+  // aboutMode/tabMode/swap -- recomputes a *different* pageClass string
+  // (now with ' is-pro' or ' is-leaving' mixed in), and because that
+  // string still unconditionally appended ' is-pending-enter', React would
+  // diff it against the previous render's className, see a change, and
+  // write the new value to the DOM -- silently reintroducing the class
+  // (and its opacity:0) *every single time this component re-renders*,
+  // including on a plain mode switch with nothing to do with page-arrival.
+  // That's the "goes black when I switch to Professional" bug. Tracking
+  // the resolved/unresolved state in React itself means pageClass stops
+  // including it for good after the first paint, however many times the
+  // component re-renders afterwards.
+  const [pendingEnter, setPendingEnter] = useState(true);
   const [tasks, setTasks] = useState(INITIAL_TASKS);
   const [drag, setDrag] = useState(null);
   const [overCol, setOverCol] = useState(null);
@@ -157,9 +179,8 @@ export default function AboutDesktop() {
   // start hidden), and no flash on a plain direct load either (removed
   // pre-paint, same tick).
   useLayoutEffect(() => {
-    const page = document.querySelector('[data-page]');
     const arriving = consumeEnterFlag();
-    if (page) page.classList.remove('is-pending-enter');
+    setPendingEnter(false);
     if (arriving) playEnterContentFade();
   }, []);
 
@@ -454,10 +475,13 @@ export default function AboutDesktop() {
     'page' +
     (isPersonal ? '' : ' is-pro') +
     (swap ? ' ' + swap : '') +
-    // Always on at first paint (both server and client) -- see the
-    // useLayoutEffect above for why this can't be conditional on a flag
-    // computed during render.
-    ' is-pending-enter';
+    // `pendingEnter` starts true identically on server and client (see its
+    // declaration above), so this is still present at first paint either
+    // way -- no hydration mismatch -- but unlike the old unconditional
+    // string suffix, it actually stops appearing once the useLayoutEffect
+    // resolves it, instead of being silently reapplied by React on every
+    // later re-render this component does for unrelated reasons.
+    (pendingEnter ? ' is-pending-enter' : '');
 
   const dragId = drag ? drag.id : null;
   const boardCols = BOARD_COLS.map((c) => {

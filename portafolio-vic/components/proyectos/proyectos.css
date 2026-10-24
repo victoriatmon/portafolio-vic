@@ -1745,7 +1745,7 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
    into the same lead-image slot. */
 .vai-demo {
   position: relative;
-  height: 180px;
+  height: 204px;
   margin: 0 0 40px;
   border-radius: 16px;
   overflow: hidden;

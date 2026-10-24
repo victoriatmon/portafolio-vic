@@ -783,7 +783,7 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
 .project-card-lg.is-current {
   left: 50%;
   top: 0;
-  width: 1260px;
+  width: 1300px;
   height: 96%;
   transform: translateX(-50%);
   z-index: 3;
@@ -928,7 +928,7 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
 .deck-ghost.deck-ghost-show { opacity: 1; }
 .deck-ghost.deck-ghost-at-prev { left: calc(-270px - var(--peek-extra, 0px)); width: 320px; height: 70%; transform: translateY(-50%) scale(0.94); background: #202020; box-shadow: 0 30px 70px -20px rgba(0,0,0,0.6); }
 .deck-ghost.deck-ghost-at-next { left: calc(1390px + var(--peek-extra, 0px)); width: 320px; height: 70%; transform: translateY(-50%) scale(0.94); background: #202020; box-shadow: 0 30px 70px -20px rgba(0,0,0,0.6); }
-.deck-ghost.deck-ghost-at-center { left: 50%; top: 0; width: 1260px; height: 96%; transform: translateX(-50%); background: #181818; box-shadow: 0 50px 100px -20px rgba(0,0,0,0.7), 0 20px 34px rgba(0,0,0,0.5); }
+.deck-ghost.deck-ghost-at-center { left: 50%; top: 0; width: 1300px; height: 96%; transform: translateX(-50%); background: #181818; box-shadow: 0 50px 100px -20px rgba(0,0,0,0.7), 0 20px 34px rgba(0,0,0,0.5); }
 .deck-ghost.deck-ghost-at-prev::before,
 .deck-ghost.deck-ghost-at-next::before { opacity: 0.5; }
 .deck-ghost.deck-ghost-at-center::before { opacity: 0; }

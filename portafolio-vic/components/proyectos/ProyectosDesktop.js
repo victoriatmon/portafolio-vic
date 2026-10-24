@@ -1119,6 +1119,55 @@ function ProyectosDesktopInner() {
   }
 
   // ---- Phantom Money "expense-entry" mini-demo ----
+  // Tapping a calendar day pops the bottom sheet up over the phone mockup's
+  // *own* fixed-height frame (.phantom-demo-phone is a constant 600px tall,
+  // overflow:hidden -- the sheet is an absolutely positioned overlay inside
+  // it, so the mockup's own size/position never changes). The actual
+  // problem this scrolls to fix is upstream of the mockup: Victoria is
+  // usually scrolled to wherever the calendar itself first became visible
+  // in .proj-card-scroll, which (on most viewports) crops the bottom of the
+  // phone -- the AI Insight row and the bottom nav -- below the fold. So on
+  // every day tap this recenters the whole mockup in the open card's
+  // scroll viewport, same idea as scrollToMapfreSection's TOC-click scroll
+  // just below, but targeting a fixed DOM node instead of a section id, and
+  // centering (when the mockup is shorter than the viewport) rather than
+  // pinning to an offset from the top, so the whole phone -- bezel to bottom
+  // nav -- lands in the middle of the card instead of just clearing the
+  // fold. Harmless (near-zero distance, skipped by the <1px guard) when the
+  // mockup already happens to be fully in view.
+  function scrollPhantomDemoIntoView() {
+    const el = document.querySelector('.phantom-demo-wrap');
+    if (!el) return;
+    const container = el.closest('.proj-card-scroll');
+    if (!container) return;
+    const id = 'phantom-demo';
+    tocScrollLockRef.current = id;
+    const COMFORTABLE_OFFSET = 32;
+    const startTop = container.scrollTop;
+    const elTop = el.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop;
+    const maxTop = container.scrollHeight - container.clientHeight;
+    const targetTop = Math.max(0, Math.min(maxTop, el.offsetHeight <= container.clientHeight
+      ? elTop - (container.clientHeight - el.offsetHeight) / 2
+      : elTop - COMFORTABLE_OFFSET));
+    const distance = targetTop - startTop;
+    if (Math.abs(distance) < 1) { tocScrollLockRef.current = null; return; }
+    const duration = 500;
+    const startTime = performance.now();
+    const ease = (t) => 1 - Math.pow(1 - t, 3);
+    const step = (now) => {
+      const elapsed = now - startTime;
+      const t = Math.min(1, elapsed / duration);
+      container.scrollTop = startTop + distance * ease(t);
+      if (t < 1) {
+        requestAnimationFrame(step);
+      } else {
+        tocScrollLockTRef.current = setTimeout(() => {
+          if (tocScrollLockRef.current === id) tocScrollLockRef.current = null;
+        }, 80);
+      }
+    };
+    requestAnimationFrame(step);
+  }
   function phantomPickDay(d) {
     clearTimeout(phantomCalcTimerRef.current);
     setPhantomDay(d);
@@ -1126,6 +1175,7 @@ function ProyectosDesktopInner() {
     setPhantomCalculating(false);
     setPhantomResult(null);
     setPhantomMathOpen(false);
+    scrollPhantomDemoIntoView();
   }
   function phantomCloseSheet() {
     clearTimeout(phantomCalcTimerRef.current);

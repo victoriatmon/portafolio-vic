@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { consumeEnterFlag, playEnterContentFade } from '@/lib/pageTransitions';
 import { VictorAIChatProvider } from '@/components/chat/ChatContext';
@@ -60,10 +60,6 @@ export default function AboutDesktop() {
   const [lastDrop, setLastDrop] = useState(null);
   const [interacted, setInteracted] = useState(false);
   const [moveAnnouncement, setMoveAnnouncement] = useState('');
-  const pendingNavEnterRef = useRef(null);
-  if (pendingNavEnterRef.current === null) {
-    pendingNavEnterRef.current = typeof window !== 'undefined' && consumeEnterFlag();
-  }
 
   const swappingRef = useRef(false);
   const swapT1 = useRef(null);
@@ -134,16 +130,37 @@ export default function AboutDesktop() {
   // Cross-page nav transition: this page has no reveal of its own (unlike
   // Home's load-time fade or Proyectos' arrive), so when reached via
   // Navbar's attachNavTransition both the blue line and a whole-page
-  // fade/drift-in play. The .is-pending-enter class on [data-page] (set
-  // via pendingNavEnterRef above, computed before first paint) keeps the
-  // page invisible until this effect removes it in the same synchronous
-  // call that starts the fade animation, so there's no flash of fully
-  // visible content first. See lib/pageTransitions.js.
-  useEffect(() => {
-    if (!pendingNavEnterRef.current) return;
+  // fade/drift-in play. See lib/pageTransitions.js.
+  //
+  // .is-pending-enter is now in the JSX unconditionally (see pageClass
+  // below), not only when a nav-arrival flag is present. Reasoning: this
+  // component is server-rendered (Next.js App Router SSRs 'use client'
+  // components for their initial HTML), and sessionStorage -- what
+  // consumeEnterFlag() reads -- doesn't exist on the server. An earlier
+  // version computed "is this a nav-arrival" during render via a ref and
+  // only included is-pending-enter conditionally; that's necessarily
+  // `false` in the server-rendered HTML (no window there) but can be
+  // `true` once this same render function re-runs on the client during
+  // hydration. On a flagged arrival that mismatch meant the server HTML
+  // painted fully visible for however long hydration took, THEN snapped
+  // invisible the instant hydration added the class, THEN faded back in
+  // -- a visible/invisible/visible stutter, worse than no transition at
+  // all, and more noticeable the heavier the page's hydration is (which
+  // is exactly why this read as "entra de golpe" specifically on
+  // Proyectos, the heaviest client component here, rather than here).
+  //
+  // Starting every load hidden and resolving visibility in
+  // useLayoutEffect (not useEffect) fixes both sides: it runs
+  // synchronously after the DOM commits but before the browser paints,
+  // so whichever way the flag resolves, the class is already corrected
+  // before anything is shown -- no server/client mismatch (both always
+  // start hidden), and no flash on a plain direct load either (removed
+  // pre-paint, same tick).
+  useLayoutEffect(() => {
     const page = document.querySelector('[data-page]');
+    const arriving = consumeEnterFlag();
     if (page) page.classList.remove('is-pending-enter');
-    playEnterContentFade();
+    if (arriving) playEnterContentFade();
   }, []);
 
   // ---- Clear every tracked timer/raf and any still-attached drag
@@ -437,7 +454,10 @@ export default function AboutDesktop() {
     'page' +
     (isPersonal ? '' : ' is-pro') +
     (swap ? ' ' + swap : '') +
-    (pendingNavEnterRef.current ? ' is-pending-enter' : '');
+    // Always on at first paint (both server and client) -- see the
+    // useLayoutEffect above for why this can't be conditional on a flag
+    // computed during render.
+    ' is-pending-enter';
 
   const dragId = drag ? drag.id : null;
   const boardCols = BOARD_COLS.map((c) => {

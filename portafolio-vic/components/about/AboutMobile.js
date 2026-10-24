@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { consumeEnterFlag, playEnterContentFade } from '@/lib/pageTransitions';
 import { VictorAIChatProvider } from '@/components/chat/ChatContext';
 import ChatPanel from '@/components/chat/ChatPanel';
@@ -67,10 +67,6 @@ export default function AboutMobile() {
   const [lastDrop, setLastDrop] = useState(null);
   const [interacted, setInteracted] = useState(false);
   const [moveAnnouncement, setMoveAnnouncement] = useState('');
-  const pendingNavEnterRef = useRef(null);
-  if (pendingNavEnterRef.current === null) {
-    pendingNavEnterRef.current = typeof window !== 'undefined' && consumeEnterFlag();
-  }
 
   const swappingRef = useRef(false);
   const swapT1 = useRef(null);
@@ -85,11 +81,21 @@ export default function AboutMobile() {
   // effect in AboutDesktop.js): no reveal of its own here, so both the
   // blue line and a whole-page fade/drift-in play when reached via
   // Navbar's attachNavTransition.
-  useEffect(() => {
-    if (!pendingNavEnterRef.current) return;
+  //
+  // is-pending-enter is unconditional in the JSX (see pageClass below) and
+  // resolved here via useLayoutEffect rather than useEffect -- see the long
+  // comment on AboutDesktop.js's matching effect for why: this component is
+  // server-rendered, sessionStorage doesn't exist there, so a flag computed
+  // conditionally during render can only ever be accurate on the client,
+  // producing a visible/invisible/visible stutter on a real nav arrival.
+  // Starting hidden unconditionally and resolving pre-paint in a layout
+  // effect removes that mismatch entirely, for both the arrival case and a
+  // plain direct load.
+  useLayoutEffect(() => {
     const page = document.querySelector('[data-page]');
+    const arriving = consumeEnterFlag();
     if (page) page.classList.remove('is-pending-enter');
-    playEnterContentFade();
+    if (arriving) playEnterContentFade();
   }, []);
 
   useEffect(() => {
@@ -357,7 +363,10 @@ export default function AboutMobile() {
     'page' +
     (isPersonal ? '' : ' is-pro') +
     (swap ? ' ' + swap : '') +
-    (pendingNavEnterRef.current ? ' is-pending-enter' : '');
+    // Always on at first paint (both server and client) -- see the
+    // useLayoutEffect above for why this can't be conditional on a flag
+    // computed during render.
+    ' is-pending-enter';
 
   const dragId = drag ? drag.id : null;
   const boardCols = BOARD_COLS.map((c) => {

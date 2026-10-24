@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { consumeEnterFlag, playEnterContentFade } from '@/lib/pageTransitions';
 import { VictorAIChatProvider, useChatContext } from '@/components/chat/ChatContext';
@@ -435,7 +435,6 @@ function ProyectosMobileInner() {
   const bcRef = useRef(null);
   const arriveRef = useRef(null);
   const pillsWrapRef = useRef(null);
-  const pendingNavEnterRef = useRef(null);
 
   if (arriveRef.current === null && typeof window !== 'undefined') {
     let xt = '';
@@ -452,16 +451,6 @@ function ProyectosMobileInner() {
       const h = parseInt(window.location.hash.replace('#', ''), 10);
       setArriveCoverGradient(PROJECT_GRADIENTS[!isNaN(h) && h >= 0 && h < PROJECT_GRADIENTS.length ? h : 0]);
     }
-  }
-
-  // Arriving from plain navbar navigation (not a card click): same generic
-  // whole-page fade every other route uses (see About/ProyectosDesktop).
-  // Mutually exclusive with arriveRef above in practice -- the card-click
-  // path preventDefaults before attachNavTransition's listener ever sets
-  // this flag -- but both are safe to compute unconditionally since each
-  // just reads its own, independent sessionStorage key.
-  if (pendingNavEnterRef.current === null) {
-    pendingNavEnterRef.current = typeof window !== 'undefined' && consumeEnterFlag();
   }
 
   // Auto-play the before state briefly, then settle on after -- unless the
@@ -654,15 +643,20 @@ function ProyectosMobileInner() {
   }, []);
 
   // Cross-page nav transition from a plain navbar click (see About's
-  // identical effect): the .is-pending-enter class on [data-page] (set via
-  // pendingNavEnterRef above, computed before first paint) keeps the page
-  // invisible until this removes it in the same synchronous call that
-  // starts the fade, so there's no flash of fully-visible content first.
-  useEffect(() => {
-    if (!pendingNavEnterRef.current) return;
+  // matching effect for the full reasoning). is-pending-enter is
+  // unconditional in the JSX below and resolved here via useLayoutEffect
+  // (not useEffect): this component is server-rendered and sessionStorage
+  // doesn't exist on the server, so a flag computed conditionally during
+  // render is necessarily wrong on the server's HTML for any real nav
+  // arrival, producing a visible-then-invisible-then-fade-in stutter once
+  // hydration catches up. useLayoutEffect runs synchronously before the
+  // browser paints the hydrated tree, so the class is corrected either way
+  // before anything is shown.
+  useLayoutEffect(() => {
     const page = document.querySelector('[data-page]');
+    const arriving = consumeEnterFlag();
     if (page) page.classList.remove('is-pending-enter');
-    playEnterContentFade();
+    if (arriving) playEnterContentFade();
   }, []);
 
   // Clear every named timer on unmount.
@@ -1060,7 +1054,7 @@ function ProyectosMobileInner() {
           bundles into this route's client CSS regardless of which variant
           renders. */}
       <div className="proyectos-mobile-scope">
-      <main data-page className={'page proyectos-mobile' + (pendingNavEnterRef.current ? ' is-pending-enter' : '')}>
+      <main data-page className="page proyectos-mobile is-pending-enter">
         <section className="projects-view" id="projects">
           <div className={'proj-bar ' + barClass}>
             <Link className="mini-carousel-btn" href="/" aria-label="Back to home carousel">

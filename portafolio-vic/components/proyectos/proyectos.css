@@ -2966,7 +2966,15 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
 .mapfre-toc {
   position: absolute;
   left: 32px;
-  top: 104px;
+  /* Nudged down from 104px per Victoria's request: the "Meta data" index
+     should start visually level with the project title's text, not the
+     head-row (status pill + company label) above it. The box-level tops of
+     .mapfre-toc and .mapfre-title already matched exactly at 104px, but the
+     title's larger 48px/1.2 line-height (and its different typeface,
+     Pavanam vs. Manrope) left more built-in leading above its cap-height
+     than the small 12px toc label has above its own, so the title's visible
+     glyph read lower than "Meta data"'s despite the boxes being aligned. */
+  top: 116px;
   width: 164px;
   display: flex;
   flex-direction: column;

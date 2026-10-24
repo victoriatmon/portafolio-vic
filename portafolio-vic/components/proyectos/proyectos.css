@@ -2936,22 +2936,32 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
   line-height: 1.2;
   color: #F5F5F5;
 }
+/* A long value (AXA's "Team with" roster, its "Skills" list) used to force
+   its column to grow to the text's full one-line width instead of wrapping,
+   which pushed later columns past the card edge. The old fix capped every
+   non-last column at a flat 310px and let only the last column flex to
+   fill leftover room (matching Figma for AXA's specific copy) -- but that
+   310px cap was a fixed number tuned for the narrower card the design had
+   back then, so once the card grew (see proyectos.css history on
+   .project-card-lg.is-current), a long non-last value like Pulso's "Team
+   with" roster kept wrapping onto 2 lines even with plenty of real estate
+   free on the card. CSS Grid auto-fit + minmax fixes that at the source:
+   every column sizes to its own natural one-line width (`max-content`) by
+   default, shrinking toward the 160px floor -- and wrapping -- only once
+   the row actually runs out of room for however many columns a given
+   project's meta needs (3 for most projects, 4 for Pulso/AXA with "Team
+   with"). Scales automatically with however wide .mapfre-content is, so
+   there's no per-project tuning and no magic px cap to revisit the next
+   time the card's own width changes. */
 .mapfre-meta-grid {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, max-content));
   align-items: flex-start;
-  gap: 48px;
+  gap: 32px 48px;
   margin: 0 0 40px;
   scroll-margin-top: 20px;
 }
-/* A long value (AXA's "Team with" roster, its "Skills" list) used to force
-   its column to grow to the text's full one-line width instead of wrapping,
-   which pushed later columns past the card edge. Matches Figma: a middle
-   column wraps within a capped width, and the last column (always Skills)
-   grows to fill whatever room is left and wraps there -- both land on 2
-   lines for AXA's actual copy, same as the source design. A short value
-   (Role, Timeline) never reaches its cap, so it still sits on one line. */
-.mapfre-meta-grid > div { flex: none; max-width: 310px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
-.mapfre-meta-grid > div:last-child { flex: 1 1 0; max-width: none; min-width: 160px; }
+.mapfre-meta-grid > div { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; }
 .mapfre-meta-label {
   margin: 0;
   font-family: 'Pavanam', 'Manrope', sans-serif;

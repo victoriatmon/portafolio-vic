@@ -1008,7 +1008,7 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
   border-radius: 999px;
   background: #1B1B1B;
   color: #B5B5B5;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.03em;
   transition: color 0.15s ease, background 0.15s ease;
@@ -1214,7 +1214,7 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
   margin: 0;
   font-family: 'Manrope', sans-serif;
   font-weight: 400;
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.65;
   color: #B5B5B5;
 }
@@ -1283,7 +1283,7 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
   margin: 0 0 8px;
   font-family: 'Manrope', sans-serif;
   font-weight: 400;
-  font-size: 14px;
+  font-size: 16px;
   color: rgba(255, 255, 255, 0.6);
 }
 .mapfre-section .proj-card-body {
@@ -2908,7 +2908,7 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
 .mapfre-company-label {
   font-family: 'Pavanam', 'Manrope', sans-serif;
   font-weight: 400;
-  font-size: 14px;
+  font-size: 16px;
   letter-spacing: 0.02em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.8);
@@ -2923,7 +2923,7 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
   border: 0.6px solid rgba(255, 255, 255, 0.4);
   font-family: 'Pavanam', 'Manrope', sans-serif;
   font-weight: 400;
-  font-size: 14px;
+  font-size: 16px;
   letter-spacing: 0.02em;
   text-transform: uppercase;
   color: #FFFFFF;
@@ -2956,7 +2956,7 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
   margin: 0;
   font-family: 'Pavanam', 'Manrope', sans-serif;
   font-weight: 400;
-  font-size: 14px;
+  font-size: 16px;
   letter-spacing: 0.02em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.6);
@@ -2965,7 +2965,7 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
   margin: 0;
   font-family: 'Manrope', sans-serif;
   font-weight: 400;
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.55;
   color: rgba(255, 255, 255, 0.6);
 }
@@ -2996,7 +2996,7 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
   text-align: left;
   font-family: 'Manrope', sans-serif;
   font-weight: 400;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.5;
   letter-spacing: 0.01em;
   color: rgba(255, 255, 255, 0.6);
@@ -3370,7 +3370,7 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
   margin: 0 0 16px;
   font-family: 'Manrope', sans-serif;
   font-weight: 400;
-  font-size: 14px;
+  font-size: 16px;
   line-height: 26px;
   color: rgba(255, 255, 255, 0.8);
 }
@@ -3400,7 +3400,7 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
 .mapfre-metric-label {
   font-family: 'Manrope', sans-serif;
   font-weight: 400;
-  font-size: 14px;
+  font-size: 16px;
   color: rgba(255, 255, 255, 0.6);
 }
 
@@ -3415,7 +3415,7 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
   margin-bottom: 8px;
   font-family: 'Manrope', sans-serif;
   font-weight: 400;
-  font-size: 14px;
+  font-size: 16px;
   color: rgba(255, 255, 255, 0.6);
 }
 .mapfre-result-text {
@@ -3443,7 +3443,7 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
   background: #2A2A2A;
   font-family: 'Manrope', sans-serif;
   font-weight: 500;
-  font-size: 14px;
+  font-size: 16px;
   color: #E8E8E8;
   transition: background 0.15s ease;
 }

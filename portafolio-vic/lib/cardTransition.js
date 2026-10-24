@@ -106,7 +106,7 @@ function getTarget(mobile) {
 // (animation finished, or a safety timeout fired) -- never rejects, so a
 // caller can always `await` it and then navigate, same as the original's
 // try/catch-everything-then-navigate-anyway.
-export function playCardOpenTransition({ slot, gradient, mobile }) {
+export function playCardOpenTransition({ slot, mobile }) {
   return new Promise((resolve) => {
     let done = false;
     const finish = () => {
@@ -153,11 +153,17 @@ export function playCardOpenTransition({ slot, gradient, mobile }) {
       clone.style.filter = cs.filter === 'none' ? '' : cs.filter;
       art.appendChild(clone);
 
+      // This wash fades in over the clone right before navigating, so it's
+      // what the user actually sees settle on the open-card animation.
+      // Always the same flat #141414 regardless of viewport -- it used to
+      // take a per-project `gradient` on mobile only (Home*.js's own local
+      // flat-placeholder palette for `.card-art`, not the real brand color),
+      // which made e.g. Mapfre flash a strong orange on mobile right before
+      // the Proyectos page took over, instead of the dark, neutral look
+      // desktop has always had.
       const gr = document.createElement('div');
       gr.style.cssText =
-        'position:absolute;left:0;top:0;right:0;bottom:0;opacity:0;background:' +
-        (mobile ? gradient : '#141414') +
-        ';' +
+        'position:absolute;left:0;top:0;right:0;bottom:0;opacity:0;background:#141414;' +
         (mobile ? '' : 'box-sizing:border-box;border:1px solid #232323;border-radius:inherit;');
 
       ov.appendChild(art);

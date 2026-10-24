@@ -14,10 +14,24 @@
   overflow-x: hidden;
   /* Scaled to the real window width by _fitApply (see AboutDesktop's useEffect)
      so this page adapts on any desktop size instead of only fitting a
-     1440px-wide window -- margin:auto + a top-center transform-origin keep it
-     centered at every scale, narrower or wider than 1440. The page still
-     scrolls normally; only the width is fit, height is left to flow + scroll. */
-  margin: 0 auto;
+     1440px-wide window. Centering this is NOT `margin: 0 auto` -- that was
+     the original approach here, but CSS collapses `auto` margins to 0 the
+     moment the unscaled box (fixed at 1440px) is wider than its containing
+     block, i.e. on any window under 1440px wide (the normal case, since
+     _fitApply's whole job is handling windows under 1440). Once the margin
+     collapses to 0, the box's layout position pins to the left edge, but
+     `transform-origin: center top` still scales it around the unscaled
+     box's own center (x=720 within the box) -- not the viewport's center --
+     so the visible, scaled-down box lands shifted well off to the right
+     instead of centered, up to mostly off-screen at narrow widths. Confirmed
+     live at a ~553px window. `left: 50%` + a negative `margin-left` of half
+     the box's own width is the classic fix for exactly this: unlike `auto`,
+     these never collapse under overflow, so the box's center always lands
+     at the containing block's center regardless of over/underflow, which is
+     what `transform-origin: center top` needs to scale around correctly. */
+  position: relative;
+  left: 50%;
+  margin-left: -720px;
   transform-origin: center top;
 }
 .about-desktop-scope .page.is-pro { min-height: 2156px; }

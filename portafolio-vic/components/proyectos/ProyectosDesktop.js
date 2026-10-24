@@ -1144,7 +1144,15 @@ function ProyectosDesktopInner() {
     tocScrollLockRef.current = id;
     const COMFORTABLE_OFFSET = 32;
     const startTop = container.scrollTop;
-    const elTop = el.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop;
+    // The open card renders inside a scaled "stage" wrapper (deck zoom/morph),
+    // so getBoundingClientRect() deltas are in on-screen (scaled) pixels while
+    // scrollTop/clientHeight/offsetHeight are in the container's own unscaled
+    // layout pixels. Divide the rect delta by that scale before mixing it with
+    // scrollTop, or the target lands far short of where the element actually
+    // is in the scrollable content.
+    const containerRect = container.getBoundingClientRect();
+    const scale = container.clientHeight ? (containerRect.height / container.clientHeight) || 1 : 1;
+    const elTop = (el.getBoundingClientRect().top - containerRect.top) / scale + container.scrollTop;
     const maxTop = container.scrollHeight - container.clientHeight;
     const targetTop = Math.max(0, Math.min(maxTop, el.offsetHeight <= container.clientHeight
       ? elTop - (container.clientHeight - el.offsetHeight) / 2

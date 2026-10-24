@@ -1318,8 +1318,16 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
    centering a caption inside the padded box. Victoria asked for the 3
    Pulso lead videos (pulso-video-1/2/3) specifically to run 16px taller
    than the shared 272px Pulso placeholder height above -- scoped to
-   .proj-video so a future non-video Pulso placeholder stays at 272px. */
-.proj-image.proj-video {
+   .proj-video so a future non-video Pulso placeholder stays at 272px.
+   Written as `#pulso .proj-image.proj-video` (not the bare
+   `.proj-image.proj-video` this used to be) because on Pulso the bare
+   class-only selector loses the cascade to `#pulso .proj-image` right
+   above: an ID selector always outranks any number of class selectors,
+   so a bare `.proj-image.proj-video` (specificity 0,2,0) can never beat
+   `#pulso .proj-image` (0,1,1,0) no matter how many classes it chains --
+   confirmed live, the 288px never actually painted until this rule also
+   carried #pulso. */
+#pulso .proj-image.proj-video {
   height: 288px;
   padding: 0;
   overflow: hidden;

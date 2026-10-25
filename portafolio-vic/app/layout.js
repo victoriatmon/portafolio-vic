@@ -2,7 +2,7 @@ import Script from 'next/script';
 import './globals.css';
 
 export const metadata = {
-  title: 'Victoria Talamantes — Product Designer',
+  title: 'Victoria Talamantes',
   description:
     'Portfolio of Victoria Talamantes, Lead Product Designer specialized in fintech and insurtech in Mexico and LATAM.',
 };

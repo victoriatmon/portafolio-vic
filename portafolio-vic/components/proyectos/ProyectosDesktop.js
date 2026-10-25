@@ -1073,7 +1073,15 @@ function ProyectosDesktopInner() {
     if (!container) return;
     const COMFORTABLE_OFFSET = 56;
     const startTop = container.scrollTop;
-    const elTop = el.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop;
+    // The open card renders inside a scaled "stage" wrapper (deck zoom/morph),
+    // so getBoundingClientRect() deltas are in on-screen (scaled) pixels while
+    // scrollTop/clientHeight are in the container's own unscaled layout
+    // pixels. Divide the rect delta by that scale before mixing it with
+    // scrollTop, or the target lands far short of the actual section (see
+    // the same fix on scrollPhantomDemoIntoView just below).
+    const containerRect = container.getBoundingClientRect();
+    const scale = container.clientHeight ? (containerRect.height / container.clientHeight) || 1 : 1;
+    const elTop = (el.getBoundingClientRect().top - containerRect.top) / scale + container.scrollTop;
     const maxTop = container.scrollHeight - container.clientHeight;
     const targetTop = id === 'meta' ? 0 : Math.max(0, Math.min(maxTop, elTop - COMFORTABLE_OFFSET));
     const distance = targetTop - startTop;

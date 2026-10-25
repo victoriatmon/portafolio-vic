@@ -1291,7 +1291,7 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
   font-family: 'Manrope', sans-serif;
   font-weight: 200;
   font-size: 18px;
-  line-height: 27px;
+  line-height: 1.75;
   color: #FFFFFF;
 }
 .mapfre-section .proj-image {

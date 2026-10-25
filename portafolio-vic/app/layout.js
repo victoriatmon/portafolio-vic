@@ -2,9 +2,28 @@ import Script from 'next/script';
 import './globals.css';
 
 export const metadata = {
+  metadataBase: new URL('https://victoriatalamantes.com'),
   title: 'Victoria Talamantes',
   description:
     'Portfolio of Victoria Talamantes, Lead Product Designer specialized in fintech and insurtech in Mexico and LATAM.',
+  // Link-preview copy (WhatsApp, X, LinkedIn, etc.) reuses the Home hero's
+  // own headline verbatim, so the preview says the same thing the page
+  // says the moment it loads -- rather than a separate, invented blurb.
+  // The image itself comes from app/opengraph-image.jpg / twitter-image.jpg
+  // (Next.js's file-convention icons, same pattern as app/favicon.ico):
+  // Next picks those up on its own, no `images` field needed here.
+  openGraph: {
+    title: 'Victoria Talamantes',
+    description: "I'm Victoria, a product designer who invests in what moves the needle.",
+    url: 'https://victoriatalamantes.com',
+    siteName: 'Victoria Talamantes',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Victoria Talamantes',
+    description: "I'm Victoria, a product designer who invests in what moves the needle.",
+  },
 };
 
 // Sets the `arrive` class on <html> -- read by Proyectos' own

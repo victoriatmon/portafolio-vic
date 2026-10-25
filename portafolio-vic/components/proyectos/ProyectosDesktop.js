@@ -1111,8 +1111,16 @@ function ProyectosDesktopInner() {
     const sections = container.querySelectorAll('[data-toc-id]');
     if (!sections.length) return;
     let activeId = sections[0].getAttribute('data-toc-id');
-    const containerTop = container.getBoundingClientRect().top;
-    const threshold = Math.min(220, Math.max(100, container.clientHeight * 0.25));
+    const containerRect = container.getBoundingClientRect();
+    const containerTop = containerRect.top;
+    // Sections' getBoundingClientRect() tops are in on-screen (scaled) pixels
+    // -- the open card sits inside a scaled "stage" wrapper -- so the
+    // threshold has to be scaled down to match, or it reads as nearly the
+    // whole card height and the highlighted sidebar item jumps too early
+    // while scrolling (same root cause as the scrollToMapfreSection /
+    // scrollPhantomDemoIntoView scroll-target fixes above).
+    const scale = container.clientHeight ? (containerRect.height / container.clientHeight) || 1 : 1;
+    const threshold = Math.min(220, Math.max(100, container.clientHeight * 0.25)) * scale;
     for (let i = 0; i < sections.length; i++) {
       const relTop = sections[i].getBoundingClientRect().top - containerTop;
       if (relTop <= threshold) {

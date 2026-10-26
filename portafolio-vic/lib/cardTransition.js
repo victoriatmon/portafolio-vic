@@ -86,18 +86,62 @@ export function prefersReducedMotion() {
 
 // mobile: the overlay grows to fill the whole viewport (ProjectsMobile is a
 // full-bleed page). desktop: it grows to where Proyectos' own
-// .project-card-lg.is-current sits -- 1260px wide inside the 888px-tall
+// .project-card-lg.is-current sits -- 1550px wide inside the 888px-tall
 // .x-stage, scaled exactly the way ProyectosDesktop scales that stage
-// against the room left between the 64px navbar and 72px footer (see
-// proyectos.css).
+// against the room left between the navbar and footer (see proyectos.css
+// and the long comment inside getTarget below).
 function getTarget(mobile) {
   if (mobile) {
     return { tx: 0, ty: 0, tw: window.innerWidth, th: window.innerHeight, tr: 0 };
   }
-  const pScale = Math.min((window.innerHeight - 64 - 72) / 888, 1.25);
-  const tw = 1260 * pScale;
-  const th = 638 * pScale;
-  const ty = 197 * pScale;
+  // This used to hardcode tw/th/ty off a design that had .project-card-lg
+  // .is-current at 1260px wide -- stale after several later Victoria
+  // requests widened it (1260 -> 1300 -> 1340 -> 1380 -> 1450 -> 1550px,
+  // see proyectos.css/ProyectosDesktop.js's own history) without anyone
+  // coming back to update this file, since it's a separate page (Home)
+  // that doesn't render any of that CSS. Symptom: the zoom overlay grew to
+  // the OLD (narrower) 1260px target, then the instant /proyectos actually
+  // painted its own real 1550px-wide card on top of it, the user saw a
+  // visible "snap to the old size, then grow" jump instead of one
+  // continuous zoom -- exactly the bug this comment exists to stop from
+  // quietly recurring a second time.
+  //
+  // Mirrors ProyectosDesktop.js's own fit-scale formula (dh=888,
+  // STAGE_MIN_W=1550, same 1.25 cap and the same width-aware term for
+  // narrow windows -- see that file's long comment on why it's there)
+  // instead of a height-only shortcut, so this lands at the same size the
+  // real page will compute on arrival either way. navH/footH are measured
+  // live off Home's own <nav>/<footer> (the same shared Navbar/Footer
+  // components Proyectos renders) rather than hardcoded, so at least that
+  // part can't go stale the same way again.
+  const navbar = document.querySelector('[data-nav]');
+  const footerEl = document.querySelector('[data-site-footer]');
+  const navH = navbar ? navbar.offsetHeight : 64;
+  const footH = footerEl ? footerEl.offsetHeight : 72;
+  const availH = window.innerHeight - navH - footH;
+  const STAGE_MIN_W = 1550; // keep in sync with ProyectosDesktop.js's own STAGE_MIN_W
+  const scale = Math.min(availH / 888, window.innerWidth / STAGE_MIN_W, 1.25);
+  // 1550: `.project-card-lg.is-current`'s own CSS width (proyectos.css).
+  // 638 (card height) and 133 (card's own top offset within the stage, in
+  // that same 888-tall design space) aren't derivable cleanly from the
+  // padding/margin/percentage chain around them (.projects-view's padding,
+  // .project-pills' height/margin, .projects-stage's flex-grow + its own
+  // margin, then 96% of that) -- measured live instead, by loading
+  // /proyectos, reading `.project-card-lg.is-current` and `.x-stage`'s
+  // getBoundingClientRect(), and dividing back out by the scale read off
+  // .x-stage's own computed transform. Verified 2026-10-26 at 1512x982
+  // (live scale 0.9527): card height 608.2px measured / 0.9527 = 638.5
+  // design px; card top 190.7px, stage top 64px (=navH):
+  // (190.7-64)/0.9527 = 133.0 design px.
+  //
+  // *** If `.project-card-lg.is-current`'s width OR anything feeding its
+  // height (the 96% rule, .projects-stage's margin, .project-pills'
+  // height/margin, .projects-view's padding) changes again, re-measure
+  // these three numbers the same live way instead of guessing -- don't let
+  // this go stale a second time. ***
+  const tw = 1550 * scale;
+  const th = 638 * scale;
+  const ty = navH + 133 * scale;
   const tx = (window.innerWidth - tw) / 2;
   return { tx, ty, tw, th, tr: 28 };
 }

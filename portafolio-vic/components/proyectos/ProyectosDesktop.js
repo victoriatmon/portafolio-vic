@@ -854,7 +854,25 @@ function ProyectosDesktopInner() {
   // Scales the fixed 1440x888 design (.x-stage) to fit whatever real
   // viewport this ends up in, so the page always fits without a page
   // scrollbar, however tall or short that viewport is. Capped at 1.25x.
-  useEffect(() => {
+  //
+  // useLayoutEffect, not useEffect: the CSS fallback (`.x-stage`'s static
+  // width/no-transform-scale, see proyectos.css) renders unscaled before
+  // any JS runs, so with useEffect there was a guaranteed real paint at
+  // that unscaled size -- then, once this effect's synchronous `apply()`
+  // call below ran (an instant later, but still a separate paint), the
+  // stage visibly snapped to its real computed size. That's the "abre
+  // primero el tamaño antiguo... y después crece" Victoria reported, and
+  // it happened on every arrival at /proyectos regardless of how you got
+  // there (navbar click, not just the card-open zoom from Home), since
+  // every arrival mounts this same component and runs this same effect.
+  // useLayoutEffect still commits after the DOM mutation but BEFORE the
+  // browser paints, so this first, synchronous `apply()` call now has a
+  // chance to land before anything is shown at all, instead of after. The
+  // rAF-deferred second call, the fonts.ready re-check and the
+  // ResizeObserver below are untouched -- they're still needed for the
+  // separate case (see their own comment) where web fonts are still
+  // loading and this first measurement is simply wrong, not just late.
+  useLayoutEffect(() => {
     const stage = document.querySelector('.x-stage');
     const wrap = document.querySelector('.stage-wrap');
     const navbar = document.querySelector('[data-nav]');

@@ -148,7 +148,19 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+  /* NOT `justify-content: flex-end`. That pins the (single) child to the
+     bottom by overflowing upward past the container's start edge -- and
+     browsers don't count that upward overflow as *scrollable* overflow,
+     so once a long conversation pushed earlier messages above the top
+     edge, `overflow-y: auto` had scrollHeight === clientHeight (nothing
+     registered as hidden) and scrolling up did nothing: the messages were
+     visibly clipped but permanently unreachable. `margin-top: auto` below
+     on `.chat-greeting`/`.chat-messages` produces the identical bottom-
+     anchored look while content is short enough to fit, but because the
+     overflow now grows downward from a top-aligned flex container, it's
+     ordinary, scrollable overflow once content exceeds the available
+     height. */
+  justify-content: flex-start;
   padding: 28px 28px 44px;
   overflow-y: auto;
   /* Without this, scrolling up past the top of the conversation (or down
@@ -160,6 +172,13 @@
      this element's own boundary. */
   overscroll-behavior-y: contain;
   gap: 20px;
+}
+
+.chat-greeting {
+  /* Pushes the greeting to the bottom of .chat-body (it's the sole child
+     while there are no messages yet) without using justify-content:
+     flex-end on the parent -- see .chat-body's comment above. */
+  margin-top: auto;
 }
 
 .chat-greeting h3 {
@@ -197,6 +216,10 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  /* Pushes the conversation to the bottom of .chat-body (it's the sole
+     child once there are messages) without using justify-content: flex-end
+     on the parent -- see .chat-body's comment above. */
+  margin-top: auto;
 }
 
 /* Each message row (user or assistant) fades and settles upward into place

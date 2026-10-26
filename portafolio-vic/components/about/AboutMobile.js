@@ -432,7 +432,17 @@ export default function AboutMobile() {
             <div className="mode-tabs" style={{ backgroundColor: '#2A2A2A' }}>
               <div
                 className={`mode-indicator ${nudgeClass}`}
-                style={{ transform: 'translateX(' + (tabPersonal ? 0 : 42) + 'px)' }}
+                // 58px = 52px tab width + 6px gap, matching the mobile-first
+                // `.mode-tab`/`.mode-indicator` override at the bottom of
+                // about-mobile.css (52px wide, not the 36px base rule further
+                // up, which that override always wins over on this
+                // component -- no media query needed, see its comment). This
+                // used to be hardcoded to 42px (36+6, the base/desktop-ish
+                // size), which left the indicator sliding only 42px instead
+                // of the 58px actually needed to land under "Professional" --
+                // visually a gray square stuck between the two tabs instead
+                // of landing on either one.
+                style={{ transform: 'translateX(' + (tabPersonal ? 0 : 58) + 'px)' }}
               />
               <button
                 className={`mode-tab ${tabPersonal ? 'is-active' : ''} ${nudgeClass}`}

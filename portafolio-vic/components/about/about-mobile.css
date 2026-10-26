@@ -697,10 +697,28 @@ html::-webkit-scrollbar-thumb { background: #2A2A2A; border-radius: 999px; }
 .about-mobile-scope .task-card { height: auto; min-height: 76px; padding: 14px 56px 14px 16px; border-radius: 14px; touch-action: pan-y; }
 .about-mobile-scope .task-title { font-size: 14px; line-height: 20px; padding-right: 0; }
 .about-mobile-scope .task-pill { height: 22px; margin-top: 8px; font-size: 12px; padding: 0 10px; }
-.about-mobile-scope .task-check { top: auto; bottom: 14px; right: 52px; width: 18px; height: 18px; }
+/* Mobile stacks title above the priority pill (see `.task-card`'s
+   flex-direction: column, base rule above), so the checkmark's vertical
+   position has to track the TITLE row, not the pill row below it. This
+   used to be `top: auto; bottom: 14px`, which pinned it level with the
+   pill instead -- `top: 15px` lines it up with the title's own 14px
+   padding-top + its 20px line-height (15 ~= 14 + (20-18)/2, centered on
+   the 18px icon). */
+.about-mobile-scope .task-check { top: 15px; right: 52px; width: 18px; height: 18px; }
 .about-mobile-scope .task-grip { position: absolute; top: 0; bottom: 0; right: 0; width: 48px; touch-action: none; }
 .about-mobile-scope .task-grip::before { content: ""; position: absolute; top: 50%; left: 50%; width: 14px; height: 22px; transform: translate(-50%, -50%); background: radial-gradient(circle, #B8B8B8 1.6px, transparent 2.1px) 0 0 / 7px 7.3px; }
 .about-mobile-scope .board-slot { height: 76px; border-radius: 14px; }
-.about-mobile-scope .board-empty { display: flex; align-items: center; justify-content: center; min-height: 76px; font-size: 13px; line-height: 18px; padding: 0 10px; text-align: center; }
+/* Was `position: absolute; inset: 0` (inherited from the base/desktop rule
+   above, where `.board` has a fixed `height: 546px` so an empty column
+   still has real height to center the placeholder text within). Mobile's
+   board stacks columns vertically with `height: auto` (see `.board`
+   override above), so an empty column's height came only from its header
+   row (the only in-flow content left once there are no cards) -- the
+   absolutely-positioned placeholder then had to center "Drop a task here"
+   inside that sliver, reading as cramped/overlapping instead of a normal
+   empty-state box. Making it an in-flow block (`position: static`) with its
+   own padding/min-height instead gives the column real height to work with
+   and the copy actual room to breathe. */
+.about-mobile-scope .board-empty { position: static; display: flex; align-items: center; justify-content: center; min-height: 84px; font-size: 13px; line-height: 18px; padding: 16px 14px; text-align: center; }
 .about-mobile-scope .board-progress { margin-top: 18px; }
 .about-mobile-scope .board-caption { font-size: 13px; line-height: 19px; padding: 0 16px; }

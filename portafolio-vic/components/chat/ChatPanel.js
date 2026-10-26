@@ -28,7 +28,16 @@ const PROJECT_LINK_TEXT = {
   victorai: 'VictorAI',
   'onu-pnud': 'Inclusive finance architecture',
 };
-function linkifyMessage(text) {
+// `onLinkClick` closes the chat panel before the click's own navigation
+// happens -- requested by Vic: clicking a project link buried inside the
+// chat used to leave the panel open and covering the page it just jumped
+// to (most noticeable for a same-document /proyectos#slug hop while
+// already on /proyectos -- see ProyectosDesktop.js/ProyectosMobile.js's
+// hashchange listener -- where nothing reloads, so the panel just sits
+// there over the new content instead of a page transition ever having a
+// chance to hide it). Passed in rather than imported, so linkifyMessage
+// itself stays a plain function with no dependency on chat state.
+function linkifyMessage(text, onLinkClick) {
   if (typeof text !== 'string') return text;
   const re = /(https?:\/\/[^\s)]+|\/proyectos#[\w-]+)/g;
   const nodes = [];
@@ -44,6 +53,7 @@ function linkifyMessage(text) {
       <a
         key={'lnk' + key++}
         href={href}
+        onClick={onLinkClick}
         style={{ color: '#0066FF', textDecoration: 'underline', wordBreak: 'break-word' }}
       >
         {linkText}
@@ -245,7 +255,7 @@ export default function ChatPanel() {
                           }
                     }
                   >
-                    {m.role === 'user' ? m.text : linkifyMessage(m.text)}
+                    {m.role === 'user' ? m.text : linkifyMessage(m.text, chat.closeChat)}
                   </div>
                 </div>
               ))}

@@ -1,6 +1,19 @@
 import Script from 'next/script';
 import './globals.css';
 
+// `resizes-content` makes the mobile browser's on-screen keyboard actually
+// shrink the layout viewport (not just the visual one, which is Safari's
+// default `resizes-visual`). Without this, a `position:fixed`/`100dvh`
+// panel like the chat (see chat.css) keeps laying out against the *full*
+// viewport even while the keyboard covers the bottom of the screen, so its
+// footer/input ends up rendered underneath the keyboard instead of above
+// it -- the "no veo el input" bug reported on mobile.
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  interactiveWidget: 'resizes-content',
+};
+
 export const metadata = {
   metadataBase: new URL('https://victoriatalamantes.com'),
   title: 'Victoria Talamantes',

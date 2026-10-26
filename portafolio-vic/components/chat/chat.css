@@ -35,6 +35,15 @@
   top: 0;
   right: 0;
   height: 100vh;
+  /* `dvh` tracks the *real*, current visible viewport -- it shrinks live as
+     the mobile browser's address bar/toolbar collapses/expands and (with
+     the `interactive-widget: resizes-content` viewport meta set in
+     app/layout.js) as the on-screen keyboard opens -- instead of `vh`,
+     which is pinned to the viewport's largest possible size and left the
+     chat-footer/input rendered below the real visible area on mobile.
+     Declared after the `vh` line so older browsers without `dvh` support
+     keep that as a fallback. */
+  height: 100dvh;
   width: 480px;
   max-width: 92vw;
   display: flex;
@@ -46,6 +55,20 @@
   z-index: 41;
 }
 .chat-panel.is-open { transform: translateX(0); }
+
+/* Mobile: the chat should take over the whole screen, not read as a
+   480px-ish sidebar with a sliver of the page still visible on the left
+   (that's the desktop/tablet treatment -- see the base rule's `max-width:
+   92vw` above, which is deliberate there). 767px matches the same
+   mobile/desktop line this site's server-side UA split targets (see
+   lib/device.js's header comment: "isPhone = width < 768"). */
+@media (max-width: 767px) {
+  .chat-panel {
+    width: 100vw;
+    max-width: 100vw;
+    border-left: none;
+  }
+}
 
 .chat-header {
   position: relative;

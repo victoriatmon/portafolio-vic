@@ -125,6 +125,24 @@ export default function ChatPanel() {
     el.scrollTop = el.scrollHeight;
   }, [chat.messages, chat.isLoading, chat.followUps]);
 
+  // handleDraftChange grows the textarea with an imperative inline
+  // `el.style.height` as the person types, but nothing ever reset that
+  // inline style back down -- sendDraft()/resetChat() only clear the
+  // controlled `draft` value, never touch the DOM node's height. A message
+  // that had wrapped to several lines left the input stuck at that taller
+  // height after being sent: an empty box with the placeholder sitting at
+  // its normal top padding, and a big block of blank space below it where
+  // the extra lines used to be -- reported as the input "getting
+  // distorted" / having "too much padding at the bottom". Resetting the
+  // inline height to `auto` whenever the draft goes back to empty (by any
+  // path, not just Send) lets CSS's `min-height: 56px` take back over, the
+  // same floor handleDraftChange itself relies on for a single empty line.
+  useEffect(() => {
+    if (chat.draft === '' && inputRef.current) {
+      inputRef.current.style.height = 'auto';
+    }
+  }, [chat.draft]);
+
   function handleDraftChange(e) {
     const el = e.target;
     el.style.height = 'auto';

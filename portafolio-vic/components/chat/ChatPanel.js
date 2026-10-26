@@ -74,6 +74,7 @@ export default function ChatPanel() {
   const chat = useChatContext();
   const panelRef = useRef(null);
   const inputRef = useRef(null);
+  const bodyRef = useRef(null);
 
   useEffect(() => {
     const navbar = document.querySelector('[data-nav]');
@@ -107,6 +108,22 @@ export default function ChatPanel() {
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [chat.chatOpen, chat]);
+
+  // Keep the conversation pinned to its latest content -- a new message
+  // (either side), the typing indicator starting/stopping, or a fresh set
+  // of follow-up pills all change what .chat-body's natural bottom is.
+  // Without this, a reply that arrives while .chat-body is already
+  // scrolled up (or simply tall enough that the new content lands below
+  // the fold) is invisible until the person scrolls down for it
+  // themselves -- reads as the reply "not showing up" rather than as
+  // content to scroll to. Runs after paint (useEffect, not
+  // useLayoutEffect) so it measures the row's settled layout, but still
+  // before the user has a chance to perceive the unscrolled frame.
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [chat.messages, chat.isLoading, chat.followUps]);
 
   function handleDraftChange(e) {
     const el = e.target;
@@ -200,7 +217,7 @@ export default function ChatPanel() {
           </div>
         </div>
 
-        <div className="chat-body" onClick={chat.onBodyClick}>
+        <div className="chat-body" ref={bodyRef} onClick={chat.onBodyClick}>
           {!chat.hasMessages && (
             <div className="chat-greeting">
               <h3>Hello there, I&apos;m VictorAI.</h3>
@@ -226,6 +243,7 @@ export default function ChatPanel() {
               {chat.messages.map((m, i) => (
                 <div
                   key={i}
+                  className="chat-msg-row"
                   style={{
                     display: 'flex',
                     justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start',

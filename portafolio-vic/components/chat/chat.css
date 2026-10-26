@@ -132,6 +132,20 @@
 
 .chat-body {
   flex: 1 1 auto;
+  /* A flex item's default min-height is `auto`, which for a column flex
+     child means "at least as tall as my content" -- it never shrinks
+     below that even when the flex parent (.chat-panel, a fixed-height
+     column) has less room to give it. With a long conversation, .chat-body
+     was quietly growing taller than the space actually available between
+     the header and footer instead of being capped at it, so `overflow-y:
+     auto` below never had anything to do -- there was nothing to scroll
+     because the element itself just kept expanding (pushing the footer
+     off-panel, or in practice reading as "no scroll" since the element
+     never became shorter than its content in the first place). Reported
+     as "no scroll in the conversation". `min-height: 0` lets this item
+     actually shrink to its flexed size, which is what makes `overflow-y:
+     auto` have a real boundary to scroll within. */
+  min-height: 0;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -183,6 +197,26 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+/* Each message row (user or assistant) fades and settles upward into place
+   on mount instead of popping in at full opacity the instant React commits
+   it -- requested by Vic: a reply felt like it "appeared abruptly". Only
+   plays once per row: React keeps every earlier row's DOM node mounted as
+   the array grows (stable index keys, nothing is ever removed/reordered),
+   so a CSS mount animation only ever fires for the newly appended row, not
+   for the whole list on every re-render. `both` holds the 0%-keyframe
+   state (opacity:0) from the moment the row is inserted, so the animation
+   owns the row's very first paint instead of a flash-then-animate. */
+.chat-msg-row {
+  animation: chat-msg-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes chat-msg-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chat-msg-row { animation: none; }
 }
 
 .chat-footer {

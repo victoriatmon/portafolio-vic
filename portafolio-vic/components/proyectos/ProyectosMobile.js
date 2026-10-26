@@ -519,19 +519,27 @@ function ProyectosMobileInner() {
   // hide-on-scroll pill bar, mouse-drag scrolling for that bar, the
   // cross-tab "bring to front" BroadcastChannel listener and the arrive
   // failsafe, all mirrored from ProjectsMobile.dc.html's componentDidMount.
-  useEffect(() => {
+  // Shared by the mount check below and by the hashchange/popstate
+  // listeners further down -- see the "URL/hash sync" note near the end of
+  // this effect for why those are needed.
+  function resolveIndexFromHash() {
     const n = PROJECT_LABELS.length;
     const raw = window.location && window.location.hash ? window.location.hash.replace('#', '') : '';
     const parsed = parseInt(raw, 10);
-    if (!isNaN(parsed) && parsed >= 0 && parsed < n) {
-      setActiveProject(parsed);
-      requestAnimationFrame(() => centerPill(parsed));
-    } else if (raw) {
+    if (!isNaN(parsed) && parsed >= 0 && parsed < n) return parsed;
+    if (raw) {
       const slugIdx = PROJECT_SLUGS.indexOf(raw);
-      if (slugIdx >= 0) {
-        setActiveProject(slugIdx);
-        requestAnimationFrame(() => centerPill(slugIdx));
-      }
+      if (slugIdx >= 0) return slugIdx;
+    }
+    return null;
+  }
+
+  useEffect(() => {
+    const n = PROJECT_LABELS.length;
+    const initIdx = resolveIndexFromHash();
+    if (initIdx !== null) {
+      setActiveProject(initIdx);
+      requestAnimationFrame(() => centerPill(initIdx));
     }
 
     lastYRef.current = window.scrollY || 0;
@@ -626,6 +634,25 @@ function ProyectosMobileInner() {
       }, 1400);
     }
 
+    // Bug fix: a chatbot reply (or anything else) that links to
+    // /proyectos#slug while the visitor is ALREADY on /proyectos is a
+    // same-document hash navigation -- the browser never reloads the page,
+    // so the mount-only hash read above never re-runs, and the click
+    // silently does nothing ("no me redirige a esa sección"). `hashchange`
+    // catches that case. `popstate` catches the browser back/forward
+    // buttons moving between the per-project history entries the sync
+    // effect below now pushes -- without this, back changes the URL's hash
+    // but leaves the visible card exactly where it was.
+    function onHashOrPop() {
+      const i = resolveIndexFromHash();
+      if (i !== null) {
+        setActiveProject(i);
+        requestAnimationFrame(() => centerPill(i));
+      }
+    }
+    window.addEventListener('hashchange', onHashOrPop);
+    window.addEventListener('popstate', onHashOrPop);
+
     return () => {
       window.removeEventListener('scroll', onScroll);
       if (raf !== null) cancelAnimationFrame(raf);
@@ -640,9 +667,39 @@ function ProyectosMobileInner() {
         /* ignore */
       }
       clearTimeout(arriveFailsafeTRef.current);
+      window.removeEventListener('hashchange', onHashOrPop);
+      window.removeEventListener('popstate', onHashOrPop);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // URL/hash sync: keep the address bar's hash matching whichever project
+  // is currently open, for ANY reason it changed (pill tap, swipe, the
+  // broadcast-channel message, or the hashchange/popstate listeners above
+  // resolving a new hash into state). Same reasoning as ProyectosDesktop.js's
+  // matching effect -- pushState (not `location.hash =`) so it can't loop
+  // with the listener above, guarded against double-pushing when the change
+  // already came from the URL itself. Also skips its very first run after
+  // mount, for the same reason as ProyectosDesktop.js's matching ref: the
+  // hash-reading effect above can still correct activeProject away from its
+  // initial 0 within that same first commit, and without this guard this
+  // effect would push a stale '#mapfre' a beat before correcting itself --
+  // an extra, spurious history entry on a direct link to e.g.
+  // /proyectos#pulso. The real arrival hash is already in the URL on first
+  // load, so there's nothing to sync on that first run anyway.
+  const skipFirstHashSyncRef = useRef(true);
+  useEffect(() => {
+    if (skipFirstHashSyncRef.current) {
+      skipFirstHashSyncRef.current = false;
+      return;
+    }
+    const slug = PROJECT_SLUGS[activeProject];
+    if (!slug) return;
+    const newHash = '#' + slug;
+    if (window.location.hash !== newHash) {
+      window.history.pushState(null, '', newHash);
+    }
+  }, [activeProject]);
 
   // Cross-page nav transition from a plain navbar click (see About's
   // matching effect for the full reasoning). is-pending-enter is

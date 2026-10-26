@@ -785,17 +785,25 @@ function ProyectosDesktopInner() {
   }, []);
 
   // Arriving from a specific card on the Home carousel passes its index (or
-  // slug) as a hash, e.g. /proyectos#3 or /proyectos#mapfre.
-  useEffect(() => {
+  // slug) as a hash, e.g. /proyectos#3 or /proyectos#mapfre. Shared by the
+  // mount check below and by the hashchange/popstate listeners -- see the
+  // "URL/hash sync" note further down for why those are needed.
+  function resolveIndexFromHash() {
     const n = PILL_LABELS.length;
     const raw = window.location && window.location.hash ? window.location.hash.replace('#', '') : '';
     const parsed = parseInt(raw, 10);
-    if (!isNaN(parsed) && parsed >= 0 && parsed < n) {
-      setActiveProject(parsed);
-    } else if (raw) {
+    if (!isNaN(parsed) && parsed >= 0 && parsed < n) return parsed;
+    if (raw) {
       const slugIdx = PROJECTS.findIndex((p) => p.slug === raw);
-      if (slugIdx >= 0) setActiveProject(slugIdx);
+      if (slugIdx >= 0) return slugIdx;
     }
+    return null;
+  }
+
+  useEffect(() => {
+    const n = PILL_LABELS.length;
+    const idx = resolveIndexFromHash();
+    if (idx !== null) setActiveProject(idx);
 
     try {
       bcRef.current = new BroadcastChannel('vic-xt-desktop');
@@ -821,6 +829,23 @@ function ProyectosDesktopInner() {
       }, 1400);
     }
 
+    // Bug fix: a chatbot reply (or anything else) that links to
+    // /proyectos#slug while the visitor is ALREADY on /proyectos is a
+    // same-document hash navigation -- the browser never reloads the page,
+    // so the mount-only hash read above never re-runs, and the click
+    // silently does nothing ("no me redirige a esa sección"). `hashchange`
+    // catches that case. `popstate` catches the browser back/forward
+    // buttons moving between the per-project history entries the sync
+    // effect below now pushes (see its own comment) -- without this, back
+    // changes the URL's hash but leaves the visible card exactly where it
+    // was, which reads as back doing nothing/jumping too far.
+    function onHashOrPop() {
+      const i = resolveIndexFromHash();
+      if (i !== null) setActiveProject(i);
+    }
+    window.addEventListener('hashchange', onHashOrPop);
+    window.addEventListener('popstate', onHashOrPop);
+
     return () => {
       try {
         if (bcRef.current) bcRef.current.close();
@@ -828,9 +853,56 @@ function ProyectosDesktopInner() {
         /* ignore */
       }
       clearTimeout(arriveFailsafeTRef.current);
+      window.removeEventListener('hashchange', onHashOrPop);
+      window.removeEventListener('popstate', onHashOrPop);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // URL/hash sync: keep the address bar's hash matching whichever project
+  // is currently open, for ANY reason it changed (pill click, prev/next,
+  // side-card click, the broadcast-channel message, or the hashchange/
+  // popstate listeners above resolving a new hash into state). This is the
+  // single place that writes the hash, so every path that can change
+  // activeProject gets URL sync for free without touching the deck-slide
+  // timers in runDeckTransition.
+  //   - Fixes bug #1 for the OTHER direction too: without this, no project
+  //     switch ever changed the hash in the first place, so a copied/shared
+  //     /proyectos#slug link from the chatbot could point at a project the
+  //     visitor had already navigated away from by the time they clicked it.
+  //   - Fixes "back button exits the site instead of going to the previous
+  //     project": pushState gives each project view its own history entry,
+  //     so Back steps backward through the projects actually viewed (then
+  //     out to Home) instead of having nothing to go back to RIGHT AWAY.
+  //   - pushState (not `location.hash =`) deliberately does not fire
+  //     `hashchange` or try to scroll to an element with that id (there
+  //     isn't one -- this is a JS-driven deck, not real in-page anchors),
+  //     so it can't loop with the listener above.
+  //   - Guarded by comparing to the current hash so it never double-pushes
+  //     when the change that triggered this effect ALREADY came from the
+  //     URL (hashchange/popstate resolving into the same hash).
+  //   - Skips its very first run after mount: the hash-reading effect above
+  //     runs in that same initial commit and, if the hash named a project
+  //     other than index 0, calls setActiveProject AFTER this effect has
+  //     already read the old (0) value for that render -- so without this
+  //     guard, a direct link straight to e.g. /proyectos#pulso would
+  //     momentarily push '#mapfre' (the stale default) before correcting
+  //     itself to '#pulso' on the next render, leaving a spurious extra
+  //     entry in history. The real arrival hash is already in the URL on
+  //     first load, so there's nothing to sync on that first run anyway.
+  const skipFirstHashSyncRef = useRef(true);
+  useEffect(() => {
+    if (skipFirstHashSyncRef.current) {
+      skipFirstHashSyncRef.current = false;
+      return;
+    }
+    const proj = PROJECTS[activeProject];
+    if (!proj || !proj.slug) return;
+    const newHash = '#' + proj.slug;
+    if (window.location.hash !== newHash) {
+      window.history.pushState(null, '', newHash);
+    }
+  }, [activeProject]);
 
   // Cross-page nav transition from a plain navbar click (see About's
   // matching effect for the full reasoning). is-pending-enter is

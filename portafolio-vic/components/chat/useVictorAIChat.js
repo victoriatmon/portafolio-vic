@@ -43,6 +43,10 @@ const FALLBACK =
 
 // Same lightweight detection as the Edge Function, so the limit/error
 // messages reply in whichever of the 3 supported languages the visitor used.
+// Reads only the message passed in (never blended with earlier history) --
+// see the Edge Function's detectLanguage for why that matters: an older
+// version that mixed in the whole conversation's history let one earlier
+// Spanish/Dutch word permanently flip detection for every later message.
 function detectLanguage(text) {
   const sample = (text || '').toLowerCase();
   const nl =

@@ -137,6 +137,14 @@
   justify-content: flex-end;
   padding: 28px 28px 44px;
   overflow-y: auto;
+  /* Without this, scrolling up past the top of the conversation (or down
+     past the bottom) "chains" into whatever scrollable content sits behind
+     the panel -- the page keeps scrolling once .chat-body runs out of room
+     to scroll itself, instead of the gesture just stopping. Reported as
+     "quiero hacer scroll up en la conversación y no me funciona, hace
+     scroll pero en la pantalla de atrás". `contain` stops the scroll at
+     this element's own boundary. */
+  overscroll-behavior-y: contain;
   gap: 20px;
 }
 

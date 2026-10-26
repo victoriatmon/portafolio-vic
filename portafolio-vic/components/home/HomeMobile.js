@@ -135,11 +135,26 @@ export default function HomeMobile() {
     let wheelIdle = null; // named timer, cleared below on unmount
     let last = performance.now();
     let rafId = null;
+    // Set (not applied) by onWinMove below; consumed here, at most once per
+    // rendered frame. Touch `pointermove` can dispatch more than once per
+    // vsync on some mobile browsers, and calling `setPos()` straight from
+    // that handler commits a React re-render per event rather than per
+    // frame -- wasted work (several renders that never even get painted)
+    // that was the main cause of the sluggish/non-smooth drag feel on
+    // mobile. Routing every update through this already-running rAF loop
+    // instead caps it at one commit per frame, same cadence as the
+    // momentum settle below.
+    let dragDirty = false;
 
     function tick(t) {
       const dt = Math.min(48, t - last);
       last = t;
-      if (!dragging) {
+      if (dragging) {
+        if (dragDirty) {
+          dragDirty = false;
+          setPos(posVal);
+        }
+      } else {
         const diff = targetVal - posVal;
         if (Math.abs(diff) > 0.0008) {
           posVal += diff * (reduce ? 1 : 1 - Math.exp(-dt / 120));
@@ -212,7 +227,7 @@ export default function HomeMobile() {
       const now = performance.now();
       samples.push({ t: now, x: e.clientX });
       while (samples.length > 2 && now - samples[0].t > 120) samples.shift();
-      setPos(posVal);
+      dragDirty = true;
     }
 
     function onWinUp() {

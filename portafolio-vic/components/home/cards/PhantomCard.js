@@ -15,7 +15,9 @@
 // this size. Correctness here rests on the extraction step, not on
 // attribute-by-attribute conversion.
 
-const PHANTOM_SVG = `<svg class="ph-card" aria-hidden="true" width="300" height="400" viewBox="1 1 300 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+import { memo } from 'react';
+
+const PHANTOM_SVG =`<svg class="ph-card" aria-hidden="true" width="300" height="400" viewBox="1 1 300 400" fill="none" xmlns="http://www.w3.org/2000/svg">
 <g filter="url(#filter0_f_80_156)">
 <g clip-path="url(#clip0_80_156)">
 <g clip-path="url(#clip1_80_156)">
@@ -62,6 +64,10 @@ const PHANTOM_SVG = `<svg class="ph-card" aria-hidden="true" width="300" height=
 </defs>
 </svg>`;
 
-export default function PhantomCard() {
+function PhantomCard() {
   return <div className="ph-card-wrap" dangerouslySetInnerHTML={{ __html: PHANTOM_SVG }} />;
 }
+
+// Memoized -- see MapfreCard.js's comment: no props, static output, but
+// re-rendered 6x per drag-carousel tick without this.
+export default memo(PhantomCard);

@@ -22,7 +22,7 @@
 // portfolio only ever renders one AXA card, unlike the artifact's canvas
 // runtime which had to handle N instances generically).
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, memo } from 'react';
 import { prefersReducedMotion } from '@/lib/cardTransition';
 
 const LANES = [
@@ -75,7 +75,7 @@ const AXA_SVG = `<svg class="ax-card" aria-hidden="true" width="300" height="400
 </defs>
 </svg>`;
 
-export default function AXACard() {
+function AXACard() {
   const wrapRef = useRef(null);
 
   useEffect(() => {
@@ -225,3 +225,9 @@ export default function AXACard() {
 
   return <div className="ax-card-wrap" ref={wrapRef} dangerouslySetInnerHTML={{ __html: AXA_SVG }} />;
 }
+
+// Memoized -- see MapfreCard.js's comment: no props, so this also means the
+// mount effect above (and its JS-driven marquee loop) runs exactly once,
+// instead of being torn down/re-run or losing its live-looked-up DOM nodes
+// on every parent re-render during a drag.
+export default memo(AXACard);

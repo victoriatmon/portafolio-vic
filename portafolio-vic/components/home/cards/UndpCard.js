@@ -22,7 +22,7 @@
 // AXA card, where a one-time captured reference went stale and animated
 // an orphaned, invisible node.
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, memo } from 'react';
 import { prefersReducedMotion } from '@/lib/cardTransition';
 
 const GLITCH_MS = 700; // length of each glitch (matches the CSS animation)
@@ -178,7 +178,7 @@ const UNDP_SVG = `<svg class="ud-card" aria-hidden="true" width="300" height="40
 </g>
 </svg>`;
 
-export default function UndpCard() {
+function UndpCard() {
   const wrapRef = useRef(null);
 
   useEffect(() => {
@@ -244,3 +244,8 @@ export default function UndpCard() {
 
   return <div className="ud-card-wrap" ref={wrapRef} dangerouslySetInnerHTML={{ __html: UNDP_SVG }} />;
 }
+
+// Memoized -- see MapfreCard.js's comment: no props, so this also means the
+// mount effect above runs exactly once instead of on every parent re-render
+// during a drag.
+export default memo(UndpCard);

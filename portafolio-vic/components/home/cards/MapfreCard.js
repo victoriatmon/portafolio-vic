@@ -17,7 +17,9 @@
 // (post base64-extraction), so correctness here rests on the extraction
 // step, not on manual attribute-by-attribute conversion.
 
-const MAPFRE_SVG = `<svg class="mp-card" aria-hidden="true" width="300" height="400" viewBox="0 0 300 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+import { memo } from 'react';
+
+const MAPFRE_SVG =`<svg class="mp-card" aria-hidden="true" width="300" height="400" viewBox="0 0 300 400" fill="none" xmlns="http://www.w3.org/2000/svg">
 <g clip-path="url(#clip0_80_51)">
 <g clip-path="url(#clip1_80_51)">
 <rect width="300" height="400" rx="15" fill="#E34234"/>
@@ -62,6 +64,16 @@ const MAPFRE_SVG = `<svg class="mp-card" aria-hidden="true" width="300" height="
 </defs>
 </svg>`;
 
-export default function MapfreCard() {
+function MapfreCard() {
   return <div className="mp-card-wrap" dangerouslySetInnerHTML={{ __html: MAPFRE_SVG }} />;
 }
+
+// Memoized: this component takes no props, and its output never changes, but
+// it's re-mounted inside the mobile/desktop drag carousel, whose parent
+// re-renders on every `setPos()` during a drag/momentum tick (see
+// HomeMobile.js/HomeDesktop.js). Without memo, React re-runs and re-diffs
+// this ~100KB inline SVG tree on every one of those renders -- six times
+// over (one per card) -- which is the main cause of the janky/slow drag
+// feel reported on mobile. memo() skips all of that since the (empty)
+// props never change.
+export default memo(MapfreCard);

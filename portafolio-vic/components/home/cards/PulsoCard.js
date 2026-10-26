@@ -10,7 +10,9 @@
 // hand, even though this file is small enough that a JSX conversion would
 // have been feasible.
 
-const PULSO_SVG = `<svg class="pu-card" aria-hidden="true" width="300" height="400" viewBox="1 1 300 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+import { memo } from 'react';
+
+const PULSO_SVG =`<svg class="pu-card" aria-hidden="true" width="300" height="400" viewBox="1 1 300 400" fill="none" xmlns="http://www.w3.org/2000/svg">
 <g filter="url(#filter0_f_82_465)">
 <g clip-path="url(#clip0_82_465)">
 <g clip-path="url(#clip1_82_465)">
@@ -47,6 +49,10 @@ const PULSO_SVG = `<svg class="pu-card" aria-hidden="true" width="300" height="4
 </defs>
 </svg>`;
 
-export default function PulsoCard() {
+function PulsoCard() {
   return <div className="pu-card-wrap" dangerouslySetInnerHTML={{ __html: PULSO_SVG }} />;
 }
+
+// Memoized -- see MapfreCard.js's comment: no props, static output, but
+// re-rendered 6x per drag-carousel tick without this.
+export default memo(PulsoCard);

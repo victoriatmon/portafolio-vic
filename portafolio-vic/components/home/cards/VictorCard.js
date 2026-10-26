@@ -15,7 +15,9 @@
 // to verify a manual transcription at this size. Correctness here rests
 // on the extraction step, not on attribute-by-attribute conversion.
 
-const VICTOR_SVG = `<svg class="vs-card" aria-hidden="true" width="300" height="400" viewBox="1 1 300 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+import { memo } from 'react';
+
+const VICTOR_SVG =`<svg class="vs-card" aria-hidden="true" width="300" height="400" viewBox="1 1 300 400" fill="none" xmlns="http://www.w3.org/2000/svg">
 <g filter="url(#filter0_f_97_1279)">
 <g clip-path="url(#clip0_97_1279)">
 <rect x="1" y="1" width="300" height="400" rx="15" fill="white"></rect>
@@ -75,6 +77,10 @@ const VICTOR_SVG = `<svg class="vs-card" aria-hidden="true" width="300" height="
 </defs>
 </svg>`;
 
-export default function VictorCard() {
+function VictorCard() {
   return <div className="vs-card-wrap" dangerouslySetInnerHTML={{ __html: VICTOR_SVG }} />;
 }
+
+// Memoized -- see MapfreCard.js's comment: no props, static output, but
+// re-rendered 6x per drag-carousel tick without this.
+export default memo(VictorCard);

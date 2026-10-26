@@ -354,7 +354,7 @@ export const STARTERS = [
   { q: { en: 'How does Vic lead a design team?' }, a: bioLeadership, topic: 'Bio' },
   {
     q: { en: "What's something about Vic her portfolio won't tell you?" },
-    a: "She's an analog photography person who thinks in single frames instead of bursts, and she's an unofficial cafe connoisseur in general even though she doesn't actually drink coffee. And if you dig a bit deeper, she'd tell you she has an open heart, sometimes doubts herself more than she should, and laughs a lot.",
+    a: "She's an analog photography person who thinks in single frames instead of bursts, and she's an unofficial cafe connoisseur in general even though she doesn't actually drink coffee. And if you dig a bit deeper, she'd tell you she has an open heart and laughs a lot.",
     topic: 'Bio',
   },
 ];

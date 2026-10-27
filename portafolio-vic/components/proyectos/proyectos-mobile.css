@@ -754,7 +754,19 @@ html.arrive .page { animation: xin 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
    it can't drift sideways with the document on any stray horizontal
    scroll/bounce. */
 .proj-bar { position: sticky; top: 56px; left: 0; right: 0; z-index: 30; display: flex; align-items: center; gap: 6px; padding: 24px 0 14px 16px; background: rgba(10,10,10,0.92); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1); will-change: transform; }
-.proj-bar.is-hidden { transform: translateY(-110%); }
+/* "se esconde a medias" report: a plain `translateY(-110%)` (copied from
+   .navbar-mobile.is-hidden, where it's correct) only clears THIS element's
+   own box -- but unlike the navbar (`top: 0`), this bar is stuck 56px
+   *below* the viewport top (`top: 56px` above), so its stuck position
+   already starts 56px down. Moving it up by 110% of its own height isn't
+   enough to also cover that extra 56px head start: the math only clears
+   (110% of own height), leaving the bottom ~56px of the bar's box still
+   inside the viewport, still visible under the hidden navbar. Folding that
+   same 56px into the translate (on top of the existing 110%-of-own-height
+   buffer) accounts for it, same visual "slides fully away" result as the
+   navbar, confirmed via computed getBoundingClientRect(): bottom edge now
+   lands above y=0 instead of ~48px into the viewport. */
+.proj-bar.is-hidden { transform: translateY(calc(-56px - 110%)); }
 .proj-bar .mini-carousel-btn { flex: none; }
 .pills-wrap { flex: 1 1 auto; min-width: 0; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 28px), transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 28px), transparent 100%); }
 .project-pills { margin: 0; padding: 0 28px 0 12px; justify-content: flex-start; width: auto; cursor: grab; touch-action: pan-x; user-select: none; -webkit-user-select: none; }

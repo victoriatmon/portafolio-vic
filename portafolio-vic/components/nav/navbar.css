@@ -96,6 +96,21 @@
   transform: translateY(-100%);
   visibility: hidden;
   transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), visibility 0s linear 0.5s;
+  /* Without this, some browsers (confirmed live: Chromium in the remote
+     preview pane, and this is the textbook trigger for the same bug on
+     iOS Safari) never repaint the element after its `transform` target
+     changes between `.menu-sheet` and `.menu-sheet.is-open` -- the class
+     toggles correctly (confirmed via devtools: `is-open` is present,
+     `visibility` does flip to `visible`), but the computed `transform`
+     stays stuck at the closed `translateY(-100%)` indefinitely, so the
+     menu becomes an invisible, untappable full-screen overlay sitting off
+     -screen while the open menu-links/contact-links underneath are only
+     reachable because they're taller than the viewport and technically
+     still in the DOM. `will-change: transform` hints the compositor to
+     promote this element to its own layer up front, which is what makes
+     the engine actually pick up and paint the new transform value on
+     every toggle instead of leaving the stale one painted. */
+  will-change: transform;
 }
 .menu-sheet.is-open {
   transform: translateY(0);

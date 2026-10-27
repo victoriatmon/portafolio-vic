@@ -291,7 +291,7 @@ export default function ChatPanel() {
                           }
                     }
                   >
-                    {m.role === 'user' ? m.text : linkifyMessage(m.text, chat.closeChat)}
+                    {m.role === 'user' ? m.text : linkifyMessage(m.text, chat.closeChatForNav)}
                   </div>
                 </div>
               ))}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 // The real VictorAI chat engine, shared by all 3 routes (it used to be copy-
 // pasted into all 6 .dc.html files in Claude Design -- Home already called
@@ -239,12 +239,72 @@ export function useVictorAIChat({ topics, starters }) {
     if (typeof document !== 'undefined') triggerElRef.current = document.activeElement;
     setChatOpen(true);
   }, []);
+  // `suppressPopRef` lets a caller close the panel WITHOUT the history
+  // cleanup below popping its own entry (see closeChatForNav) -- needed for
+  // the one case where closing is itself a side effect of a *different*
+  // navigation already under way (clicking a project link inside a chat
+  // reply, see ChatPanel.js's linkifyMessage usage): calling history.back()
+  // at the same time as that link's own navigation races it, and can leave
+  // the browser back where it started instead of on the clicked project.
+  const suppressPopRef = useRef(false);
   const closeChat = useCallback(() => {
+    setChatOpen(false);
+    setTooltipOpen(false);
+  }, []);
+  // Used by a click that's already navigating elsewhere (see suppressPopRef
+  // above) -- closes the panel the same way, just opts out of the
+  // history.back() cleanup for *this* close.
+  const closeChatForNav = useCallback(() => {
+    suppressPopRef.current = true;
     setChatOpen(false);
     setTooltipOpen(false);
   }, []);
   const toggleTooltip = useCallback(() => setTooltipOpen((v) => !v), []);
   const onBodyClick = useCallback(() => setTooltipOpen(false), []);
+
+  // Pressing the browser/OS back button while the chat is open used to
+  // navigate all the way out of it (back past whatever page the chat was
+  // opened on) instead of just closing the panel -- reported by Victoria on
+  // both mobile and desktop. Fix: push one extra history entry (same URL,
+  // so nothing actually navigates yet) the moment the panel opens, and
+  // treat popping back off of it as "close the panel", not "leave the
+  // page". If the panel is instead closed through the UI (X/Escape/scrim)
+  // while that entry is still the current one, the cleanup below pops it
+  // itself via history.back() -- otherwise it would sit in the back-stack
+  // as a dead entry (same URL as the page itself) that a LATER real back
+  // tap would have to burn through with no visible effect before the tap
+  // after that one finally did anything.
+  const pushedEntryRef = useRef(false);
+  useEffect(() => {
+    if (!chatOpen) return undefined;
+    try {
+      window.history.pushState({ victoraiChat: true }, '', window.location.href);
+      pushedEntryRef.current = true;
+    } catch (e) {
+      pushedEntryRef.current = false;
+    }
+    const onPopState = () => {
+      // The back navigation that just happened already consumed our pushed
+      // entry -- nothing left to pop in the cleanup below, just close.
+      pushedEntryRef.current = false;
+      suppressPopRef.current = true;
+      setChatOpen(false);
+      setTooltipOpen(false);
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => {
+      window.removeEventListener('popstate', onPopState);
+      if (pushedEntryRef.current && !suppressPopRef.current) {
+        try {
+          window.history.back();
+        } catch (e) {
+          /* ignore */
+        }
+      }
+      pushedEntryRef.current = false;
+      suppressPopRef.current = false;
+    };
+  }, [chatOpen]);
 
   const hasMessages = messages.length > 0;
   const topic = currentTopic || 'Bio';
@@ -273,6 +333,7 @@ export function useVictorAIChat({ topics, starters }) {
     starters: starters.map((item) => ({ text: item.q.en, pick: () => answer(item.q.en, item.topic) })),
     openChat,
     closeChat,
+    closeChatForNav,
     resetChat,
     toggleTooltip,
     onBodyClick,

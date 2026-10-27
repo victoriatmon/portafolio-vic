@@ -175,18 +175,53 @@ export function playCardOpenTransition({ slot, mobile }) {
       const w0 = W * sc;
       const h0 = H * sc;
       const { tx, ty, tw, th, tr } = getTarget(mobile);
+      const cover = Math.max(tw / W, th / H);
+
+      // `ov`'s own layout box is set ONCE, to the final target (tx,ty,tw,th),
+      // and never animated -- only its `transform` is. This used to animate
+      // left/top/width/height directly (growing the card to the final box
+      // over the whole transition), which is correct-looking but forces a
+      // full reflow + repaint of this position:fixed element on every frame
+      // (plus `art`'s own left:50%/top:50%, recomputed against `ov`'s box
+      // each time) -- cheap enough on desktop, where the overlay only grows
+      // to a ~1550x638 centered card, but on mobile, where it grows to cover
+      // the FULL viewport, that per-frame layout work is what read as a
+      // slow-motion/stuck card-open on a real phone. Scale/translate/rotate
+      // are the only properties the compositor can animate without redoing
+      // layout or paint each frame, so the start state is expressed as a
+      // `transform` that visually places/sizes `ov` exactly where the
+      // clicked card was, animating to the identity transform (`ov` at its
+      // real tx/ty/tw/th box) -- same visual motion, no layout thrash.
+      const scaleX0 = w0 / tw;
+      const scaleY0 = h0 / th;
+      const dx = cx - (tx + tw / 2);
+      const dy = cy - (ty + th / 2);
+      const startTransform = 'translate(' + dx + 'px,' + dy + 'px) rotate(' + ang + 'deg) scale(' + scaleX0 + ',' + scaleY0 + ')';
+      // Border-radius is still cheap to animate (repaint-only -- `ov`'s own
+      // box never changes size now), but its px value lives in `ov`'s own
+      // *logical* (pre-transform) space, which is always the final tw-wide
+      // box -- so what should visually read as `15 * sc`px at frame 0 has to
+      // be a bigger logical value that the scaleX0 shrink brings back down
+      // to that same apparent size: `(15*sc) / scaleX0` = `(15*sc)*tw/w0` =
+      // `(15*sc)*tw/(W*sc)` = `15*tw/W` (the `sc`s cancel).
+      const radius0 = (15 * tw) / W;
 
       const ov = document.createElement('div');
       ov.setAttribute('aria-hidden', 'true');
       ov.style.cssText =
         'position:fixed;z-index:2147483000;overflow:hidden;pointer-events:none;transform-origin:50% 50%;' +
-        'left:' + (cx - w0 / 2) + 'px;top:' + (cy - h0 / 2) + 'px;width:' + w0 + 'px;height:' + h0 + 'px;' +
-        'border-radius:' + 15 * sc + 'px;transform:rotate(' + ang + 'deg);';
+        'left:' + tx + 'px;top:' + ty + 'px;width:' + tw + 'px;height:' + th + 'px;' +
+        'border-radius:' + radius0 + 'px;transform:' + startTransform + ';';
 
+      // Statically sized/scaled to cover the final box from the start --
+      // previously animated from `scale(sc)` to `scale(cover)` to keep
+      // covering `ov`'s own box as THAT grew; now that `ov`'s logical box
+      // never changes, the cover amount it needs is constant too, so this
+      // needs no animation of its own (one fewer per-frame computation).
       const art = document.createElement('div');
       art.style.cssText =
         'position:absolute;left:50%;top:50%;width:' + W + 'px;height:' + H + 'px;transform-origin:50% 50%;' +
-        'transform:translate(-50%,-50%) scale(' + sc + ');';
+        'transform:translate(-50%,-50%) scale(' + cover + ');';
 
       const clone = face.cloneNode(true);
       uniquifyIds(clone);
@@ -225,7 +260,6 @@ export function playCardOpenTransition({ slot, mobile }) {
       scopeRoot.appendChild(ov);
       slot.style.visibility = 'hidden';
 
-      const cover = Math.max(tw / W, th / H);
       const page = document.querySelector('[data-page]');
       if (page) {
         Array.prototype.forEach.call(page.children, (el) => {
@@ -236,30 +270,15 @@ export function playCardOpenTransition({ slot, mobile }) {
       const main = ov.animate(
         [
           {
-            left: cx - w0 / 2 + 'px',
-            top: cy - h0 / 2 + 'px',
-            width: w0 + 'px',
-            height: h0 + 'px',
-            borderRadius: 15 * sc + 'px',
-            transform: 'rotate(' + ang + 'deg)',
+            transform: startTransform,
+            borderRadius: radius0 + 'px',
             boxShadow: 'none',
           },
           {
-            left: tx + 'px',
-            top: ty + 'px',
-            width: tw + 'px',
-            height: th + 'px',
+            transform: 'translate(0px,0px) rotate(0deg) scale(1,1)',
             borderRadius: tr + 'px',
-            transform: 'rotate(0deg)',
             boxShadow: shadow,
           },
-        ],
-        { duration: DURATION, easing: EASE, fill: 'forwards' }
-      );
-      art.animate(
-        [
-          { transform: 'translate(-50%,-50%) scale(' + sc + ')' },
-          { transform: 'translate(-50%,-50%) scale(' + cover + ')' },
         ],
         { duration: DURATION, easing: EASE, fill: 'forwards' }
       );

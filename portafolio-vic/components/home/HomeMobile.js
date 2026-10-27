@@ -28,14 +28,21 @@
 //
 // Each card's bespoke art animation (the tile mosaic, the spinning star,
 // the glitch swap, etc. -- see CARD_ART below) plays on its own, in a loop,
-// for as long as that card sits centred in the carousel: buildCards() below
-// derives `isCurrent` from the same signed distance-from-centre (`d`) it
-// already computes for layout, and the render applies it as `.is-current`
-// on `.card-face` (home-mobile.css's trigger selectors) and as an `active`
-// prop on <Art/> (for AXA/UNDP's JS-driven art). This replaced an earlier
-// version where a ~240ms press (`.is-held`, via holdOn/holdOff just below)
-// triggered the art instead -- `.is-held` still exists and still drives the
-// plain card-lift feedback on press, it just no longer feeds any card's art.
+// for as long as that card sits centred in the carousel AND the carousel
+// itself has fully stopped moving (the `settled` state + `currentIndex`,
+// just below): the render applies that as `.is-current` on `.card-face`
+// (home-mobile.css's trigger selectors) and as an `active` prop on <Art/>
+// (for AXA/UNDP's JS-driven art). This replaced an earlier version where a
+// ~240ms press (`.is-held`, via holdOn/holdOff below) triggered the art
+// instead -- `.is-held` still exists and still drives the plain card-lift
+// feedback on press, it just no longer feeds any card's art. A first pass
+// at the centred-trigger gated on proximity to centre alone (a small
+// epsilon on `d`) rather than on the carousel being fully at rest, which
+// could mark a card current ~100ms before tick()'s settle ease actually
+// finished -- on a real phone, starting a heavy CSS transition (Mapfre's
+// tile mosaic, say) while the carousel's own per-frame re-render was still
+// running read as a stutter right as the card arrived at centre. Gating on
+// `settled` instead removes that overlap by construction.
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -88,7 +95,7 @@ const CARD_SCALE = 0.85; // card scale on mobile
 const STEP = (Math.asin(275 / RC) * 180) / Math.PI; // degrees between cards: 275px apart along the arc
 const SPACING = RC * Math.sin((STEP * Math.PI) / 180);
 
-function buildCards(pos) {
+function buildCards(pos, currentIndex) {
   return LABELS.map((label, i) => {
     const d = ((((i - pos + COUNT / 2) % COUNT) + COUNT) % COUNT) - COUNT / 2; // signed distance from centre
     const ang = d * STEP;
@@ -96,21 +103,28 @@ function buildCards(pos) {
     const x = RC * Math.sin(th);
     const y = RC * (1 - Math.cos(th));
     const hidden = Math.abs(d) > 2.3;
-    // Drives each card's bespoke art animation (home-mobile.css's
-    // .is-current selectors + the `active` prop passed to <Art/> below),
-    // in place of the old press-and-hold trigger. A small epsilon rather
-    // than `d === 0`: tick()'s settle ease (see the useEffect below) always
-    // lands exactly on an integer position once it finishes, so this only
-    // needs enough slack to not be thrown off by a stray float-rounding
-    // step on the way there -- not to decide "close enough" early, which
-    // would start the loop a frame or two before the card actually stops.
-    const isCurrent = Math.abs(d) < 0.03;
     return {
       index: i,
       label,
       gradient: GRADIENTS[i],
       href: `/proyectos#${i}`,
-      isCurrent,
+      // Drives each card's bespoke art animation (home-mobile.css's
+      // .is-current selectors + the `active` prop passed to <Art/> below),
+      // in place of the old press-and-hold trigger. `currentIndex` is -1
+      // (so no card ever matches) while the carousel is still actually
+      // moving -- see the `settled` state in the component below. An
+      // earlier version of this instead compared `d` against a small
+      // epsilon, which could flip a card's art on ~100ms before tick()'s
+      // settle ease actually finished: that overlap meant a heavy CSS
+      // transition (Mapfre's ~27-selector tile mosaic, say) kicked off
+      // while the carousel's own per-frame re-render was still running,
+      // and on a real phone (weaker GPU than this repo's dev/test
+      // environment) that contention is what read as "se traba" / stutter
+      // right as the card arrived at centre. Gating on `settled` instead
+      // guarantees zero overlap by construction: nothing is ever marked
+      // current until the carousel has fully stopped producing new
+      // frames, however long that happens to take.
+      isCurrent: i === currentIndex,
       wrapperStyle: {
         position: 'absolute',
         left: -CARD_W / 2,
@@ -128,6 +142,12 @@ function buildCards(pos) {
 
 export default function HomeMobile() {
   const [pos, setPos] = useState(0);
+  // Whether the carousel is fully at rest (not dragging, no settle ease in
+  // flight) -- see tick() below, which is the only place this flips. Gates
+  // which card (if any) counts as "current" for the bespoke-art trigger
+  // (see buildCards()'s isCurrent): a card is only ever marked current once
+  // this is true, never while the carousel is still actively re-rendering.
+  const [settled, setSettled] = useState(true);
   const [entered, setEntered] = useState(false);
   const carRef = useRef(null);
 
@@ -176,10 +196,26 @@ export default function HomeMobile() {
     // instead caps it at one commit per frame, same cadence as the
     // momentum settle below.
     let dragDirty = false;
+    // Mirrors the `settled` state above, readable/writable synchronously
+    // inside tick() (a plain closure var, same pattern as posVal/dragDirty/
+    // etc. above -- avoids a stale read of React state inside the rAF
+    // loop). Flips false the instant real drag motion starts or a settle
+    // ease has work left to do, true again the moment tick() has nothing
+    // left to animate -- see the two call sites below.
+    let settledNow = true;
 
     function tick(t) {
       last = t;
       if (dragging) {
+        // Only an actual drag (moved past the 10px threshold, same one
+        // onWinMove already uses) unsettles -- a finger merely resting on
+        // a card (pointerdown without movement, e.g. a tap or a brief
+        // hold) never moves posVal, so there's nothing for a bespoke art
+        // animation to visually clash with yet.
+        if (moved && settledNow) {
+          settledNow = false;
+          setSettled(false);
+        }
         if (dragDirty) {
           dragDirty = false;
           setPos(posVal);
@@ -187,6 +223,10 @@ export default function HomeMobile() {
       } else {
         const diff = targetVal - posVal;
         if (Math.abs(diff) > 0.0008) {
+          if (settledNow) {
+            settledNow = false;
+            setSettled(false);
+          }
           if (reduce) {
             posVal = targetVal;
           } else {
@@ -224,6 +264,15 @@ export default function HomeMobile() {
         } else if (diff !== 0) {
           posVal = targetVal;
           setPos(posVal);
+        } else if (!settledNow) {
+          // diff === 0 exactly and not dragging: the carousel has nothing
+          // left to animate as of this frame (the render from the branch
+          // above, which snapped posVal to targetVal, has already
+          // committed by the time this runs next). Only now is it safe to
+          // mark a card current -- one rAF tick after the carousel's own
+          // last visual change, never overlapping it.
+          settledNow = true;
+          setSettled(true);
         }
       }
       rafId = requestAnimationFrame(tick);
@@ -413,7 +462,13 @@ export default function HomeMobile() {
     };
   }, []);
 
-  const cards = buildCards(pos);
+  // -1 while not settled so buildCards() never matches any card -- see
+  // `settled` above. Once settled, `pos` is guaranteed to already be an
+  // exact integer (every targetVal setter below rounds/wraps to one before
+  // the carousel is allowed to call this settled), so this is just an
+  // index lookup, not a rounding decision.
+  const currentIndex = settled ? (((Math.round(pos) % COUNT) + COUNT) % COUNT) : -1;
+  const cards = buildCards(pos, currentIndex);
   const ticksStyle = { transform: `rotate(${(-pos * STEP).toFixed(3)}deg)` };
 
   // Ported from MainMobile.dc.html's _xOpen/_xGoTo -- see HomeDesktop.js's

@@ -79,7 +79,16 @@
   left: 0;
   right: 0;
   width: 100%;
+  /* 100vh is the LARGEST possible viewport (as if the browser's address
+     bar/bottom toolbar were fully collapsed) -- on iOS/Android that chrome
+     is often still showing (as it was in Victoria's screenshot), so the
+     real visible area is shorter than 100vh and the bottom of the sheet
+     (menu-credit, "...by Vic") renders behind it, clipped. 100dvh tracks
+     the *actual* visible viewport live as that chrome shows/hides; kept
+     after 100vh (not replacing it) so a browser that doesn't understand
+     dvh still gets the old value instead of `height: auto`. */
   height: 100vh;
+  height: 100dvh;
   z-index: 45;
   display: flex;
   flex-direction: column;
@@ -152,7 +161,10 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 28px 28px;
+  /* calc(...) instead of a plain 28px: on an iPhone with a home-indicator
+     bar, that bar sits inside the 100dvh area above, not outside it -- without
+     this the credit line's own 28px padding can still end up right behind it. */
+  padding: 0 28px calc(28px + env(safe-area-inset-bottom, 0px));
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.06em;

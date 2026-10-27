@@ -25,7 +25,8 @@
 .home-mobile-scope .car2-ticks { position: absolute; left: calc(50% - 910px); top: 200px; width: 1820px; height: 1820px; border-radius: 50%; pointer-events: none;
   background: repeating-conic-gradient(from -0.06deg at 50% 50%, rgba(255,255,255,0.30) 0deg 0.12deg, transparent 0.12deg 1.1deg);
   -webkit-mask-image: radial-gradient(circle closest-side, transparent 889px, #000 890px, #000 910px, transparent 911px);
-  mask-image: radial-gradient(circle closest-side, transparent 889px, #000 890px, #000 910px, transparent 911px); }
+  mask-image: radial-gradient(circle closest-side, transparent 889px, #000 890px, #000 910px, transparent 911px);
+  transform: translateZ(0); will-change: transform; backface-visibility: hidden; }
 
 .home-mobile-scope .card-slot {
   position: absolute;

@@ -222,7 +222,20 @@ export default function HomeMobile() {
       }
       if (heldFace || !moved) return;
       const dx = e.clientX - startX;
-      posVal = startPos - dx / SPACING;
+      // Guided swipe, part 1/2 (see onWinUp for the release/commit side):
+      // the live drag still tracks the finger 1:1 for tactile feel, but is
+      // clamped to +-1 card (a touch of overshoot for a rubber-band feel)
+      // off the card the gesture started on. Before this clamp, dragging
+      // further just kept scrolling the ring continuously past however
+      // many cards the raw px distance implied -- which is also why a
+      // *short* swipe used to barely move anything (this is a proportional
+      // mapping: ~SPACING px of travel, nearly a full mobile screen width,
+      // for one card). A swipe now always reads as "pick the next/prev
+      // card", not "scroll the whole ring", so it shouldn't visually run
+      // past that either.
+      const rawDelta = -dx / SPACING;
+      const clampedDelta = Math.max(-1.15, Math.min(1.15, rawDelta));
+      posVal = startPos + clampedDelta;
       targetVal = posVal;
       const now = performance.now();
       samples.push({ t: now, x: e.clientX });
@@ -245,8 +258,31 @@ export default function HomeMobile() {
         const b = samples[samples.length - 1];
         v = (b.x - a.x) / Math.max(1, b.t - a.t);
       }
-      const flick = Math.max(-3, Math.min(3, (-v * 220) / SPACING));
-      const tr = Math.round(posVal + flick);
+      // Guided swipe, part 2/2: commit to exactly one card over -- never
+      // more than one, however far or fast the gesture was -- or snap back
+      // to the current one. Old behaviour rounded the raw accumulated drag
+      // distance (+ a velocity-based "flick" nudge) to the nearest integer,
+      // which is why a quick, short, deliberate swipe (small distance, not
+      // quite enough velocity to flick past the 0.5-card rounding line)
+      // could fail to advance at all and spring back -- reading as "slow"/
+      // unresponsive even though a real swipe gesture had just happened.
+      // Two independent triggers, either one is enough: a clear flick
+      // (fast enough, almost regardless of distance -- someone flicking
+      // the ring expects it to move) or a deliberate drag past a small
+      // fraction of a card's spacing (~16%, well under the old ~100%
+      // needed) -- in whichever direction the gesture went. Below both, it
+      // springs back to the card it started on (tick()'s existing ease-to-
+      // target already animates that return).
+      const dragCards = posVal - startPos; // net cards moved this gesture (already +-1.15 clamped above)
+      const FLICK_V = 0.3; // px/ms (~300px/s) -- a normal quick flick, whatever the distance
+      const DRAG_THRESHOLD = 0.16; // ~16% of a card's spacing (~44px) of deliberate drag
+      let dir = 0;
+      if (Math.abs(v) > FLICK_V) {
+        dir = v < 0 ? 1 : -1; // dragging/flicking left (negative v) advances to the next card
+      } else if (Math.abs(dragCards) > DRAG_THRESHOLD) {
+        dir = dragCards > 0 ? 1 : -1;
+      }
+      const tr = Math.round(startPos) + dir;
       const shift = Math.floor(tr / COUNT) * COUNT;
       posVal -= shift;
       targetVal = tr - shift;

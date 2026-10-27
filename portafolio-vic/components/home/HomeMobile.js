@@ -135,6 +135,15 @@ export default function HomeMobile() {
     let wheelIdle = null; // named timer, cleared below on unmount
     let last = performance.now();
     let rafId = null;
+    // Settle-to-target animation state (see tick() below). easeTarget tracks
+    // the targetVal that the ease currently in flight is running towards --
+    // comparing it against targetVal each frame is how a fresh ease gets
+    // (re)started the instant targetVal changes (new swipe commit, wheel
+    // settling, focus recentring), without needing every call site that sets
+    // targetVal to also reset these.
+    let easeFrom = 0;
+    let easeTarget = 0;
+    let easeStart = last;
     // Set (not applied) by onWinMove below; consumed here, at most once per
     // rendered frame. Touch `pointermove` can dispatch more than once per
     // vsync on some mobile browsers, and calling `setPos()` straight from
@@ -147,7 +156,6 @@ export default function HomeMobile() {
     let dragDirty = false;
 
     function tick(t) {
-      const dt = Math.min(48, t - last);
       last = t;
       if (dragging) {
         if (dragDirty) {
@@ -157,15 +165,39 @@ export default function HomeMobile() {
       } else {
         const diff = targetVal - posVal;
         if (Math.abs(diff) > 0.0008) {
-          // Settle-to-target ease. Time-constant kept short (vs. the old
-          // 120ms) because the guided swipe above (onWinUp) now routinely
-          // asks this to cover a near-full card's distance on every commit
-          // -- a short, decisive swipe can leave posVal barely past the
-          // drag threshold with targetVal already a whole card away. At
-          // 120ms that catch-up tween took ~500ms+ to fully settle, which
-          // read as slow motion for what's meant to be a snappy paginated
-          // swipe. 60ms settles the same jump in ~250-300ms.
-          posVal += diff * (reduce ? 1 : 1 - Math.exp(-dt / 60));
+          if (reduce) {
+            posVal = targetVal;
+          } else {
+            // Settle-to-target ease: a fixed-duration ease-out, not a
+            // proportional/exponential "move X% of the remaining distance
+            // every frame" decay (which is what this used to be, including
+            // in an earlier pass at this same bug that just shortened its
+            // time-constant). That shape never actually finishes -- it only
+            // asymptotically approaches the target, so however fast its
+            // early motion is tuned, the home stretch right as a card
+            // reaches centre is *always* the slowest-looking part, for
+            // longer the bigger the jump (which the guided swipe above
+            // made routine: a short swipe commits a whole card's distance).
+            // That's exactly "se mueve lento cuando la card va a ponerse en
+            // la posición del medio". A duration-based tween instead always
+            // finishes in EASE_DUR_MS flat, regardless of distance, so the
+            // slow-down at the very end is always short and bounded rather
+            // than an open-ended tail.
+            if (targetVal !== easeTarget) {
+              // targetVal just changed (swipe committed, wheel settled, or
+              // focus moved) -- (re)start the ease from wherever posVal is
+              // right now, which also makes a new gesture during an
+              // in-flight ease blend smoothly from the current position
+              // instead of jumping.
+              easeFrom = posVal;
+              easeTarget = targetVal;
+              easeStart = t;
+            }
+            const EASE_DUR_MS = 220;
+            const frac = Math.min(1, (t - easeStart) / EASE_DUR_MS);
+            const eased = 1 - (1 - frac) * (1 - frac); // quadratic ease-out: decelerates, but over a fixed, short span
+            posVal = easeFrom + (easeTarget - easeFrom) * eased;
+          }
           setPos(posVal);
         } else if (diff !== 0) {
           posVal = targetVal;

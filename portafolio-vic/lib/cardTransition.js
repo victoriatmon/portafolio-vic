@@ -213,15 +213,43 @@ export function playCardOpenTransition({ slot, mobile }) {
         'left:' + tx + 'px;top:' + ty + 'px;width:' + tw + 'px;height:' + th + 'px;' +
         'border-radius:' + radius0 + 'px;transform:' + startTransform + ';';
 
-      // Statically sized/scaled to cover the final box from the start --
-      // previously animated from `scale(sc)` to `scale(cover)` to keep
-      // covering `ov`'s own box as THAT grew; now that `ov`'s logical box
-      // never changes, the cover amount it needs is constant too, so this
-      // needs no animation of its own (one fewer per-frame computation).
+      // `art`'s scale has to ANIMATE, not sit static at `cover` -- `ov`'s own
+      // box is anisotropic in transit (scaleX0 != scaleY0 whenever the
+      // source card's aspect ratio differs from the target stage's, which it
+      // always does here: tall portrait cards opening into a wide landscape
+      // stage), so a single isotropic `cover` factor on `art` only produces
+      // the correct, undistorted picture at the very end (t=1, once `ov`'s
+      // own scale has settled to (1,1)). At every earlier frame it's wrong
+      // in a way that compounds, not just crops: `art`'s content is
+      // implicitly re-stretched by whatever `ov`'s current (scaleX,scaleY)
+      // happens to be, and since those two axes shrink at different rates
+      // while `art` itself doesn't correct for that, the clone reads as
+      // warped/"disfigured" (Victoria's word) rather than merely cropped --
+      // most visible early-to-mid transition, which is most of its 820ms.
+      //
+      // Fix: give `art` its own two-axis start scale that exactly cancels
+      // `ov`'s anisotropic start scale, so the COMBINED visual scale (the
+      // product of the two, since `art` is `ov`'s descendant and transforms
+      // compose) is isotropic and equals the original card's own on-screen
+      // size at t=0 -- pixel-identical to the real card it's standing in
+      // for. `ov`'s start scale is (w0/tw, h0/th); for the product with
+      // `art`'s own (W-by-H-native) scale to land on the single scalar `sc`
+      // (the card's current on-screen scale) in both axes, `art` needs
+      // (tw/W, th/H) -- i.e. per-axis "cover" against each dimension
+      // separately, not the combined max(). Animating `art` from that
+      // anisotropic pair to the isotropic (cover, cover) end state, in
+      // lockstep with `ov`'s own main animation (same duration/easing),
+      // keeps the two corrective factors in sync at every frame in
+      // between, not just at the two ends -- so the clone reads as a
+      // continuous, undistorted zoom the whole way, the same way the real
+      // project-card art it's handing off to is only ever "cover"-cropped
+      // once it has actually reached that final wide aspect ratio.
+      const coverX = tw / W;
+      const coverY = th / H;
       const art = document.createElement('div');
       art.style.cssText =
         'position:absolute;left:50%;top:50%;width:' + W + 'px;height:' + H + 'px;transform-origin:50% 50%;' +
-        'transform:translate(-50%,-50%) scale(' + cover + ');';
+        'transform:translate(-50%,-50%) scale(' + coverX + ',' + coverY + ');';
 
       const clone = face.cloneNode(true);
       uniquifyIds(clone);
@@ -279,6 +307,16 @@ export function playCardOpenTransition({ slot, mobile }) {
             borderRadius: tr + 'px',
             boxShadow: shadow,
           },
+        ],
+        { duration: DURATION, easing: EASE, fill: 'forwards' }
+      );
+      // Same duration/easing as `main` above so the two corrective scales
+      // (this element's and `ov`'s) stay multiplicatively in sync -- see the
+      // long comment where `coverX`/`coverY` are computed.
+      art.animate(
+        [
+          { transform: 'translate(-50%,-50%) scale(' + coverX + ',' + coverY + ')' },
+          { transform: 'translate(-50%,-50%) scale(' + cover + ',' + cover + ')' },
         ],
         { duration: DURATION, easing: EASE, fill: 'forwards' }
       );

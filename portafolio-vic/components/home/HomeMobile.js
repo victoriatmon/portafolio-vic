@@ -38,11 +38,30 @@
 // feedback on press, it just no longer feeds any card's art. A first pass
 // at the centred-trigger gated on proximity to centre alone (a small
 // epsilon on `d`) rather than on the carousel being fully at rest, which
-// could mark a card current ~100ms before tick()'s settle ease actually
+// could mark a card current ~100ms before the settle ease actually
 // finished -- on a real phone, starting a heavy CSS transition (Mapfre's
 // tile mosaic, say) while the carousel's own per-frame re-render was still
 // running read as a stutter right as the card arrived at centre. Gating on
 // `settled` instead removes that overlap by construction.
+//
+// The settle-to-target animation itself (after a swipe/wheel-idle/focus
+// commits to a new card -- see commitTo() below) is driven by a CSS
+// `transition` on each card's own `transform`, toggled via the `easing`
+// state/wrapperStyle, NOT by a per-frame JS tween calling setPos() every
+// rAF frame like it used to. Victoria reported the card doing "3 pasos"
+// (visibly discrete jumps) on her phone specifically during this settle,
+// never during the drag itself -- i.e. dropped frames, not a speed/shape
+// problem (fix #10's duration/curve were already right). A JS-driven tween
+// pays a full React re-render + commit + paint for every single animation
+// frame; on a weaker phone that cost alone can be enough to miss frames,
+// which is exactly what reads as discrete steps instead of one continuous
+// slide. A CSS transition instead needs ONE React commit (snapping `pos`
+// straight to the final target) and lets the browser's compositor
+// interpolate the visual motion on its own thread, independent of
+// React/JS's per-frame cost. See commitTo()/stopEasing()/currentVisualPos()
+// below for how dragging or a new commit can still cleanly interrupt an
+// in-flight settle without a visible pop, which is the one thing the old
+// per-frame tween got "for free" that this design has to do on purpose.
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -94,8 +113,18 @@ const RC = 900; // radius of the arc the cards sit on (screen px)
 const CARD_SCALE = 0.85; // card scale on mobile
 const STEP = (Math.asin(275 / RC) * 180) / Math.PI; // degrees between cards: 275px apart along the arc
 const SPACING = RC * Math.sin((STEP * Math.PI) / 180);
+// Fixed settle duration (fix #10) -- now also the CSS transition's own
+// duration (fix #13), so it has to live at module scope: buildCards() below
+// needs it for each card's wrapperStyle.transition, and the component's
+// effect needs the same number for commitTo()/currentVisualPos(). The curve
+// is a cubic-bezier hand-picked to match the original `1-(1-frac)²`
+// quadratic ease-out this replaced (easings.net's "easeOutQuad") -- not
+// mathematically identical to a CSS cubic-bezier, but visually
+// indistinguishable, which is all that's needed here.
+const EASE_DUR_MS = 220;
+const EASE_CURVE = 'cubic-bezier(0.25, 0.46, 0.45, 0.94)';
 
-function buildCards(pos, currentIndex) {
+function buildCards(pos, currentIndex, easing) {
   return LABELS.map((label, i) => {
     const d = ((((i - pos + COUNT / 2) % COUNT) + COUNT) % COUNT) - COUNT / 2; // signed distance from centre
     const ang = d * STEP;
@@ -125,6 +154,16 @@ function buildCards(pos, currentIndex) {
       // current until the carousel has fully stopped producing new
       // frames, however long that happens to take.
       isCurrent: i === currentIndex,
+      // Only enabled during a committed settle, never during an active drag
+      // -- a drag needs instant 1:1 tracking, this would otherwise add a
+      // laggy 220ms delay to every finger movement. Applied as a CLASS
+      // (`.card-slot.is-easing` in home-mobile.css), not an inline
+      // `transition` style: `.card-slot` already declares its own
+      // `transition: opacity ...` for the load-time reveal (see that CSS),
+      // and an inline `transition` would replace that whole shorthand,
+      // silently breaking the entrance fade. The CSS class re-states the
+      // opacity transition alongside the transform one instead.
+      isEasing: easing,
       wrapperStyle: {
         position: 'absolute',
         left: -CARD_W / 2,
@@ -142,12 +181,20 @@ function buildCards(pos, currentIndex) {
 
 export default function HomeMobile() {
   const [pos, setPos] = useState(0);
-  // Whether the carousel is fully at rest (not dragging, no settle ease in
-  // flight) -- see tick() below, which is the only place this flips. Gates
-  // which card (if any) counts as "current" for the bespoke-art trigger
-  // (see buildCards()'s isCurrent): a card is only ever marked current once
-  // this is true, never while the carousel is still actively re-rendering.
+  // Whether the carousel is fully at rest (not dragging, no settle commit in
+  // flight) -- see onWinMove/commitTo()/stopEasing() below, the only places
+  // this flips. Gates which card (if any) counts as "current" for the
+  // bespoke-art trigger (see buildCards()'s isCurrent): a card is only ever
+  // marked current once this is true, never while the carousel is still
+  // dragging or mid-settle.
   const [settled, setSettled] = useState(true);
+  // Whether a committed (non-drag) settle is currently animating via CSS
+  // transition -- see commitTo()/EASE_CURVE below (fix #13), and the
+  // `.card-slot.is-easing` class it drives in home-mobile.css. Narrower
+  // than `settled`: `settled` is also false during an active drag, but
+  // `easing` must NEVER be true then (a drag needs instant 1:1 tracking,
+  // not a 220ms-lagged one).
+  const [easing, setEasing] = useState(false);
   const [entered, setEntered] = useState(false);
   const carRef = useRef(null);
 
@@ -175,17 +222,21 @@ export default function HomeMobile() {
     let heldFace = null;
     let holdTimer = null; // named timer, cleared below on unmount
     let wheelIdle = null; // named timer, cleared below on unmount
-    let last = performance.now();
+    let easeDoneTimer = null; // named timer, cleared below on unmount
     let rafId = null;
-    // Settle-to-target animation state (see tick() below). easeTarget tracks
-    // the targetVal that the ease currently in flight is running towards --
-    // comparing it against targetVal each frame is how a fresh ease gets
-    // (re)started the instant targetVal changes (new swipe commit, wheel
-    // settling, focus recentring), without needing every call site that sets
-    // targetVal to also reset these.
+    // Settle-to-target animation reference points (see commitTo()/
+    // currentVisualPos() below). easeFrom/easeTarget/easeStart describe the
+    // CSS transition currently in flight (if any) -- not used to drive the
+    // motion itself (the browser's compositor does that), only to work out
+    // where the card visually IS right now if something needs to interrupt
+    // it cleanly (a new drag, a new commit, a live wheel nudge).
     let easeFrom = 0;
     let easeTarget = 0;
-    let easeStart = last;
+    let easeStart = performance.now();
+    // Mirrors the `easing` state above, readable/writable synchronously
+    // (same pattern as posVal/settledNow -- avoids a stale read of React
+    // state from inside a plain event handler).
+    let easingNow = false;
     // Set (not applied) by onWinMove below; consumed here, at most once per
     // rendered frame. Touch `pointermove` can dispatch more than once per
     // vsync on some mobile browsers, and calling `setPos()` straight from
@@ -193,87 +244,94 @@ export default function HomeMobile() {
     // frame -- wasted work (several renders that never even get painted)
     // that was the main cause of the sluggish/non-smooth drag feel on
     // mobile. Routing every update through this already-running rAF loop
-    // instead caps it at one commit per frame, same cadence as the
-    // momentum settle below.
+    // instead caps it at one commit per frame.
     let dragDirty = false;
     // Mirrors the `settled` state above, readable/writable synchronously
-    // inside tick() (a plain closure var, same pattern as posVal/dragDirty/
-    // etc. above -- avoids a stale read of React state inside the rAF
-    // loop). Flips false the instant real drag motion starts or a settle
-    // ease has work left to do, true again the moment tick() has nothing
-    // left to animate -- see the two call sites below.
+    // (same pattern as posVal/dragDirty/etc. above). Flips false the
+    // instant real drag motion starts or a settle commits to a new target,
+    // true again once that settle has visually finished -- see
+    // onWinMove/commitTo() below.
     let settledNow = true;
 
-    function tick(t) {
-      last = t;
-      if (dragging) {
-        // Only an actual drag (moved past the 10px threshold, same one
-        // onWinMove already uses) unsettles -- a finger merely resting on
-        // a card (pointerdown without movement, e.g. a tap or a brief
-        // hold) never moves posVal, so there's nothing for a bespoke art
-        // animation to visually clash with yet.
-        if (moved && settledNow) {
-          settledNow = false;
-          setSettled(false);
-        }
-        if (dragDirty) {
-          dragDirty = false;
-          setPos(posVal);
-        }
-      } else {
-        const diff = targetVal - posVal;
-        if (Math.abs(diff) > 0.0008) {
-          if (settledNow) {
-            settledNow = false;
-            setSettled(false);
-          }
-          if (reduce) {
-            posVal = targetVal;
-          } else {
-            // Settle-to-target ease: a fixed-duration ease-out, not a
-            // proportional/exponential "move X% of the remaining distance
-            // every frame" decay (which is what this used to be, including
-            // in an earlier pass at this same bug that just shortened its
-            // time-constant). That shape never actually finishes -- it only
-            // asymptotically approaches the target, so however fast its
-            // early motion is tuned, the home stretch right as a card
-            // reaches centre is *always* the slowest-looking part, for
-            // longer the bigger the jump (which the guided swipe above
-            // made routine: a short swipe commits a whole card's distance).
-            // That's exactly "se mueve lento cuando la card va a ponerse en
-            // la posición del medio". A duration-based tween instead always
-            // finishes in EASE_DUR_MS flat, regardless of distance, so the
-            // slow-down at the very end is always short and bounded rather
-            // than an open-ended tail.
-            if (targetVal !== easeTarget) {
-              // targetVal just changed (swipe committed, wheel settled, or
-              // focus moved) -- (re)start the ease from wherever posVal is
-              // right now, which also makes a new gesture during an
-              // in-flight ease blend smoothly from the current position
-              // instead of jumping.
-              easeFrom = posVal;
-              easeTarget = targetVal;
-              easeStart = t;
-            }
-            const EASE_DUR_MS = 220;
-            const frac = Math.min(1, (t - easeStart) / EASE_DUR_MS);
-            const eased = 1 - (1 - frac) * (1 - frac); // quadratic ease-out: decelerates, but over a fixed, short span
-            posVal = easeFrom + (easeTarget - easeFrom) * eased;
-          }
-          setPos(posVal);
-        } else if (diff !== 0) {
-          posVal = targetVal;
-          setPos(posVal);
-        } else if (!settledNow) {
-          // diff === 0 exactly and not dragging: the carousel has nothing
-          // left to animate as of this frame (the render from the branch
-          // above, which snapped posVal to targetVal, has already
-          // committed by the time this runs next). Only now is it safe to
-          // mark a card current -- one rAF tick after the carousel's own
-          // last visual change, never overlapping it.
-          settledNow = true;
-          setSettled(true);
-        }
+    // While a CSS-driven settle (commitTo() below) is still animating,
+    // `posVal` already holds the FINAL target -- it's snapped there
+    // immediately at commit time, see commitTo() -- not whatever the
+    // browser is currently painting on screen mid-transition. This
+    // reconstructs that on-screen position at this instant, using the same
+    // quadratic ease-out EASE_CURVE approximates. Only needed for the rare
+    // case where something interrupts an in-flight settle (a new drag, a
+    // new commit, a live wheel nudge) and has to pick up from where the
+    // card visually is, not from a target it hasn't reached yet.
+    function currentVisualPos() {
+      if (!easingNow) return posVal;
+      const frac = Math.min(1, (performance.now() - easeStart) / EASE_DUR_MS);
+      const eased = 1 - (1 - frac) * (1 - frac);
+      return easeFrom + (easeTarget - easeFrom) * eased;
+    }
+
+    // Cleanly interrupts an in-flight CSS settle (see commitTo() below),
+    // snapping pos/targetVal to wherever the card visually was and turning
+    // the transition off in the SAME commit -- so nothing pops. Called
+    // whenever something is about to take over the motion by other means
+    // (a new drag starting, a live wheel nudge).
+    function stopEasing() {
+      if (!easingNow) return;
+      clearTimeout(easeDoneTimer);
+      posVal = currentVisualPos();
+      targetVal = posVal;
+      easingNow = false;
+      settledNow = true;
+      setSettled(true);
+      setEasing(false);
+      setPos(posVal);
+    }
+
+    // Commits to a new integer position with the fixed-duration ease-out
+    // settle (fix #10's 220ms curve), driven by a CSS transition on each
+    // card's own `transform` (the `easing` state/wrapperStyle) rather than
+    // a per-frame JS tween -- see the file header and fix #13 for why.
+    // `posVal`/`pos` snap to the FINAL value immediately, in one React
+    // commit; the CSS transition is what makes that jump look smooth on
+    // screen, entirely on the compositor, with no further JS involvement
+    // once this returns (until the setTimeout below marks it settled).
+    function commitTo(target) {
+      clearTimeout(easeDoneTimer);
+      const fromPos = currentVisualPos();
+      targetVal = target;
+      posVal = target;
+      if (reduce) {
+        easingNow = false;
+        setEasing(false);
+        settledNow = true;
+        setSettled(true);
+        setPos(posVal);
+        return;
+      }
+      easeFrom = fromPos;
+      easeTarget = target;
+      easeStart = performance.now();
+      easingNow = true;
+      settledNow = false;
+      setSettled(false);
+      setEasing(true);
+      setPos(posVal);
+      easeDoneTimer = setTimeout(() => {
+        easingNow = false;
+        setEasing(false);
+        settledNow = true;
+        setSettled(true);
+      }, EASE_DUR_MS);
+    }
+
+    function tick() {
+      // The only per-frame job left: flushing the live drag position (see
+      // onWinMove below) at most once per rendered frame. Settling to a
+      // target is a one-shot CSS-transition commit now (commitTo() above),
+      // not something this loop needs to drive frame by frame -- see the
+      // file header and fix #13.
+      if (dragging && dragDirty) {
+        dragDirty = false;
+        setPos(posVal);
       }
       rafId = requestAnimationFrame(tick);
     }
@@ -304,6 +362,11 @@ export default function HomeMobile() {
         const EDGE = 28;
         if (e.clientX < EDGE || e.clientX > window.innerWidth - EDGE) return;
       }
+      // If a CSS settle was still animating, pick up from exactly where the
+      // card visually is (not from a target it hasn't reached yet) and
+      // turn the transition off in the same commit -- see stopEasing()
+      // above. A no-op if nothing was easing.
+      stopEasing();
       dragging = true;
       startX = e.clientX;
       startPos = posVal;
@@ -327,6 +390,16 @@ export default function HomeMobile() {
       if (!moved && Math.hypot(e.clientX - downX, e.clientY - downY) > 10) {
         moved = true;
         clearTimeout(holdTimer);
+        // Only an actual drag (crossing this threshold) unsettles -- a
+        // finger merely resting on a card (pointerdown without movement,
+        // e.g. a tap or a brief hold) never moves posVal, so there's
+        // nothing for a bespoke art animation to visually clash with yet.
+        // (stopEasing() in onDragStart above already unsettled this if a
+        // CSS settle was still in flight when the drag started.)
+        if (settledNow) {
+          settledNow = false;
+          setSettled(false);
+        }
         if (heldFace) {
           holdOff();
           startX = e.clientX;
@@ -384,8 +457,8 @@ export default function HomeMobile() {
       // the ring expects it to move) or a deliberate drag past a small
       // fraction of a card's spacing (~16%, well under the old ~100%
       // needed) -- in whichever direction the gesture went. Below both, it
-      // springs back to the card it started on (tick()'s existing ease-to-
-      // target already animates that return).
+      // springs back to the card it started on (commitTo() below already
+      // animates that return).
       const dragCards = posVal - startPos; // net cards moved this gesture (already +-1.15 clamped above)
       const FLICK_V = 0.3; // px/ms (~300px/s) -- a normal quick flick, whatever the distance
       const DRAG_THRESHOLD = 0.16; // ~16% of a card's spacing (~44px) of deliberate drag
@@ -397,9 +470,8 @@ export default function HomeMobile() {
       }
       const tr = Math.round(startPos) + dir;
       const shift = Math.floor(tr / COUNT) * COUNT;
-      posVal -= shift;
-      targetVal = tr - shift;
-      setPos(posVal);
+      posVal -= shift; // wrap-normalize the drag-end position first, same as before
+      commitTo(tr - shift);
     }
 
     // Suppresses the click a drag/hold release leaves behind.
@@ -411,21 +483,33 @@ export default function HomeMobile() {
     }
 
     // Trackpad/mouse wheel on a touch-capable device drives the carousel
-    // too, alongside drag -- the two never conflict since drag writes
-    // posVal directly while this only nudges targetVal, which tick() eases
-    // posVal toward.
+    // too, alongside drag -- the two never conflict since both write
+    // posVal directly for live feedback (1:1, same as a drag) and only the
+    // idle-settle below commits to a final card via commitTo().
     function onWheel(e) {
       const horizontal = Math.abs(e.deltaX) > Math.abs(e.deltaY);
       const delta = horizontal ? e.deltaX : e.deltaY;
       if (!delta) return;
       e.preventDefault();
-      targetVal -= delta / 340;
+      stopEasing(); // a live scroll interrupts any in-flight settle, same as starting a drag would
+      // A live scroll moves posVal off-target same as a drag does, so it
+      // has to unsettle too -- otherwise `settled` could still read `true`
+      // (nothing marked it false) while `pos` is mid-scroll and not
+      // actually resting on any card, which would wrongly let buildCards()
+      // match a card as current. See the matching check in onWinMove.
+      if (settledNow) {
+        settledNow = false;
+        setSettled(false);
+      }
+      posVal -= delta / 340;
+      targetVal = posVal;
+      setPos(posVal);
       clearTimeout(wheelIdle);
       wheelIdle = setTimeout(() => {
         const tr = Math.round(targetVal);
         const shift = Math.floor(tr / COUNT) * COUNT;
         posVal -= shift;
-        targetVal = tr - shift;
+        commitTo(tr - shift);
       }, 140);
     }
 
@@ -435,7 +519,7 @@ export default function HomeMobile() {
       const all = Array.prototype.slice.call(document.querySelectorAll('.card-face'));
       const idx = all.indexOf(a);
       if (idx < 0) return;
-      targetVal = Math.round((posVal - idx) / COUNT) * COUNT + idx;
+      commitTo(Math.round((currentVisualPos() - idx) / COUNT) * COUNT + idx);
     }
 
     const carEl = carRef.current;
@@ -450,6 +534,7 @@ export default function HomeMobile() {
       if (rafId) cancelAnimationFrame(rafId);
       clearTimeout(holdTimer);
       clearTimeout(wheelIdle);
+      clearTimeout(easeDoneTimer);
       window.removeEventListener('wheel', onWheel);
       window.removeEventListener('pointermove', onWinMove);
       window.removeEventListener('pointerup', onWinUp);
@@ -468,8 +553,14 @@ export default function HomeMobile() {
   // the carousel is allowed to call this settled), so this is just an
   // index lookup, not a rounding decision.
   const currentIndex = settled ? (((Math.round(pos) % COUNT) + COUNT) % COUNT) : -1;
-  const cards = buildCards(pos, currentIndex);
-  const ticksStyle = { transform: `rotate(${(-pos * STEP).toFixed(3)}deg)` };
+  const cards = buildCards(pos, currentIndex, easing);
+  const ticksStyle = {
+    transform: `rotate(${(-pos * STEP).toFixed(3)}deg)`,
+    // Same CSS-transition settle as each card's wrapperStyle -- see
+    // commitTo()/EASE_CURVE above (fix #13) -- so the decorative tick
+    // marks glide in sync with the cards instead of snapping instantly.
+    transition: easing ? `transform ${EASE_DUR_MS}ms ${EASE_CURVE}` : 'none',
+  };
 
   // Ported from MainMobile.dc.html's _xOpen/_xGoTo -- see HomeDesktop.js's
   // matching handleCardOpen and lib/cardTransition.js. The existing tap-
@@ -511,7 +602,11 @@ export default function HomeMobile() {
               {cards.map((card) => {
                 const Art = CARD_ART[card.index];
                 return (
-                <div className="card-slot" style={card.wrapperStyle} key={card.index}>
+                <div
+                  className={`card-slot${card.isEasing ? ' is-easing' : ''}`}
+                  style={card.wrapperStyle}
+                  key={card.index}
+                >
                   <Link
                     className={`card-face${card.isCurrent ? ' is-current' : ''}`}
                     href={card.href}

@@ -827,6 +827,14 @@ html.arrive .page { animation: xin 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
 .proj-imgrow { display: flex; flex-direction: column; gap: 12px; margin: 8px 0 20px; }
 .proj-imgrow .proj-image { margin: 0; min-height: 136px; }
 .proj-imgrow-img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; }
+/* A real photo (vs. the caption-only placeholder) should fill its frame
+   edge to edge, same as desktop's .mapfre-imgrow-item--img -- without this,
+   .proj-image's own padding/border/background (meant for the placeholder's
+   italic caption text) left visible gray card around the photo instead of
+   the photo using the full frame. Same pattern as .proj-image.proj-video
+   above. */
+.proj-imgrow .proj-image.proj-image--fill { padding: 0; overflow: hidden; border: none; background: transparent; }
+.proj-imgrow .proj-image--fill .proj-imgrow-img { width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: cover; border-radius: inherit; }
 
 .proj-list { margin: 8px 0 20px; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 14px; }
 .proj-list-item { display: flex; gap: 12px; align-items: flex-start; }

@@ -1059,7 +1059,7 @@ function ProyectosMobileInner() {
     if (b.isImgRow) return (
       <div className="proj-imgrow" key={key}>
         {b.items.map((im, i) => (
-          <div className="proj-image" key={i}>
+          <div className={`proj-image${im.hasSrc ? ' proj-image--fill' : ''}`} key={i}>
             {im.hasSrc ? <img className="proj-imgrow-img" src={im.src} alt={im.caption} /> : <p className="proj-image-label">{im.caption}</p>}
           </div>
         ))}

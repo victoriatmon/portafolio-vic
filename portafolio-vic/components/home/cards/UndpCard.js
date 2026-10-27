@@ -178,8 +178,19 @@ const UNDP_SVG = `<svg class="ud-card" aria-hidden="true" width="300" height="40
 </g>
 </svg>`;
 
-function UndpCard() {
+// `active`: controlled-mode trigger used by HomeMobile.js (card centred in
+// the carousel), replacing hover there since mobile has no real hover.
+// HomeDesktop.js never passes this prop, so `active === undefined` there is
+// what tells the effect below to fall back to the original real-pointer
+// hover/pointerout wiring -- see AXACard.js's matching comment for the same
+// pattern.
+function UndpCard({ active } = {}) {
   const wrapRef = useRef(null);
+  // Imperative activate/deactivate, shared by the controlled (`active`
+  // prop) and uncontrolled (real pointerover/pointerout) paths -- see
+  // AXACard.js's apiRef for the same reasoning. Replaced on every mount by
+  // the effect below.
+  const apiRef = useRef({ activate() {}, deactivate() {} });
 
   useEffect(() => {
     const wrap = wrapRef.current;
@@ -211,41 +222,77 @@ function UndpCard() {
       }
       if (!reduce) state.timer = setTimeout(toggle, GLITCH_MS + HOLD_MS);
     };
-    const faceOf = (e) => {
-      const target = e.target && e.target.closest ? e.target.closest('.card-face') : null;
-      if (target !== face) return false;
-      if (e.relatedTarget && face.contains(e.relatedTarget)) return false;
-      return true;
-    };
-    const onOver = (e) => {
-      if (!faceOf(e) || reduce) return;
-      clearTimeout(state.timer);
-      if (state.target === 'A') toggle();
-      else state.timer = setTimeout(toggle, HOLD_MS);
-    };
-    const onOut = (e) => {
-      if (!faceOf(e) || reduce) return;
-      clearTimeout(state.timer);
-      if (state.target === 'B') {
-        play('ud-out');
-        state.target = 'A';
-      }
+
+    apiRef.current = {
+      activate: () => {
+        if (reduce) return;
+        clearTimeout(state.timer);
+        if (state.target === 'A') toggle();
+        else state.timer = setTimeout(toggle, HOLD_MS);
+      },
+      deactivate: () => {
+        if (reduce) return;
+        clearTimeout(state.timer);
+        if (state.target === 'B') {
+          play('ud-out');
+          state.target = 'A';
+        }
+      },
     };
 
-    document.addEventListener('pointerover', onOver);
-    document.addEventListener('pointerout', onOut);
+    // Real-pointer hover wiring only applies in uncontrolled mode (desktop
+    // -- see AXACard.js's matching comment). Mobile passes `active` and
+    // drives activate()/deactivate() from that instead (see the effect
+    // below).
+    if (active === undefined) {
+      const faceOf = (e) => {
+        const target = e.target && e.target.closest ? e.target.closest('.card-face') : null;
+        if (target !== face) return false;
+        if (e.relatedTarget && face.contains(e.relatedTarget)) return false;
+        return true;
+      };
+      const onOver = (e) => {
+        if (!faceOf(e)) return;
+        apiRef.current.activate();
+      };
+      const onOut = (e) => {
+        if (!faceOf(e)) return;
+        apiRef.current.deactivate();
+      };
+
+      document.addEventListener('pointerover', onOver);
+      document.addEventListener('pointerout', onOut);
+
+      return () => {
+        document.removeEventListener('pointerover', onOver);
+        document.removeEventListener('pointerout', onOut);
+        clearTimeout(state.timer);
+      };
+    }
 
     return () => {
-      document.removeEventListener('pointerover', onOver);
-      document.removeEventListener('pointerout', onOut);
       clearTimeout(state.timer);
     };
+    // Mount-once -- see AXACard.js's matching comment: controlled vs.
+    // uncontrolled is fixed for this instance's lifetime by its parent,
+    // not by `active`'s value (handled by the separate effect below).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Controlled mode only (mobile): mirror `active` into the toggle loop.
+  // Desktop (active === undefined) leaves this as a no-op -- real pointer
+  // events drive it instead, inside the effect above.
+  useEffect(() => {
+    if (active === undefined) return;
+    if (active) apiRef.current.activate();
+    else apiRef.current.deactivate();
+  }, [active]);
 
   return <div className="ud-card-wrap" ref={wrapRef} dangerouslySetInnerHTML={{ __html: UNDP_SVG }} />;
 }
 
-// Memoized -- see MapfreCard.js's comment: no props, so this also means the
-// mount effect above runs exactly once instead of on every parent re-render
-// during a drag.
+// Memoized -- see MapfreCard.js's comment, and AXACard.js's matching note
+// about `active`: memo()'s shallow prop comparison still means a re-render
+// only happens when `active` actually changes value, not on every parent
+// re-render during a drag.
 export default memo(UndpCard);

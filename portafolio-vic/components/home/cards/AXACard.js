@@ -75,8 +75,20 @@ const AXA_SVG = `<svg class="ax-card" aria-hidden="true" width="300" height="400
 </defs>
 </svg>`;
 
-function AXACard() {
+// `active`: controlled-mode trigger used by HomeMobile.js (card centred in
+// the carousel), replacing hover there since mobile has no real hover.
+// HomeDesktop.js never passes this prop, so `active === undefined` there is
+// what tells the effect below to fall back to the original real-pointer
+// hover/pointerout wiring -- see the mode split just past the shared
+// lane-physics setup.
+function AXACard({ active } = {}) {
   const wrapRef = useRef(null);
+  // Imperative activate/deactivate, so both the controlled (`active` prop)
+  // and uncontrolled (real pointerover/pointerout) paths can drive the same
+  // run/settle state machine without duplicating its logic. Replaced on
+  // every mount by the effect below; the no-op defaults here only matter
+  // for a stray call before that effect has run.
+  const apiRef = useRef({ activate() {}, deactivate() {} });
 
   useEffect(() => {
     const wrap = wrapRef.current;
@@ -124,18 +136,30 @@ function AXACard() {
       return !!(el && face.contains(el));
     };
     const frame = (now) => {
-      if (st.mode === 'run' && now - st.lastCheck > 80) {
+      // Safety net for the real-pointer (uncontrolled/desktop) path only:
+      // the carousel can spin a card out from under a cursor that never
+      // moved, so pointerout never fires -- this periodic recheck catches
+      // that. In controlled mode (mobile) there's no live pointer to check
+      // (ptr is never updated -- onMove isn't wired up below), so this
+      // would otherwise see ptr.gone stuck true and incorrectly settle the
+      // card ~80ms after every activate(); gated out here instead.
+      if (active === undefined && st.mode === 'run' && now - st.lastCheck > 80) {
         st.lastCheck = now;
         if (!isOver()) beginSettle(now);
       }
       const dt = Math.min(0.05, Math.max(0, (now - st.last) / 1000));
       st.last = now;
-      let active = false;
+      // Renamed from `active` (its name before this file took an `active`
+      // prop) to `anyLaneMoving` -- `let active = false` here would shadow
+      // the outer prop for this entire function body (including the
+      // `active === undefined` check above, via `let`'s hoisting), not just
+      // from this line down.
+      let anyLaneMoving = false;
       lanes.forEach((L) => {
         if (st.mode === 'run') {
           L.vel += (L.v - L.vel) * (1 - Math.exp(-dt / ACCEL_TAU));
           L.pos += L.vel * dt;
-          active = true;
+          anyLaneMoving = true;
         } else if (L.plan) {
           const p = L.plan;
           const u = Math.min(1, (now - p.t0) / 1000 / p.T);
@@ -143,7 +167,7 @@ function AXACard() {
           L.pos = p.pos0 + (u * u * u - 2 * u * u + u) * a + (3 * u * u - 2 * u * u * u) * p.D;
           L.vel = u < 1 ? ((3 * u * u - 4 * u + 1) * a + (6 * u - 6 * u * u) * p.D) / p.T : 0;
           if (u < 1) {
-            active = true;
+            anyLaneMoving = true;
           } else {
             L.plan = null;
             L.pos = 0;
@@ -153,7 +177,7 @@ function AXACard() {
         apply(L);
       });
       st.raf = 0;
-      if (active) {
+      if (anyLaneMoving) {
         st.raf = requestAnimationFrame(frame);
       } else {
         st.mode = 'idle';
@@ -164,70 +188,116 @@ function AXACard() {
       st.last = performance.now();
       st.raf = requestAnimationFrame(frame);
     };
-    // Only react to pointer events on THIS card's own face -- the artifact's
-    // version looks this up generically (any .card-face under the event)
-    // since one delegated listener served every ax-card on the page; here
-    // there's only ever one, so we just filter for a match.
-    const faceOf = (e) => {
-      const target = e.target && e.target.closest ? e.target.closest('.card-face') : null;
-      if (target !== face) return null;
-      if (e.relatedTarget && face.contains(e.relatedTarget)) return null;
-      return card;
-    };
-    const onOver = (e) => {
-      ptr.x = e.clientX;
-      ptr.y = e.clientY;
-      ptr.gone = false;
-      const matched = faceOf(e);
-      if (!matched || reduce) return;
-      st.mode = 'run';
-      st.lastCheck = performance.now();
-      lanes.forEach((L) => {
-        L.plan = null;
-      });
-      kick();
-    };
-    const onOut = (e) => {
-      if (!faceOf(e) || reduce) return;
-      if (st.mode !== 'run') return;
-      beginSettle(performance.now());
-      kick();
-    };
-    const onMove = (e) => {
-      ptr.x = e.clientX;
-      ptr.y = e.clientY;
-      ptr.gone = false;
-    };
-    // finger lifted / pointer cancelled / left the window: nothing is hovering any more
-    const onGone = (e) => {
-      if (!e || e.type !== 'pointerup' || e.pointerType !== 'mouse') ptr.gone = true;
+
+    // Shared run/settle entry points -- called either by the real-pointer
+    // handlers just below (uncontrolled/desktop) or by the `active`-prop
+    // effect further down (controlled/mobile), never both for one mounted
+    // instance.
+    apiRef.current = {
+      activate: () => {
+        if (reduce) return;
+        st.mode = 'run';
+        st.lastCheck = performance.now();
+        lanes.forEach((L) => {
+          L.plan = null;
+        });
+        kick();
+      },
+      deactivate: () => {
+        if (reduce) return;
+        if (st.mode !== 'run') return;
+        beginSettle(performance.now());
+        kick();
+      },
     };
 
-    document.addEventListener('pointerover', onOver);
-    document.addEventListener('pointerout', onOut);
-    document.addEventListener('pointermove', onMove, { passive: true });
-    document.addEventListener('pointerup', onGone);
-    document.addEventListener('pointercancel', onGone);
-    document.documentElement.addEventListener('mouseleave', onGone);
-    window.addEventListener('blur', onGone);
+    // Real-pointer hover wiring only applies in uncontrolled mode
+    // (desktop, where HomeDesktop.js never passes `active`). Mobile passes
+    // `active` and drives activate()/deactivate() from that instead (see
+    // the effect below), so none of this gets wired up there -- a stray
+    // touch pointerover mid-swipe can't fire the old hover behaviour
+    // alongside the new centred-card one.
+    if (active === undefined) {
+      // Only react to pointer events on THIS card's own face -- the
+      // artifact's version looks this up generically (any .card-face under
+      // the event) since one delegated listener served every ax-card on
+      // the page; here there's only ever one, so we just filter for a
+      // match.
+      const faceOf = (e) => {
+        const target = e.target && e.target.closest ? e.target.closest('.card-face') : null;
+        if (target !== face) return null;
+        if (e.relatedTarget && face.contains(e.relatedTarget)) return null;
+        return card;
+      };
+      const onOver = (e) => {
+        ptr.x = e.clientX;
+        ptr.y = e.clientY;
+        ptr.gone = false;
+        if (!faceOf(e)) return;
+        apiRef.current.activate();
+      };
+      const onOut = (e) => {
+        if (!faceOf(e)) return;
+        apiRef.current.deactivate();
+      };
+      const onMove = (e) => {
+        ptr.x = e.clientX;
+        ptr.y = e.clientY;
+        ptr.gone = false;
+      };
+      // finger lifted / pointer cancelled / left the window: nothing is hovering any more
+      const onGone = (e) => {
+        if (!e || e.type !== 'pointerup' || e.pointerType !== 'mouse') ptr.gone = true;
+      };
+
+      document.addEventListener('pointerover', onOver);
+      document.addEventListener('pointerout', onOut);
+      document.addEventListener('pointermove', onMove, { passive: true });
+      document.addEventListener('pointerup', onGone);
+      document.addEventListener('pointercancel', onGone);
+      document.documentElement.addEventListener('mouseleave', onGone);
+      window.addEventListener('blur', onGone);
+
+      return () => {
+        document.removeEventListener('pointerover', onOver);
+        document.removeEventListener('pointerout', onOut);
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', onGone);
+        document.removeEventListener('pointercancel', onGone);
+        document.documentElement.removeEventListener('mouseleave', onGone);
+        window.removeEventListener('blur', onGone);
+        if (st.raf) cancelAnimationFrame(st.raf);
+      };
+    }
 
     return () => {
-      document.removeEventListener('pointerover', onOver);
-      document.removeEventListener('pointerout', onOut);
-      document.removeEventListener('pointermove', onMove);
-      document.removeEventListener('pointerup', onGone);
-      document.removeEventListener('pointercancel', onGone);
-      document.documentElement.removeEventListener('mouseleave', onGone);
-      window.removeEventListener('blur', onGone);
       if (st.raf) cancelAnimationFrame(st.raf);
     };
+    // Mount-once: whether this instance is controlled or not is decided by
+    // which parent rendered it (fixed for its lifetime, see the comment on
+    // the function signature above), not by `active`'s value -- that's
+    // handled by the separate effect below instead of being a dependency
+    // here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Controlled mode only (mobile, `active` prop passed): mirror `active`
+  // into the run/settle state machine. Desktop (active === undefined)
+  // leaves this as a no-op -- real pointer events drive it instead, inside
+  // the effect above.
+  useEffect(() => {
+    if (active === undefined) return;
+    if (active) apiRef.current.activate();
+    else apiRef.current.deactivate();
+  }, [active]);
 
   return <div className="ax-card-wrap" ref={wrapRef} dangerouslySetInnerHTML={{ __html: AXA_SVG }} />;
 }
 
-// Memoized -- see MapfreCard.js's comment: no props, so this also means the
-// mount effect above (and its JS-driven marquee loop) runs exactly once,
-// instead of being torn down/re-run or losing its live-looked-up DOM nodes
-// on every parent re-render during a drag.
+// Memoized -- see MapfreCard.js's comment: previously zero props meant the
+// mount effect above (and its JS-driven marquee loop) ran exactly once and
+// never again. It now also takes `active` (see the function signature
+// comment), but memo()'s shallow prop comparison means a re-render still
+// only happens when `active` itself actually changes value -- not on every
+// parent re-render during a drag -- so that guarantee still holds.
 export default memo(AXACard);

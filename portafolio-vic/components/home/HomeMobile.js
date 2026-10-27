@@ -25,6 +25,17 @@
 // support for a touch-capable trackpad, keyboard-focus recentring, and a
 // simplified load-time reveal standing in for the dropped transition's
 // entrance choreography.
+//
+// Each card's bespoke art animation (the tile mosaic, the spinning star,
+// the glitch swap, etc. -- see CARD_ART below) plays on its own, in a loop,
+// for as long as that card sits centred in the carousel: buildCards() below
+// derives `isCurrent` from the same signed distance-from-centre (`d`) it
+// already computes for layout, and the render applies it as `.is-current`
+// on `.card-face` (home-mobile.css's trigger selectors) and as an `active`
+// prop on <Art/> (for AXA/UNDP's JS-driven art). This replaced an earlier
+// version where a ~240ms press (`.is-held`, via holdOn/holdOff just below)
+// triggered the art instead -- `.is-held` still exists and still drives the
+// plain card-lift feedback on press, it just no longer feeds any card's art.
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -44,12 +55,13 @@ import './home-mobile.css';
 // Same six bespoke card illustrations as HomeDesktop.js (see that file's
 // CARD_ART for the full background on each one), now ported here too.
 // Mobile has no :hover, so each card's CSS trigger in home-mobile.css
-// swaps :hover for .is-held -- the class this file's drag effect already
-// adds to a card-face on a brief press (see the holdOn/holdOff helpers
-// below), reusing the same touch affordance rather than inventing a
-// second one. The two JS-driven cards (AXA/UNDP) need no mobile-specific
-// code at all: they already listen for pointerover/pointerout, which
-// fire for touch pointers the same as mouse ones.
+// swaps :hover for .is-current -- applied below to whichever card's slot
+// is centred in the carousel (see buildCards()'s `isCurrent`). The two
+// JS-driven cards (AXA/UNDP) take a matching `active` prop instead of
+// relying on their own pointerover/pointerout listeners on mobile: those
+// components now skip wiring up real pointer events whenever an `active`
+// prop is passed at all (mobile always passes one; HomeDesktop.js never
+// does, so desktop's hover behaviour is untouched).
 const CARD_ART = [MapfreCard, PhantomCard, PulsoCard, AXACard, VictorCard, UndpCard];
 
 const LABELS = [
@@ -84,11 +96,21 @@ function buildCards(pos) {
     const x = RC * Math.sin(th);
     const y = RC * (1 - Math.cos(th));
     const hidden = Math.abs(d) > 2.3;
+    // Drives each card's bespoke art animation (home-mobile.css's
+    // .is-current selectors + the `active` prop passed to <Art/> below),
+    // in place of the old press-and-hold trigger. A small epsilon rather
+    // than `d === 0`: tick()'s settle ease (see the useEffect below) always
+    // lands exactly on an integer position once it finishes, so this only
+    // needs enough slack to not be thrown off by a stray float-rounding
+    // step on the way there -- not to decide "close enough" early, which
+    // would start the loop a frame or two before the card actually stops.
+    const isCurrent = Math.abs(d) < 0.03;
     return {
       index: i,
       label,
       gradient: GRADIENTS[i],
       href: `/proyectos#${i}`,
+      isCurrent,
       wrapperStyle: {
         position: 'absolute',
         left: -CARD_W / 2,
@@ -208,9 +230,11 @@ export default function HomeMobile() {
     }
     rafId = requestAnimationFrame(tick);
 
-    // Touch: a finger resting on a card for a moment counts as hover (the
-    // card lift plays). Moving the finger turns it into a drag. A quick
-    // tap opens the project; a hold or a drag never does.
+    // Touch: a finger resting on a card for a moment plays the generic
+    // press-lift feedback only (not any card's bespoke art animation
+    // anymore -- that's driven by isCurrent/`.is-current` above instead).
+    // Moving the finger turns it into a drag. A quick tap opens the
+    // project; a hold or a drag never does.
     function holdOn(face) {
       if (heldFace) return;
       heldFace = face;
@@ -434,14 +458,17 @@ export default function HomeMobile() {
                 return (
                 <div className="card-slot" style={card.wrapperStyle} key={card.index}>
                   <Link
-                    className="card-face"
+                    className={`card-face${card.isCurrent ? ' is-current' : ''}`}
                     href={card.href}
                     draggable="false"
                     aria-label={`Open project: ${card.label}`}
                     onClick={(e) => handleCardOpen(e, card)}
                   >
                     {Art ? (
-                      <Art />
+                      // `active` only matters to AXA/UNDP (the two JS-driven
+                      // cards); the other four read `.is-current` from CSS
+                      // instead and silently ignore this prop.
+                      <Art active={card.isCurrent} />
                     ) : (
                       <>
                         <div className="card-art" style={{ background: card.gradient }} aria-hidden="true" />

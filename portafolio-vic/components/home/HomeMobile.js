@@ -157,7 +157,15 @@ export default function HomeMobile() {
       } else {
         const diff = targetVal - posVal;
         if (Math.abs(diff) > 0.0008) {
-          posVal += diff * (reduce ? 1 : 1 - Math.exp(-dt / 120));
+          // Settle-to-target ease. Time-constant kept short (vs. the old
+          // 120ms) because the guided swipe above (onWinUp) now routinely
+          // asks this to cover a near-full card's distance on every commit
+          // -- a short, decisive swipe can leave posVal barely past the
+          // drag threshold with targetVal already a whole card away. At
+          // 120ms that catch-up tween took ~500ms+ to fully settle, which
+          // read as slow motion for what's meant to be a snappy paginated
+          // swipe. 60ms settles the same jump in ~250-300ms.
+          posVal += diff * (reduce ? 1 : 1 - Math.exp(-dt / 60));
           setPos(posVal);
         } else if (diff !== 0) {
           posVal = targetVal;

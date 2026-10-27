@@ -439,21 +439,36 @@ function ProyectosMobileInner() {
   // Arriving from the landing through the card transition. The `arrive`
   // class itself is set (or not) by the beforeInteractive script in
   // app/layout.js, synchronously before the browser's first paint -- not
-  // here. This just reads that already-settled state once, on the client;
-  // the cover's gradient still has to be picked here (PROJECT_GRADIENTS is
-  // React-side data the layout script has no access to), but doing that
-  // during this render-phase check -- not an effect -- still lands in
-  // React's hydration commit before anything paints, same as before. See
-  // app/layout.js's ARRIVE_FLAG_SCRIPT comment for why the class itself
-  // can't be set from component render (too late, after first paint).
+  // here. This just reads that already-settled state once, on the client --
+  // a plain ref write, same as ProyectosDesktop.js's equivalent check, which
+  // never triggers a re-render. See app/layout.js's ARRIVE_FLAG_SCRIPT
+  // comment for why the class itself can't be set from component render
+  // (too late, after first paint).
   if (arriveRef.current === null && typeof window !== 'undefined') {
-    const isArrive = document.documentElement.classList.contains('arrive');
-    arriveRef.current = isArrive;
-    if (isArrive) {
-      const h = parseInt(window.location.hash.replace('#', ''), 10);
-      setArriveCoverGradient(PROJECT_GRADIENTS[!isNaN(h) && h >= 0 && h < PROJECT_GRADIENTS.length ? h : 0]);
-    }
+    arriveRef.current = document.documentElement.classList.contains('arrive');
   }
+
+  // Picking the cover's gradient needs real React state (PROJECT_GRADIENTS
+  // is React-side data the beforeInteractive script has no access to) -- but
+  // this component's *first* client render is also its hydration render, so
+  // calling setArriveCoverGradient(...) directly in the render-phase check
+  // above (like this used to) means triggering a state update WHILE React is
+  // still hydrating. That's exactly the kind of mid-hydration mutation that
+  // throws React's "Hydration failed" / "switched to client rendering"
+  // errors (#418/#423) -- only on an actual arrival (isArrive true, the only
+  // branch that called setState there), so only on the real Home-card-click
+  // flow, never on a plain page load -- see fix #19's "Convenciones a
+  // seguir" entry in the project's own context doc. useLayoutEffect with an
+  // empty dep array still runs synchronously before the browser's next
+  // paint (so there's no flash -- same guarantee as before, same as the
+  // is-pending-enter pattern elsewhere in this file), it just runs as a
+  // normal post-hydration commit effect instead of a render-phase one.
+  useLayoutEffect(() => {
+    if (!arriveRef.current) return;
+    const h = parseInt(window.location.hash.replace('#', ''), 10);
+    setArriveCoverGradient(PROJECT_GRADIENTS[!isNaN(h) && h >= 0 && h < PROJECT_GRADIENTS.length ? h : 0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Auto-play the before state briefly, then settle on after -- unless the
   // viewer already picked a side themselves.

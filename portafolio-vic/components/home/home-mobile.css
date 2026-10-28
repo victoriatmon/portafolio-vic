@@ -27,11 +27,12 @@
    this exact pair. */
 .home-mobile-scope .intro2-title { margin: 0 auto; max-width: 334px; text-wrap: balance; font-family: 'Pavanam', 'Manrope', sans-serif; font-weight: 400; font-size: 28px; line-height: 1.16; color: #E8E8E8; }
 .home-mobile-scope .intro2-title .accent-italic { font-family: 'Spectral', 'Pavanam', serif; font-style: italic; font-size: 31px; line-height: 1; }
-/* Carousel + arrow row nudged down 8px (fix #16) -- .car2-ring/.car2-ticks
+/* Carousel + arrow row nudged UP 8px (fix #16, corrected -- first pass
+   moved it down, Victoria wanted up): 170px -> 162px. .car2-ring/.car2-ticks
    and every .card-slot (cards, Discover, prev/next) are all positioned
    relative to THIS element, so moving .car2's own `top` moves the whole
    group together in one place instead of touching each child's offset. */
-.home-mobile-scope .car2 { position: absolute; left: 0; right: 0; top: 178px; height: 520px; touch-action: pan-y; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.home-mobile-scope .car2 { position: absolute; left: 0; right: 0; top: 162px; height: 520px; touch-action: pan-y; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .home-mobile-scope .car2-ring { position: absolute; left: 50%; top: 210px; width: 0; height: 0; }
 .home-mobile-scope .car2-ticks { position: absolute; left: calc(50% - 910px); top: 200px; width: 1820px; height: 1820px; border-radius: 50%; pointer-events: none;
   background: repeating-conic-gradient(from -0.06deg at 50% 50%, rgba(255,255,255,0.30) 0deg 0.12deg, transparent 0.12deg 1.1deg);

@@ -22,7 +22,7 @@
 // portfolio only ever renders one AXA card, unlike the artifact's canvas
 // runtime which had to handle N instances generically).
 
-import { useEffect, useRef, memo } from 'react';
+import { useEffect, useLayoutEffect, useRef, memo } from 'react';
 import { prefersReducedMotion } from '@/lib/cardTransition';
 
 const LANES = [
@@ -109,8 +109,20 @@ const ACCEL_TAU = 0.45; // seconds, how quickly the slide speeds up when hover s
 // `mix-blend-mode:hard-light`, with the `pattern0_100_1498`/
 // `image0_100_1498` defs left in place but now unreferenced. Removes the
 // pattern-fill indirection fix #51 blamed, rather than nudging around it
-// again. The fix #51 nudge inside `activate()` is left in too. **Still
-// not verified on an actual iPhone.**
+// again. The fix #51 nudge inside `activate()` is left in too.
+//
+// Fix #58 (2026-10-29, same conversation): Victoria's next report pinned
+// the symptom down precisely -- a single flicker on the jaguar photo
+// right as the card centres, not a loop. That's exactly what the fix #51
+// nudge was supposed to prevent, and it turns out it never ran in time to:
+// on mobile `activate()` is only ever called from the `[active]` effect
+// near the bottom of this file, which (as a plain `useEffect`) React runs
+// AFTER the browser's first paint of the centred state -- so the stale
+// frame was always shown first, with the nudge correcting it visibly one
+// frame later, which reads as one flicker. Switched that effect to
+// `useLayoutEffect` (same diagnosis as fix #56's Undp fix) so `activate()`
+// -- nudge included -- runs before that first paint instead of after.
+// **Still not verified on an actual iPhone.**
 const AXA_SVG = `<svg class="ax-card" aria-hidden="true" width="300" height="400" viewBox="1 1 300 400" fill="none" xmlns="http://www.w3.org/2000/svg">
 <g clip-path="url(#clip1_100_1498)">
 <rect x="1" y="1" width="300" height="400" rx="15" fill="#252825"></rect>
@@ -361,7 +373,21 @@ function AXACard({ active } = {}) {
   // into the run/settle state machine. Desktop (active === undefined)
   // leaves this as a no-op -- real pointer events drive it instead, inside
   // the effect above.
-  useEffect(() => {
+  //
+  // Fix #58 (2026-10-29): Victoria's feedback after fix #54-57 was specific
+  // -- not a continuous glitch, a single flicker on the jaguar photo
+  // exactly when the card centres (same symptom she described for
+  // Phantom's first photo tile -- see PhantomCard.js's fix #58 comment for
+  // the fuller write-up, same cause, same fix, applied here too). The
+  // fix #51 repaint nudge inside `activate()` above was always the right
+  // idea, but on mobile it only ever ran from THIS effect, which React (as
+  // a plain `useEffect`) defers until after the browser paints the commit
+  // that centres the card -- so the stale/un-recomposited frame was always
+  // shown first, with the nudge correcting it visibly a frame later. Same
+  // root-cause shape as fix #56's Undp diagnosis. Switched to
+  // `useLayoutEffect` so `activate()` -- nudge included -- runs
+  // synchronously before that first paint instead of after it.
+  useLayoutEffect(() => {
     if (active === undefined) return;
     if (active) apiRef.current.activate();
     else apiRef.current.deactivate();

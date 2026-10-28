@@ -99,7 +99,7 @@
 // this size. Correctness here rests on the extraction step, not on
 // attribute-by-attribute conversion.
 
-import { memo, useEffect, useRef } from 'react';
+import { memo, useEffect, useLayoutEffect, useRef } from 'react';
 import { prefersReducedMotion } from '@/lib/cardTransition';
 
 const PHANTOM_SVG =`<svg class="ph-card" aria-hidden="true" width="300" height="400" viewBox="1 1 300 400" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -145,11 +145,27 @@ const PHANTOM_SVG =`<svg class="ph-card" aria-hidden="true" width="300" height="
 function PhantomCard({ active } = {}) {
   const wrapRef = useRef(null);
 
-  useEffect(() => {
-    // Fix #51: see the long comment at the top of this file. `active` is
-    // `undefined` on desktop (HomeDesktop.js renders `<Art />` with no
-    // props) and `false` right after this slot stops being centred --
-    // the nudge only needs to run once, right as the card becomes current.
+  // Fix #58 (2026-10-29): Victoria's fix #54-57 feedback was far more
+  // specific than before -- not "a glitch" but a single, one-time flicker
+  // on the first of the three photos (and, in AXACard.js, on the jaguar
+  // photo) exactly when the card centres. That's a strong match for what
+  // the fix #51 nudge was ALWAYS meant to prevent, but the nudge never
+  // actually ran in time to prevent it: it lived in a plain `useEffect`,
+  // which React defers until AFTER the browser paints the commit that
+  // flips `active` true. So the real sequence on every centring was: paint
+  // the stale/un-recomposited frame first (the flicker), THEN run the
+  // nudge a frame later, which repaints it correctly -- the nudge was
+  // fixing the picture one frame after showing the broken one, which reads
+  // as exactly one flicker, not a loop. This is the same root-cause shape
+  // as fix #56's Undp diagnosis (`useEffect` vs `useLayoutEffect` timing),
+  // just applied here to the repaint nudge instead of to `activate()`.
+  // Switched to `useLayoutEffect` so the forced repaint happens
+  // synchronously before that first paint, not after it.
+  useLayoutEffect(() => {
+    // `active` is `undefined` on desktop (HomeDesktop.js renders `<Art />`
+    // with no props) and `false` right after this slot stops being
+    // centred -- the nudge only needs to run once, right as the card
+    // becomes current.
     if (!active || prefersReducedMotion()) return;
     const wrap = wrapRef.current;
     if (!wrap) return;
@@ -157,6 +173,26 @@ function PhantomCard({ active } = {}) {
     void wrap.offsetHeight; // eslint-disable-line no-unused-expressions
     wrap.style.opacity = '';
   }, [active]);
+
+  // Fix #59 (2026-10-29, same conversation): the late-peek-after-wraparound
+  // issue (fix #49/#53/#57, HomeMobile.js) still wasn't resolved by
+  // `decoding="sync"` alone (fix #55/#57) -- that only controls when an
+  // already-requested image finishes decoding, not when the browser first
+  // requests/caches it. If the browser is still deferring the network
+  // fetch itself for an off-screen `<image>`, `decoding="sync"` has
+  // nothing to speed up yet. Eagerly warm the browser's image cache for
+  // all three Phantom photos as soon as this component mounts -- well
+  // before the slot is ever near the viewport -- using plain `Image()`
+  // objects outside the SVG entirely, so the fetch+decode isn't gated on
+  // SVG/viewport visibility heuristics at all. Runs once on mount, on both
+  // mobile and desktop (harmless either way -- three small JPGs).
+  useEffect(() => {
+    ['phantom-photo-1.jpg', 'phantom-photo-2.jpg', 'phantom-photo-3.jpg'].forEach((name) => {
+      const img = new window.Image();
+      img.decoding = 'sync';
+      img.src = `/cards/${name}`;
+    });
+  }, []);
 
   return <div ref={wrapRef} className="ph-card-wrap" dangerouslySetInnerHTML={{ __html: PHANTOM_SVG }} />;
 }

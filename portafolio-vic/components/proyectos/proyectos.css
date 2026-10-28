@@ -972,12 +972,17 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
 /* Mini carousel icon — static 3-card fan that links back to Home. No
    rotation; just a colour change on hover/active, same palette the old
    spinning ring used. Now the first item of .projects-top-row (next to the
-   pills) instead of its own row below the card -- sized to match the
-   pills' fixed 37px height (see ".project-pill { height: 37px }" further
-   down) so it reads as part of the same row instead of a bigger, separate
-   control; the glyph itself is scaled down to about half its old 61x26 in
-   the markup (width/height on the <svg>, same viewBox/paths) so it doesn't
-   visually dominate next to 14px pill labels. */
+   pills) instead of its own row below the card -- the 37px *button* matches
+   the pills' fixed 37px height (see ".project-pill { height: 37px }"
+   further down) so it reads as part of the same row instead of a bigger,
+   separate control. The glyph itself (the <svg>'s own width/height, same
+   viewBox/paths as the old 61x26) is a second, independent size inside
+   that button -- Victoria asked for it at 16px tall specifically (not just
+   "shrink the button"), so it's set to 38x16 (same aspect ratio as the
+   61x26 original: 16 * 61/26 ≈ 37.5, rounded to 38) and centered by the
+   button's flex alignment. Don't conflate the two sizes if asked to adjust
+   either one again -- the button's 37px is about matching the pills' row
+   height, the svg's 16px is about how big the glyph itself reads. */
 .mini-carousel-btn {
   all: unset;
   cursor: pointer;

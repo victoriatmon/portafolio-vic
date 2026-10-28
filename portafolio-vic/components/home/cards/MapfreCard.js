@@ -190,17 +190,30 @@ function MapfreCard({ uid = '', active } = {}) {
     }
     // Longest tile/word transition + delay below is ~0.8s + 0.3s stagger
     // spread; REST_MS gives that room to finish before revealing again.
-    // Fix #50: Victoria watched this on mobile after fix #45 and reported
-    // the revealed state (the word copy, e.g. "$21k") swaps away again
-    // before it's readable. 1800ms was tuned purely for "does the mosaic
-    // finish settling", not for "can a person actually read the word" --
-    // bumped to 3200ms so the fully-revealed pose holds noticeably longer.
-    // REST_MS (the hidden/rest phase) is untouched -- only the readable
-    // phase needed more time. Mobile-only: this effect bails out entirely
-    // when `active === undefined` (desktop), so home.css/HomeDesktop.js's
-    // :hover-driven copy is unaffected.
-    const REVEAL_MS = 3200; // how long to sit fully revealed before cycling
-    const REST_MS = 900; // how long to sit at rest before revealing again
+    //
+    // Fix #50 (2026-10-29): Victoria watched this on mobile after fix #45
+    // and reported the word copy swapping away before it's readable --
+    // bumped REVEAL_MS 1800ms -> 3200ms on the (wrong, see fix #54 below)
+    // assumption that REVEAL_MS/`.mp-on` was what showed "$21k".
+    //
+    // Fix #54 (2026-10-29, same conversation): Victoria clarified fix #50
+    // extended the WRONG phase -- "no era [sobre] driving 35% yoy growth,
+    // es la fase inicial del $21k". Rendered this exact markup+CSS in a
+    // standalone Playwright page (same harness as fix #45) and screenshotted
+    // both phases to see the actual words, instead of guessing again:
+    // `.mp-on` (REVEAL_MS, mp-w3-w6) renders "DRIVING +35% YoY Growth" --
+    // confirmed fine, Victoria never asked to touch it, left at 3200ms.
+    // The REST phase (mp-on absent, mp-w0-w2) renders "THE +$21k TYPO" --
+    // THIS is the one she means. At REST_MS's old 900ms, the screenshots
+    // show the slide+fade transition into this phrase (0.7s transform +
+    // up to 0.12s stagger, same mechanism as the reveal direction) doesn't
+    // finish settling until ~500ms in, leaving only ~400ms of it actually
+    // sitting still and legible before REST_MS expires and it swaps back --
+    // exactly "fase inicial", not a hold-duration problem on the OTHER
+    // phrase. Bumped REST_MS 900ms -> 2400ms, which is what actually
+    // needed the room fix #50 mistakenly gave the other phrase.
+    const REVEAL_MS = 3200; // how long "DRIVING +35% YoY Growth" (mp-on) holds
+    const REST_MS = 2400; // how long "THE +$21k TYPO" (rest/mp-off) holds
     let timer;
     const setOn = (on) => {
       // Remove first, force a synchronous reflow, then (maybe) re-add --

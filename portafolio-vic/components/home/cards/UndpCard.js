@@ -24,7 +24,7 @@
 // AXA card, where a one-time captured reference went stale and animated
 // an orphaned, invisible node.
 
-import { useEffect, useMemo, useRef, memo } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, memo } from 'react';
 import { prefersReducedMotion } from '@/lib/cardTransition';
 import { namespaceSvgIds } from '@/lib/svgNamespace';
 
@@ -426,7 +426,41 @@ function UndpCard({ active, uid = '' } = {}) {
   // Controlled mode only (mobile): mirror `active` into the toggle loop.
   // Desktop (active === undefined) leaves this as a no-op -- real pointer
   // events drive it instead, inside the effect above.
-  useEffect(() => {
+  //
+  // Fix #56 (2026-10-29): fix #52's `animation-delay` trick didn't fix
+  // "tarda en empezar" and Victoria reported the glitch now LOOKED broken
+  // ("se ve trabado... parece más error real que glitch") -- re-diagnosed
+  // from scratch instead of tuning the delay further. Checking the actual
+  // keyframes (udA0/udStage) shows visible glitch activity starting by 4%
+  // of the 0.7s duration (~28ms) already -- there's no meaningful "quiet
+  // opening" to skip past, which means fix #52's whole premise was off,
+  // and jumping every layer's `step-end` animation to a fixed negative
+  // offset likely landed mid-step on an inconsistent combination across
+  // the ~20 separately-animated accent marks, which is exactly what would
+  // read as "trabado"/broken instead of a coherent glitch.
+  //
+  // The real gap was structural, not a timing constant: this effect ran
+  // as a plain `useEffect`, which React defers until AFTER the browser
+  // paints the commit that added `.is-current` to the card. Every OTHER
+  // card's glitch/spin/pulse is pure CSS keyed off that same `.is-current`
+  // class, so it starts painting in the SAME frame the card visibly
+  // centres -- Undp's JS-driven `activate()` call was landing a frame (or
+  // more) later, after the centred-but-not-yet-glitching poster was
+  // already visible, which is exactly "a little delay" / "looks broken"
+  // even with FIRST_HOLD_MS and GLITCH_MS/HOLD_MS all already at their
+  // instant-start values. Switched to `useLayoutEffect`, which React runs
+  // synchronously right after the DOM update, before that first paint --
+  // `apiRef.current.activate()` now adds `.ud-in` in the same synchronous
+  // phase as `.is-current` landing on the card, so the glitch's first
+  // frame (already busy by 4% per the keyframes above) is what actually
+  // gets painted first, with no separate "clean poster" frame in between.
+  // The `animation-delay: -150ms` rule fix #52 added in home-mobile.css is
+  // removed -- no longer needed, and was the likely source of the
+  // "trabado" look. Desktop (`active === undefined`) still takes the
+  // early-return path, same as before -- this only changes WHEN the
+  // mobile-controlled branch's effect runs, not what it does.
+  // **Not verified on an actual iPhone.**
+  useLayoutEffect(() => {
     if (active === undefined) return;
     if (active) apiRef.current.activate();
     else apiRef.current.deactivate();

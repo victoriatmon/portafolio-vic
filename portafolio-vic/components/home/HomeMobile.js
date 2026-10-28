@@ -611,6 +611,19 @@ export default function HomeMobile() {
         // (fix #51) on the track itself once scroll-snap is restored next
         // frame, which recomposites the whole visible strip -- Phantom's
         // slot included.
+        //
+        // Fix #53 didn't resolve it either (Victoria's next round still saw
+        // it). Fix #57 (2026-10-29, next round, see PhantomCard.js's fix
+        // #55 comment for the fuller write-up): re-read "unos segundos" --
+        // SECONDS, not the tens-of-milliseconds a paint/compositing bug
+        // would cost -- and reconsidered away from WebKit paint staleness
+        // toward image decode scheduling instead. Phantom's photo tiles
+        // (PhantomCard.js) now carry `decoding="sync"` so the browser
+        // decodes them immediately rather than deferring a scrolled-out-of-
+        // view raster image's decode until it's about to be shown, which a
+        // multi-second, rather than multi-frame, delay fits much better.
+        // This reflow/opacity nudge is left in place as a secondary
+        // measure. **Still not verified on an actual iPhone.**
         void track.getBoundingClientRect();
         requestAnimationFrame(() => {
           track.style.scrollSnapType = '';

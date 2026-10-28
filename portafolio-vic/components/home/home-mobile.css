@@ -807,86 +807,17 @@
 .home-mobile-scope .ud-card.ud-out .ud-sb10{animation-name:udB10;animation-direction:reverse;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
 .home-mobile-scope .ud-card.ud-in .ud-bar{animation:udBar 0.7s linear both;}
 .home-mobile-scope .ud-card.ud-out .ud-bar{animation:udBar 0.7s linear both;animation-direction:reverse;}
-/* Fix #52 (2026-10-29, mobile only): FIRST_HOLD_MS was already 0 (fix #48)
-   -- the JS fires the glitch class the instant the card centres, with no
-   JS-side delay left to cut. The "tarda en empezar" Victoria keeps
-   reporting lives in the keyframes themselves (udBaseA/udScan/udBar,
-   defined once in home.css and shared by name with this mobile ruleset):
-   udBaseA holds poster A at full opacity until 63% of the 0.7s duration,
-   udBar sits invisible until 14%, and udScan's first flicker isn't until
-   7% -- so for roughly the first 100ms+ of every "instant" glitch-in, mobile
-   visually shows nothing but the plain poster, reading as "a little delay"
-   / "something's broken" even though the JS and the class toggle are both
-   already instant. Can't shorten the keyframes themselves (shared by name
-   with desktop's `.home-desktop-scope` rules in home.css -- touching them
-   would change desktop's hover glitch too). Instead, mobile-only: a
-   negative `animation-delay` on every one of this card's ud-in/ud-out
-   layers below, so each glitch (every ping-pong of the loop, not just the
-   very first activation) starts playback already 150ms into its own
-   timeline -- past udScan's quiet opening and into its first visible
-   flicker/udBar's entrance, so there's already glitch activity on the very
-   first rendered frame, while the poster-swap itself (63%) still lands at
-   its usual relative point, just ~150ms sooner in real time. Same
-   `animation-duration`/keyframes/choreography otherwise -- only when each
-   one starts playing is different. Desktop's `.home-desktop-scope` rules
-   in home.css are untouched. Not verified on an actual iPhone (no device
-   access here); if it still reads as slow, the next lever is a bigger
-   negative delay (closer to -400/-440ms, nearer udBaseA's 63% swap point)
-   rather than more JS changes, since the JS side is already at 0. */
-.home-mobile-scope .ud-card.ud-in .ud-a,
-.home-mobile-scope .ud-card.ud-out .ud-a,
-.home-mobile-scope .ud-card.ud-in .ud-b,
-.home-mobile-scope .ud-card.ud-out .ud-b,
-.home-mobile-scope .ud-card.ud-in .ud-stage,
-.home-mobile-scope .ud-card.ud-out .ud-stage,
-.home-mobile-scope .ud-card.ud-in .ud-scan,
-.home-mobile-scope .ud-card.ud-out .ud-scan,
-.home-mobile-scope .ud-card.ud-in .ud-sa0,
-.home-mobile-scope .ud-card.ud-out .ud-sa0,
-.home-mobile-scope .ud-card.ud-in .ud-sa1,
-.home-mobile-scope .ud-card.ud-out .ud-sa1,
-.home-mobile-scope .ud-card.ud-in .ud-sa2,
-.home-mobile-scope .ud-card.ud-out .ud-sa2,
-.home-mobile-scope .ud-card.ud-in .ud-sa3,
-.home-mobile-scope .ud-card.ud-out .ud-sa3,
-.home-mobile-scope .ud-card.ud-in .ud-sa4,
-.home-mobile-scope .ud-card.ud-out .ud-sa4,
-.home-mobile-scope .ud-card.ud-in .ud-sa5,
-.home-mobile-scope .ud-card.ud-out .ud-sa5,
-.home-mobile-scope .ud-card.ud-in .ud-sa6,
-.home-mobile-scope .ud-card.ud-out .ud-sa6,
-.home-mobile-scope .ud-card.ud-in .ud-sa7,
-.home-mobile-scope .ud-card.ud-out .ud-sa7,
-.home-mobile-scope .ud-card.ud-in .ud-sa8,
-.home-mobile-scope .ud-card.ud-out .ud-sa8,
-.home-mobile-scope .ud-card.ud-in .ud-sa9,
-.home-mobile-scope .ud-card.ud-out .ud-sa9,
-.home-mobile-scope .ud-card.ud-in .ud-sa10,
-.home-mobile-scope .ud-card.ud-out .ud-sa10,
-.home-mobile-scope .ud-card.ud-in .ud-sb0,
-.home-mobile-scope .ud-card.ud-out .ud-sb0,
-.home-mobile-scope .ud-card.ud-in .ud-sb1,
-.home-mobile-scope .ud-card.ud-out .ud-sb1,
-.home-mobile-scope .ud-card.ud-in .ud-sb2,
-.home-mobile-scope .ud-card.ud-out .ud-sb2,
-.home-mobile-scope .ud-card.ud-in .ud-sb3,
-.home-mobile-scope .ud-card.ud-out .ud-sb3,
-.home-mobile-scope .ud-card.ud-in .ud-sb4,
-.home-mobile-scope .ud-card.ud-out .ud-sb4,
-.home-mobile-scope .ud-card.ud-in .ud-sb5,
-.home-mobile-scope .ud-card.ud-out .ud-sb5,
-.home-mobile-scope .ud-card.ud-in .ud-sb6,
-.home-mobile-scope .ud-card.ud-out .ud-sb6,
-.home-mobile-scope .ud-card.ud-in .ud-sb7,
-.home-mobile-scope .ud-card.ud-out .ud-sb7,
-.home-mobile-scope .ud-card.ud-in .ud-sb8,
-.home-mobile-scope .ud-card.ud-out .ud-sb8,
-.home-mobile-scope .ud-card.ud-in .ud-sb9,
-.home-mobile-scope .ud-card.ud-out .ud-sb9,
-.home-mobile-scope .ud-card.ud-in .ud-sb10,
-.home-mobile-scope .ud-card.ud-out .ud-sb10,
-.home-mobile-scope .ud-card.ud-in .ud-bar,
-.home-mobile-scope .ud-card.ud-out .ud-bar {
-  animation-delay: -150ms;
-}
+/* Fix #52 (2026-10-29): added a `animation-delay: -150ms` rule here on the
+   theory that the keyframes had a long "quiet" opening to skip past.
+   REMOVED by fix #56 (same conversation, see UndpCard.js's matching
+   comment): Victoria reported it made the glitch look "trabado" (stuck) --
+   likely because jumping ~20 separately-timed `step-end` accent-mark
+   animations to the same fixed offset landed them on an incoherent
+   mid-step combination. Re-checked the keyframes directly: udA0/udStage
+   already have visible activity by 4% (~28ms), so there wasn't a
+   meaningful quiet gap to skip in the first place -- the premise behind
+   this rule was wrong. The actual fix was structural, in UndpCard.js (the
+   `[active]` effect switched from `useEffect` to `useLayoutEffect`, so the
+   glitch starts in the same paint as the other cards' CSS-driven ones
+   instead of a frame later), not a CSS timing tweak. */
 @media (prefers-reduced-motion:reduce){.home-mobile-scope .ud-card *{animation:none!important}.home-mobile-scope .ud-card.ud-in .ud-a{opacity:0}.home-mobile-scope .ud-card.ud-in .ud-b{opacity:1}}

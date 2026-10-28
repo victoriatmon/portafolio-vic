@@ -255,14 +255,23 @@ export default function HomeMobile() {
   // bypassing React state/re-render entirely (see this file's header
   // comment).
   const cardSlotRefs = useRef([]);
-  // Set to true right before a scrollLeft write this effect makes on its
-  // own (the fix-#25 initial positioning jump, or a wraparound correction
-  // in finishAt()), so the 'scroll' event that write provokes is ignored
-  // instead of being treated like a real user scroll (which would
-  // otherwise mark the carousel as "mid-scroll"/not-current for a frame,
-  // or -- worse -- re-settle somewhere unintended). A ref (not a plain
-  // closure variable) because it's written from the layout effect below
-  // and read from the scroll-tracking effect's closures.
+  // True for a short window after a scrollLeft write this effect makes on
+  // its own (the fix-#25 initial positioning jump, or a wraparound
+  // correction in finishAt()), so the 'scroll'/'scrollend' noise that
+  // write provokes is ignored instead of being treated like a real user
+  // scroll (which would otherwise mark the carousel "mid-scroll"/not-
+  // current, or re-settle somewhere unintended). A TIME WINDOW (see
+  // markSuppressed() below), not a one-shot flag cleared by the first
+  // event: an instant, non-gesture scrollLeft write like these can provoke
+  // more than one 'scroll' event, and in some cases never fires
+  // 'scrollend' at all (confirmed on this exact initial-mount jump while
+  // testing fix #25 -- a one-shot flag only protected the FIRST stray
+  // event, a second one then set currentIndex to -1, and with no
+  // 'scrollend' ever arriving to run settle() afterward, nothing ever set
+  // it back -- the whole carousel was left with no card marked current,
+  // ever). A ref (not a plain closure variable) because it's written from
+  // the layout effect below and read from the scroll-tracking effect's
+  // closures.
   const suppressSettleRef = useRef(false);
 
   useEffect(() => {
@@ -284,8 +293,12 @@ export default function HomeMobile() {
   useLayoutEffect(() => {
     const track = trackRef.current;
     if (!track) return;
-    suppressSettleRef.current = true;
     track.scrollLeft = PAGE_W;
+    // The main effect below (which starts its own suppress window covering
+    // this jump via markSuppressed()) always runs synchronously right
+    // after this one, in the same commit, before the browser has had any
+    // chance to dispatch the resulting 'scroll' event -- so there's no gap
+    // here for a stray event to slip through unsuppressed.
   }, []);
 
   useEffect(() => {
@@ -301,6 +314,23 @@ export default function HomeMobile() {
     // (older Safari), fall back to the same idle-timeout principle the old
     // wheel handler used (140ms of no new scroll events).
     const hasScrollEnd = typeof window !== 'undefined' && 'onscrollend' in window;
+
+    // Opens (or extends) a short window during which onScroll/onScrollEnd
+    // (below) ignore whatever 'scroll'/'scrollend' noise a scrollLeft write
+    // this effect just made on its own provokes -- see suppressSettleRef's
+    // declaration above for why this is a time window, not a one-shot flag.
+    let suppressTimer = null;
+    function markSuppressed() {
+      suppressSettleRef.current = true;
+      clearTimeout(suppressTimer);
+      suppressTimer = setTimeout(() => {
+        suppressSettleRef.current = false;
+      }, 160);
+    }
+    // Covers the layout effect's initial-position jump, just above this in
+    // the same commit -- see that effect's comment for why there's no gap
+    // for a stray event to slip through before this call.
+    markSuppressed();
 
     // Writes the arc transform (rotate + vertical drop, see RC/STEP above)
     // to every slot in the EXTENDED strip (fix #25 -- includes the two
@@ -364,8 +394,8 @@ export default function HomeMobile() {
     function finishAt(extIdx) {
       setCurrentIndex(realIndexOf(extIdx));
       if (extIdx === 0 || extIdx === EXT_COUNT - 1) {
-        suppressSettleRef.current = true;
         track.scrollLeft = (extIdx === 0 ? COUNT : 1) * PAGE_W;
+        markSuppressed();
       }
     }
 
@@ -380,16 +410,18 @@ export default function HomeMobile() {
     }
 
     function onScroll() {
-      // A scrollLeft write this effect made itself (the fix-#25 initial
-      // jump, or finishAt()'s wraparound correction) -- not a real user
-      // scroll. Ignore it entirely: currentIndex is already correct (set
-      // before the write, see above), and treating it like a real scroll
-      // would otherwise flicker currentIndex to -1 for a frame, or
-      // schedule a redundant settle.
-      if (suppressSettleRef.current) {
-        suppressSettleRef.current = false;
-        return;
-      }
+      // Inside a scrollLeft write this effect made itself (the fix-#25
+      // initial jump, or finishAt()'s wraparound correction) -- not a real
+      // user scroll. Ignore it entirely, for the whole suppressed window
+      // (see markSuppressed() above, and suppressSettleRef's declaration
+      // for why this can't be a one-shot "ignore just the next event"
+      // check): currentIndex is already correct (set before the write),
+      // and treating this noise like a real scroll would otherwise flicker
+      // currentIndex to -1, possibly with nothing left to set it back (an
+      // instant, non-gesture scrollLeft write doesn't reliably provoke a
+      // 'scrollend' to run settle() afterward -- confirmed while testing
+      // this fix, see suppressSettleRef's comment).
+      if (suppressSettleRef.current) return;
       if (autoScrolling) return; // scrollToIndex() drives its own currentIndex updates, see below
       setCurrentIndex((prev) => (prev === -1 ? prev : -1));
       if (!hasScrollEnd) {
@@ -398,6 +430,7 @@ export default function HomeMobile() {
       }
     }
     function onScrollEnd() {
+      if (suppressSettleRef.current) return; // same reasoning as onScroll above
       if (autoScrolling) return;
       clearTimeout(scrollTimer);
       settle();
@@ -484,6 +517,7 @@ export default function HomeMobile() {
 
     return () => {
       clearTimeout(scrollTimer);
+      clearTimeout(suppressTimer);
       if (autoScrollCancel) autoScrollCancel();
       cancelAnimationFrame(rafId);
       track.removeEventListener('scroll', onScroll);

@@ -187,17 +187,32 @@ const UNDP_SVG = `<svg class="ud-card" aria-hidden="true" width="300" height="40
 // what tells the effect below to fall back to the original real-pointer
 // hover/pointerout wiring -- see AXACard.js's matching comment for the same
 // pattern.
-// Fix #27 (2026-10-28): same bug, same fix as MapfreCard.js's matching
-// comment -- HomeMobile.js now mounts TWO instances of this card at once
-// (fix #25's clone), and this SVG's hardcoded numeric ids collided across
-// them, breaking the second instance's headshot clip/pattern (the same
-// "renders solid black" failure Victoria reported on Mapfre's clone, just
-// not yet seen by her on this card's clone since that requires scrolling
-// PAST the first card going backwards -- same root cause, fixed the same
-// way preemptively). Deliberately only the plain numeric clip/pattern/
-// mask/filter ids below, NOT this card's other, hand-named ids (`udA`,
-// `udBand0`, `udRGB1`, etc.) -- see lib/svgNamespace.js's header comment
-// for why those are safe to leave shared.
+// Fix #27 (2026-10-28), corrected same day after live testing on the
+// carousel-fixes-review preview: same bug, same fix as MapfreCard.js's
+// matching comment -- HomeMobile.js now mounts TWO instances of this card
+// at once (fix #25's clone), and this SVG's hardcoded ids collided across
+// them, breaking the second instance's rendering (the same "renders solid
+// black" failure Victoria reported on Mapfre's clone). The first pass here
+// only namespaced the plain numeric clip/pattern/mask/filter ids, leaving
+// this card's hand-named ones (`udA`, `udCardClip`, `udBand0`, `udScanPat`)
+// shared on the assumption that two instances defining identical geometry
+// under the same id would be harmless either way -- live testing on the
+// preview proved that wrong: `url(#udCardClip)` (the outer card-shape clip
+// EVERYTHING else renders inside) resolved to nothing for the second
+// instance, clipping it to a zero-area region -- solid black, nothing
+// visible at all, not even the fallback background rect. A duplicate id's
+// `url(#id)` reference isn't guaranteed to just pick one of the two
+// candidates and move on; here it silently failed to resolve for one of
+// them instead. So: namespace every id this SVG defines-and-references
+// for its own purposes, full stop -- the ONLY ones still excluded are
+// `udRGB1`/`udRGB2`/`udRGB3`, which home.css's shared, unscoped
+// `@keyframes udStage` rule references directly (`filter:url(#udRGB1)`
+// etc) -- renaming the SVG's copy without also rewriting that external,
+// per-instance-unaware CSS would just break the lookup for BOTH instances.
+// Worst case there if their own duplicate ever fails to resolve the same
+// way `udCardClip` did: filters degrade to `filter:none` (no RGB-split
+// flash during the glitch), not an invisible card -- an acceptable, far
+// less severe gap versus rewriting shared CSS to fix it.
 const UNDP_INTERNAL_IDS = [
   'clip0_89_931',
   'clip0_89_949',
@@ -213,6 +228,21 @@ const UNDP_INTERNAL_IDS = [
   'pattern0_89_949',
   'pattern1_89_931',
   'pattern1_89_949',
+  'udA',
+  'udB',
+  'udCardClip',
+  'udScanPat',
+  'udBand0',
+  'udBand1',
+  'udBand2',
+  'udBand3',
+  'udBand4',
+  'udBand5',
+  'udBand6',
+  'udBand7',
+  'udBand8',
+  'udBand9',
+  'udBand10',
 ];
 
 function UndpCard({ active, uid = '' } = {}) {

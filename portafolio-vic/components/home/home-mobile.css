@@ -16,7 +16,17 @@
 }
 
 /* ===== Landing v2 (mobile): hero + project carousel ===== */
-.home-mobile-scope .stage2 { position: relative; z-index: 1; isolation: isolate; height: 690px; flex: none; overflow: hidden; }
+/* Fix #26 (2026-10-28): 690px -> 640px. Victoria reported the whole block
+   reading as cramped on a real iPhone -- cards too close to the title,
+   arrows too close to Safari's own bottom chrome -- which is really a
+   vertical-footprint problem: a real iPhone's VISIBLE height (after
+   Safari's address bar + bottom toolbar both take their share) is
+   noticeably less than the ~844px logical viewport this was tuned against
+   in this environment's Chromium test browser. The real lever is the
+   carousel's own on-screen size (CARD_W/CARD_H, see HomeMobile.js and
+   .card-slot below) -- shrinking that is what actually frees up vertical
+   room; this section height just follows that reduction down. */
+.home-mobile-scope .stage2 { position: relative; z-index: 1; isolation: isolate; height: 640px; flex: none; overflow: hidden; }
 .home-mobile-scope .intro2 { position: absolute; top: 40px; left: 0; right: 0; padding: 0 28px; text-align: center; z-index: 5; }
 /* Title size (fix #16): Pavanam dropped 30->28px per Victoria's request --
    Spectral (.accent-italic) doesn't read at the same visual size as Pavanam
@@ -59,12 +69,16 @@
   position: absolute;
   left: 0; right: 0;
   /* 146px (original) -> 138px (fix #20, 8px up per Victoria's first
-     request) -> 154px (this fix, +16px: Victoria then said #20's 138px
-     sat too close to the title and asked for at least 16px more air).
-     Still moving the WHOLE group together -- cards AND Discover/arrows --
-     same as fix #20, no counter-offset needed. */
-  top: 154px;
-  height: 520px;
+     request) -> 154px (fix #23, +16px: Victoria then said #20's 138px sat
+     too close to the title and asked for at least 16px more air) -> 160px
+     (fix #26: the card shrink below frees ~80px of vertical room overall,
+     most of which goes to the BOTTOM gap -- see .car2-track/.card-cta --
+     but a little also went back into this top gap, since Victoria's real-
+     device video showed the cards still reading as glued to the title even
+     after fix #23). Still moving the WHOLE group together -- cards AND
+     Discover/arrows -- same as fix #20, no counter-offset needed. */
+  top: 160px;
+  height: 440px;
   user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
 }
 .home-mobile-scope .car2-track {
@@ -76,11 +90,13 @@
      CARD_H with Discover absolutely positioned below it -- rotates as a
      unit). That means `.card-cta`'s content no longer adds to the flex
      row's own layout height, so the track needs an explicit height tall
-     enough to not clip it under `overflow-y: hidden` below (340 card +
-     34 gap + ~108 Discover/arrows stack ≈ 482, 500 leaves a little
-     slack; `.car2`'s own 520px above already has room for this). */
+     enough to not clip it under `overflow-y: hidden` below. Fix #26: 288
+     card + 26 gap + ~82 Discover/arrows stack ≈ 396, 440 leaves real slack
+     this time (not just a sliver) -- see .card-cta below for where the
+     rest of the freed-up height actually went: the arrows-to-bottom-chrome
+     gap Victoria's video showed as too tight. */
   left: 0; right: 0; top: 0;
-  height: 500px;
+  height: 440px;
   display: flex;
   align-items: flex-start;
   overflow-x: auto;
@@ -93,9 +109,11 @@
   overscroll-behavior-x: contain;
   -webkit-overflow-scrolling: touch;
   /* (100vw - CARD_W) / 2 -- lets the first/last card still reach dead
-     centre instead of stopping at the track's own edge. */
-  padding: 0 calc(50vw - 127.5px);
-  gap: 20px; /* CARD_GAP -- with the 255px card width below, gives the same 275px centre-to-centre spacing (PAGE_W) HomeMobile.js's scroll math assumes */
+     centre instead of stopping at the track's own edge. Fix #26: 127.5px
+     (CARD_W/2 at the old 255px) -> 108px (CARD_W/2 at the new 216px, see
+     .card-slot below). */
+  padding: 0 calc(50vw - 108px);
+  gap: 20px; /* CARD_GAP -- with the 216px card width below, gives the same 236px centre-to-centre spacing (PAGE_W) HomeMobile.js's scroll math assumes */
   scrollbar-width: none;
   -ms-overflow-style: none;
   /* No explicit touch-action override (the old arc system needed
@@ -109,9 +127,15 @@
 
 .home-mobile-scope .card-slot {
   position: relative;
-  flex: 0 0 255px; /* CARD_W -- keep in sync with HomeMobile.js's CARD_W */
-  width: 255px;
-  height: 340px; /* CARD_H -- sized to the card ONLY (not the Discover/arrows stack below, which is absolutely positioned) so the arc transform HomeMobile.js writes to this element's style rotates/drops it around the card's own centre, same as desktop. */
+  /* Fix #26: 255x340 -> 216x288 (same 3:4 aspect ratio). This, not the
+     gaps around it, is the real fix for Victoria's "amontonado" (cramped)
+     report from a real iPhone -- the card is by far the single biggest
+     vertical element in a fixed-height `.stage2`, so shrinking it is what
+     actually frees up room for the title gap above and the arrows-to-
+     bottom-chrome gap below, both of which she called out as too tight. */
+  flex: 0 0 216px; /* CARD_W -- keep in sync with HomeMobile.js's CARD_W */
+  width: 216px;
+  height: 288px; /* CARD_H -- sized to the card ONLY (not the Discover/arrows stack below, which is absolutely positioned) so the arc transform HomeMobile.js writes to this element's style rotates/drops it around the card's own centre, same as desktop. */
   scroll-snap-align: center;
   scroll-snap-stop: always; /* a fast flick still only ever advances one card, never skips past */
   /* rotate()/translateY() written here continuously by HomeMobile.js from
@@ -205,12 +229,17 @@
      under the arc transform, matching desktop's look. */
   position: absolute;
   left: 50%;
-  top: calc(100% + 34px); /* on-screen gap between card and Discover -- same value tuned pre-fix-#20. */
+  /* Fix #26: 34px -> 26px (card-to-Discover) and the flex `gap` below,
+     16px -> 12px (Discover-to-arrows), both trimmed slightly to put more
+     of the room freed up by the smaller card (see .card-slot above) into
+     the gap below the arrows instead -- that's the one Victoria's video
+     showed sitting closest to Safari's own bottom chrome. */
+  top: calc(100% + 26px); /* on-screen gap between card and Discover */
   transform: translateX(-50%);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 .home-mobile-scope .btn-primary {
   all: unset;

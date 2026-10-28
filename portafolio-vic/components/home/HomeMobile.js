@@ -32,44 +32,82 @@
 // so "advance -> next card lands centred, smoothly" is no longer something
 // this file reconstructs by hand.
 //
-// The first version of that rebuild, however, left the cards sitting flat
-// in a straight strip -- Victoria then asked for mobile to look curved
-// like desktop again: the centre card prominent, the previous/next cards
-// visibly arcing away at the sides. So, same day: the native scroll-snap
-// strip stays (still the thing that fixed reliability), but each
-// `.card-slot` now ALSO gets a `rotate()`/`translateY()` transform layered
-// on top -- the same arc math HomeDesktop.js uses (RC/STEP below), just
-// re-tuned for this narrower viewport -- recomputed continuously from the
-// track's live scrollLeft and written straight to the DOM via refs (see
-// applyArc() in the effect below), never through React state/re-render
-// per scroll frame (same reasoning as fix #13's dropped-frame lesson,
-// documented in contexto-portafolio-vercel.md). Since a CSS transform is
-// purely visual (doesn't affect layout or the scroll-snap calculation,
-// which is based on the untransformed layout box), this composes cleanly
-// with the native scroll: the browser still decides exactly where a card
-// sits left-to-right, in perfect sync with the user's finger; the arc only
-// adds the curve on top.
+// Same day, the arc visual (centre card prominent, neighbours visibly
+// arcing away at the sides) was layered back on top as a plain CSS
+// transform -- same RC/STEP math HomeDesktop.js uses -- written straight to
+// each `.card-slot` via refs, recomputed from the track's live scrollLeft.
 //
-// What's left for JS to do:
-//   1. Know which card is centred, to drive the same `.is-current` trigger
-//      the six bespoke card-art animations in home-mobile.css already key
-//      off (unchanged -- see CARD_ART below) -- done by reading the
-//      track's scrollLeft once scrolling goes idle (see the big effect
-//      below), the same "wait for rest, not just proximity to centre"
-//      principle the old system's `settled` gate existed for, just driven
-//      by the browser's own scroll state instead of a hand-tracked one.
-//   2. Drive a prev/next BUTTON tap's glide to the next card (scrollToIndex
-//      below) -- native swipe/wheel scrolling never touches this at all,
-//      the browser handles that motion entirely on its own. (Both this and
-//      native scrolling fire the same 'scroll' events, so both drive the
-//      arc update the same way -- see applyArc()/scheduleArc().)
-//   3. Continuously recompute and write each card's arc transform (this
-//      fix) -- see applyArc()/scheduleArc() in the effect below.
+// ===== Fix #24/#25/#26 (2026-10-28, same day, from Victoria's real-iPhone
+// video of the above) =====
+// Three more issues, all from a real Safari/iOS recording (this
+// environment's test browser is Chromium, which does not reproduce several
+// Safari-only behaviours -- see contexto-portafolio-vercel.md's standing
+// note): advancing felt "robotic"/stepped rather than smooth (#24); nothing
+// meaningful showed to the right of the first card, Mapfre -- Victoria
+// asked for the carousel to behave "like a closed circle" instead (#25);
+// and the whole block read as cramped -- cards too close to the title,
+// arrows too close to the browser's own bottom chrome (#26, which also
+// touches home-mobile.css's sizing, not just this file).
+//
+// #24 -- robotic motion: the arc transform used to be recomputed only
+// inside the 'scroll' event handler (scheduleArc() below, now removed).
+// WebKit on iOS is known to coalesce/throttle 'scroll' event dispatch much
+// more aggressively than Chrome during native momentum scrolling -- so on
+// a real iPhone the rotate()/translateY() transform only updated in
+// occasional big jumps instead of every frame, reading as stepped/
+// "robotized" motion, even though the exact same code looked perfectly
+// smooth in this environment's Chromium test browser (which doesn't
+// throttle 'scroll' the same way). Fix: a plain requestAnimationFrame loop
+// now polls track.scrollLeft directly every frame, independent of whether
+// or when 'scroll' actually fires -- see the tick()/rafId loop below. This
+// decouples the arc's update rate from the engine's event-dispatch cadence
+// entirely, so it now updates at the display's own refresh rate on every
+// engine, Safari included.
+//
+// #25 -- closed-circle carousel: the carousel used to be deliberately
+// bounded (tapping next on the last card, or prev on the first, was a
+// no-op) -- a simplification noted in this file's prior revision as "not
+// something native CSS scroll-snap does cleanly or reliably across engines
+// without cloning DOM nodes at both ends". Victoria has now explicitly
+// asked for the wraparound that simplification skipped, so this fix
+// implements exactly that cloning: the rendered strip is the real six
+// cards PLUS a clone of the last card prepended and a clone of the first
+// card appended (EXT_COUNT = COUNT + 2, see realIndexOf() below). Scrolling
+// past either real end reveals the *other* end's card (pixel-identical to
+// its real slot) continuing the strip, then -- the instant native
+// scrolling settles there -- JS silently snaps the underlying scrollLeft
+// back to the matching real slot (see finishAt()'s wraparound branch). Since
+// the clone and the real slot render identical content, this correction is
+// imperceptible; it's the same technique every "infinite" scroll-snap
+// carousel on the web relies on. currentIndex (and so `.is-current`,
+// everything the six bespoke card-art animations key off) never flickers
+// across this jump: realIndexOf(0) and realIndexOf(EXT_COUNT-1) already
+// equal the real last/first card's own index, so the corrective scrollLeft
+// write changes WHERE the track is scrolled to, never WHICH card is
+// current.
+//
+// #26 -- cramped layout: see home-mobile.css's matching comment -- the
+// carousel's own on-screen size (CARD_W/CARD_H below) was reduced, which is
+// what actually frees up the vertical room; the gaps around it were only
+// retuned, not the main lever.
+//
+// What's left for JS to do (updated):
+//   1. Know which REAL card is centred (0..COUNT-1, never a clone's
+//      position), to drive `.is-current` -- done by reading the track's
+//      scrollLeft once scrolling goes idle and mapping it through
+//      realIndexOf() (see finishAt()/settle() below).
+//   2. Drive a prev/next BUTTON tap's glide (scrollToIndex below) -- native
+//      swipe/wheel scrolling never touches this at all.
+//   3. Continuously recompute and write each slot's arc transform, at the
+//      display's own frame rate, independent of 'scroll' event timing
+//      (fix #24) -- see applyArc()/the tick() loop in the effect below.
+//   4. Silently correct the scroll position back onto a real slot whenever
+//      native scrolling (or a button glide) settles on one of the two
+//      cloned end slots (fix #25) -- see finishAt() below.
 // Card width (CARD_W/CARD_GAP below) is direct pixel sizing, no extra scale
 // transform -- see home-mobile.css's matching .card-slot/.car2-track rules,
 // which MUST stay numerically in sync with these. Card HEIGHT lives only in
-// CSS (340px, both `.card-slot` and `.card-face` as of this fix -- see
-// that file) -- the math below never needs it directly.
+// CSS (see that file) -- the math below never needs it directly.
 //
 // Each card's bespoke art animation (the tile mosaic, the spinning star,
 // the glitch swap, etc. -- see CARD_ART below) plays on its own, in a loop,
@@ -79,7 +117,7 @@
 // prop on <Art/> (for AXA/UNDP's JS-driven art) -- same convention as
 // before the rebuild, just now driven by `currentIndex` below.
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { VictorAIChatProvider } from '@/components/chat/ChatContext';
 import ChatPanel from '@/components/chat/ChatPanel';
@@ -123,13 +161,31 @@ const GRADIENTS = [
   'linear-gradient(135deg,#4ac4c4,#123b59)',
 ];
 const COUNT = LABELS.length;
+// Extended strip length (fix #25): the six real cards plus one cloned slot
+// at each end (a copy of the last card prepended, a copy of the first card
+// appended) -- see realIndexOf() below for the position->real-card mapping,
+// and this file's header comment for why.
+const EXT_COUNT = COUNT + 2;
+// Maps an extended-strip position (0..EXT_COUNT-1) to the real card index
+// (0..COUNT-1) it should render. Position 0 is a clone of the LAST real
+// card, positions 1..COUNT are the real cards in order, and position
+// EXT_COUNT-1 is a clone of the FIRST real card -- so this wraps cleanly
+// with a single modulo, no special-casing needed anywhere it's used
+// (render, applyArc, the wraparound correction in finishAt): the two clone
+// positions simply map to the same real index as their real counterpart.
+function realIndexOf(p) {
+  return ((p - 1) % COUNT + COUNT) % COUNT;
+}
 
 // On-screen card size, px -- no extra scale transform any more (the old
 // arc system rendered a 300x400 box through a 0.85 CSS scale; this sizes
 // directly at the same effective on-screen size instead). MUST stay in
 // sync with home-mobile.css's `.card-slot`/`.car2-track` rules, which
 // hardcode these same numbers (cross-referenced in a comment there too).
-const CARD_W = 255;
+// Fix #26: shrunk from 255x340 -- see home-mobile.css's matching comment on
+// why this (not just trimming the gaps around it) is the real lever for
+// the "cramped" complaint; aspect ratio (3:4) kept identical.
+const CARD_W = 216;
 const CARD_GAP = 20;
 // Centre-to-centre scroll distance between adjacent cards. Since every
 // card is the same width with a fixed gap, and the track's side padding is
@@ -139,18 +195,18 @@ const CARD_GAP = 20;
 // scrollLeft pointing at".
 const PAGE_W = CARD_W + CARD_GAP;
 
-// Arc visual (this fix): rotate()/translateY() layered on top of the
-// native scroll position, same shape of math as HomeDesktop.js's own
-// RC/STEP (see that file) -- `ang = d*STEP`, `translateY = RC*(1-cos(ang))`
-// -- but re-tuned for mobile's narrower viewport rather than copying
-// desktop's RC=1400/STEP=17deg verbatim. These numbers reuse the pre-
-// fix-#20 mobile arc's own RC=900, with STEP derived the same way that
-// system derived it: the angle at which the arc's chord length equals
-// PAGE_W, so adjacent cards keep landing visually close to PAGE_W apart
-// even though the arc's true horizontal placement is non-linear (this
-// value is only used for the rotation/vertical-drop added on top here;
-// actual left-right placement still comes from native scroll, see the
-// effect below and this file's header comment).
+// Arc visual: rotate()/translateY() layered on top of the native scroll
+// position, same shape of math as HomeDesktop.js's own RC/STEP (see that
+// file) -- `ang = d*STEP`, `translateY = RC*(1-cos(ang))` -- but re-tuned
+// for mobile's narrower viewport rather than copying desktop's RC=1400/
+// STEP=17deg verbatim. These numbers reuse the pre-fix-#20 mobile arc's own
+// RC=900, with STEP derived the same way that system derived it: the angle
+// at which the arc's chord length equals PAGE_W, so adjacent cards keep
+// landing visually close to PAGE_W apart even though the arc's true
+// horizontal placement is non-linear (this value is only used for the
+// rotation/vertical-drop added on top here; actual left-right placement
+// still comes from native scroll, see the effect below and this file's
+// header comment).
 const RC = 900;
 const STEP = (Math.asin(PAGE_W / RC) * 180) / Math.PI;
 // Cards beyond this many slots from centre are hidden outright (matches
@@ -178,7 +234,11 @@ export default function HomeMobile() {
   // the old system's `settled` state existed for (see this file's header
   // comment), just read off the track's own scroll state instead of a
   // hand-tracked tween. Starts at 0 (not -1): nothing has scrolled yet on
-  // first paint, card 0 is simply already centred.
+  // first paint, card 0 (Mapfre) is simply already centred -- the initial-
+  // position layout effect below lands the track there before paint, so
+  // this stays true even with the fix #25 clone slots now in the strip.
+  // Always a REAL card index (0..COUNT-1), never a clone's position -- see
+  // realIndexOf().
   const [currentIndex, setCurrentIndex] = useState(0);
   const [entered, setEntered] = useState(false);
   const trackRef = useRef(null);
@@ -188,12 +248,22 @@ export default function HomeMobile() {
   // can reach the scrollToIndex() closure defined inside that effect
   // without re-creating it on every render.
   const navRef = useRef({ prev() {}, next() {} });
-  // One DOM node per card (`.card-slot`), set via the inline ref callback
-  // in the render below -- applyArc() (in the effect below) writes the
-  // rotate()/translateY() arc transform straight to these on every scroll
-  // frame, bypassing React state/re-render entirely (see this file's
-  // header comment, point 3).
+  // One DOM node per STRIP POSITION (0..EXT_COUNT-1, including the two
+  // fix-#25 clone slots), set via the inline ref callback in the render
+  // below -- applyArc() (in the effect below) writes the rotate()/
+  // translateY() arc transform straight to these on every animation frame,
+  // bypassing React state/re-render entirely (see this file's header
+  // comment).
   const cardSlotRefs = useRef([]);
+  // Set to true right before a scrollLeft write this effect makes on its
+  // own (the fix-#25 initial positioning jump, or a wraparound correction
+  // in finishAt()), so the 'scroll' event that write provokes is ignored
+  // instead of being treated like a real user scroll (which would
+  // otherwise mark the carousel as "mid-scroll"/not-current for a frame,
+  // or -- worse -- re-settle somewhere unintended). A ref (not a plain
+  // closure variable) because it's written from the layout effect below
+  // and read from the scroll-tracking effect's closures.
+  const suppressSettleRef = useRef(false);
 
   useEffect(() => {
     if (prefersReducedMotion()) {
@@ -202,6 +272,20 @@ export default function HomeMobile() {
     }
     const t = setTimeout(() => setEntered(true), 30);
     return () => clearTimeout(t);
+  }, []);
+
+  // Fix #25: lands the track on the first REAL card (strip position 1 --
+  // position 0 is the cloned-last-card slot, see realIndexOf()) before the
+  // browser paints, so the page never flashes the clone at position 0
+  // (which, being a clone of the LAST card, would otherwise be what a
+  // freshly-mounted, unscrolled track shows first). useLayoutEffect (not
+  // useEffect) specifically so this happens before paint, same guarantee a
+  // plain default scrollLeft of 0 would have had pre-fix-#25.
+  useLayoutEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
+    suppressSettleRef.current = true;
+    track.scrollLeft = PAGE_W;
   }, []);
 
   useEffect(() => {
@@ -219,18 +303,21 @@ export default function HomeMobile() {
     const hasScrollEnd = typeof window !== 'undefined' && 'onscrollend' in window;
 
     // Writes the arc transform (rotate + vertical drop, see RC/STEP above)
-    // to every `.card-slot` for a given continuous centre position `pos`
-    // (a float -- the fractional index the track is currently scrolled
-    // to, NOT just the settled integer index). Direct DOM writes, no
-    // setState -- this runs on every scroll frame, so going through React
-    // here would reintroduce exactly the per-frame-re-render cost fix #13
-    // moved away from (see contexto-portafolio-vercel.md).
+    // to every slot in the EXTENDED strip (fix #25 -- includes the two
+    // cloned end slots, same math, no special-casing needed) for a given
+    // continuous centre position `pos` (a float -- the fractional strip
+    // position the track is currently scrolled to, NOT just the settled
+    // integer position). Direct DOM writes, no setState -- see the
+    // continuous rAF loop below (fix #24) that drives this every frame;
+    // going through React here would reintroduce exactly the per-frame-
+    // re-render cost fix #13 moved away from (see
+    // contexto-portafolio-vercel.md).
     function applyArc(pos) {
       const cards = cardSlotRefs.current;
-      for (let i = 0; i < COUNT; i++) {
+      for (let i = 0; i < EXT_COUNT; i++) {
         const el = cards[i];
         if (!el) continue;
-        const d = i - pos; // signed, continuous distance from centre -- no wraparound, this carousel is bounded (see scrollToIndex's clamp below)
+        const d = i - pos; // signed, continuous distance from centre, over the extended strip
         const ang = d * STEP;
         const y = RC * (1 - Math.cos((ang * Math.PI) / 180));
         el.style.transform = `rotate(${ang.toFixed(3)}deg) translateY(${y.toFixed(2)}px)`;
@@ -238,38 +325,71 @@ export default function HomeMobile() {
         el.style.zIndex = String(Math.round(100 - Math.abs(d) * 10));
       }
     }
-    let arcScheduled = false;
-    // Scroll fires far more often than once per frame during native
-    // momentum on some engines -- this collapses any number of scroll
-    // events landing in the same frame into a single DOM write, always
-    // reading scrollLeft fresh at the moment the frame actually runs
-    // (not whatever stale value the event that scheduled it happened to
-    // carry).
-    function scheduleArc() {
-      if (arcScheduled) return;
-      arcScheduled = true;
-      requestAnimationFrame(() => {
-        arcScheduled = false;
-        applyArc(track.scrollLeft / PAGE_W);
-      });
+    // Fix #24: a plain rAF loop polling track.scrollLeft every frame,
+    // instead of only recomputing inside the 'scroll' event handler (the
+    // old scheduleArc()/arcScheduled). WebKit on iOS coalesces/throttles
+    // 'scroll' dispatch far more than Chrome during native momentum, which
+    // made the old approach update the arc in occasional big jumps on a
+    // real iPhone -- reading as "robotic"/stepped motion -- even though it
+    // looked smooth in this environment's Chromium test browser (which
+    // doesn't throttle the same way). Polling scrollLeft directly,
+    // independent of whether/when 'scroll' fires, decouples the arc's
+    // update rate from the engine's event cadence entirely: it now runs at
+    // the display's own refresh rate regardless of engine. The loop runs
+    // for the component's whole lifetime (cancelled on unmount below) --
+    // the per-frame cost is trivial (EXT_COUNT little trig calcs + style
+    // writes), so there's no real benefit to pausing it while idle, and
+    // pausing/resuming it correctly around every possible interaction
+    // (touch, wheel, button glide, programmatic correction) would be far
+    // more code than the loop itself.
+    let rafId;
+    function tick() {
+      applyArc(track.scrollLeft / PAGE_W);
+      rafId = requestAnimationFrame(tick);
     }
-    applyArc(track.scrollLeft / PAGE_W); // correct from first paint, before any 'scroll' event has fired
+    applyArc(track.scrollLeft / PAGE_W); // correct from first paint, before the loop's first frame
+    rafId = requestAnimationFrame(tick);
 
-    // Reads the track's current rest position and converts it to a card
-    // index. Exact (not just "close enough"), because every card is the
-    // same width+gap and the track's side padding was built to make each
-    // snap point land at exactly `index * PAGE_W` -- see PAGE_W's comment
-    // above.
+    // Sets currentIndex from a settled extended-strip position AND, if
+    // that position is one of the two fix-#25 clone slots, silently
+    // corrects the underlying scrollLeft back onto the matching real slot
+    // (same content, so the jump is imperceptible) -- the "closed circle"
+    // behaviour Victoria asked for. Shared by both settle() (native swipe/
+    // wheel) and scrollToIndex()'s own completion (prev/next buttons) so
+    // the correction applies no matter which one lands on a clone.
+    // currentIndex itself never flickers across the correction:
+    // realIndexOf(0) and realIndexOf(EXT_COUNT-1) already equal the real
+    // last/first card's index, so this sets the SAME currentIndex whether
+    // extIdx is a clone position or its real counterpart.
+    function finishAt(extIdx) {
+      setCurrentIndex(realIndexOf(extIdx));
+      if (extIdx === 0 || extIdx === EXT_COUNT - 1) {
+        suppressSettleRef.current = true;
+        track.scrollLeft = (extIdx === 0 ? COUNT : 1) * PAGE_W;
+      }
+    }
+
+    // Reads the track's current rest position and converts it to an
+    // extended-strip position. Exact (not just "close enough"), because
+    // every slot is the same width+gap and the track's side padding was
+    // built to make each snap point land at exactly `position * PAGE_W` --
+    // see PAGE_W's comment above.
     function settle() {
-      const idx = Math.max(0, Math.min(COUNT - 1, Math.round(track.scrollLeft / PAGE_W)));
-      setCurrentIndex(idx);
+      const extIdx = Math.max(0, Math.min(EXT_COUNT - 1, Math.round(track.scrollLeft / PAGE_W)));
+      finishAt(extIdx);
     }
 
     function onScroll() {
-      // Runs every scroll frame regardless of source -- native swipe/
-      // wheel AND the programmatic prev/next glide below both change
-      // scrollLeft, which fires this same event either way.
-      scheduleArc();
+      // A scrollLeft write this effect made itself (the fix-#25 initial
+      // jump, or finishAt()'s wraparound correction) -- not a real user
+      // scroll. Ignore it entirely: currentIndex is already correct (set
+      // before the write, see above), and treating it like a real scroll
+      // would otherwise flicker currentIndex to -1 for a frame, or
+      // schedule a redundant settle.
+      if (suppressSettleRef.current) {
+        suppressSettleRef.current = false;
+        return;
+      }
       if (autoScrolling) return; // scrollToIndex() drives its own currentIndex updates, see below
       setCurrentIndex((prev) => (prev === -1 ? prev : -1));
       if (!hasScrollEnd) {
@@ -297,16 +417,21 @@ export default function HomeMobile() {
       autoScrolling = false;
     }
 
-    // Animates track.scrollLeft to the target index's snap position over
-    // NAV_EASE_MS with easeInOutCubic. Used by the prev/next buttons only --
-    // see this file's header comment for why native swipe/wheel never run
-    // this. Safe to call again mid-glide (a quick double-tap on an arrow):
-    // it starts its `from` at the track's actual current scrollLeft, same
-    // "pick up from wherever it visually is" principle as the old
-    // commitTo()/currentVisualPos(), simpler here because scrollLeft IS the
-    // visual position already, nothing to reconstruct.
+    // Animates track.scrollLeft to the target extended-strip position's
+    // snap position over NAV_EASE_MS with easeInOutCubic. Used by the
+    // prev/next buttons only -- see this file's header comment for why
+    // native swipe/wheel never run this. Safe to call again mid-glide (a
+    // quick double-tap on an arrow): it starts its `from` at the track's
+    // actual current scrollLeft, same "pick up from wherever it visually
+    // is" principle as the old commitTo()/currentVisualPos(), simpler here
+    // because scrollLeft IS the visual position already, nothing to
+    // reconstruct. Clamped to the FULL extended range (0..EXT_COUNT-1,
+    // fix #25) rather than the real 0..COUNT-1 range -- tapping prev on
+    // the first real card (or next on the last) now glides one slot
+    // further, onto the matching clone, and finishAt() (below) silently
+    // corrects the landing onto the real slot once the glide completes.
     function scrollToIndex(idx) {
-      const clamped = Math.max(0, Math.min(COUNT - 1, idx));
+      const clamped = Math.max(0, Math.min(EXT_COUNT - 1, idx));
       const target = clamped * PAGE_W;
       if (autoScrollCancel) {
         autoScrollCancel();
@@ -317,40 +442,37 @@ export default function HomeMobile() {
       if (Math.abs(change) < 1 || prefersReducedMotion()) {
         track.scrollLeft = target;
         autoScrolling = false;
-        setCurrentIndex(clamped);
+        finishAt(clamped);
         return;
       }
       autoScrolling = true;
       setCurrentIndex(-1);
       const startTime = performance.now();
-      let rafId;
+      let rafId2;
       function step(now) {
         const frac = Math.min(1, (now - startTime) / NAV_EASE_MS);
         track.scrollLeft = start + change * easeInOutCubic(frac);
         if (frac < 1) {
-          rafId = requestAnimationFrame(step);
-          autoScrollCancel = () => cancelAnimationFrame(rafId);
+          rafId2 = requestAnimationFrame(step);
+          autoScrollCancel = () => cancelAnimationFrame(rafId2);
         } else {
           autoScrolling = false;
           autoScrollCancel = null;
-          setCurrentIndex(clamped);
+          finishAt(clamped);
         }
       }
-      rafId = requestAnimationFrame(step);
-      autoScrollCancel = () => cancelAnimationFrame(rafId);
+      rafId2 = requestAnimationFrame(step);
+      autoScrollCancel = () => cancelAnimationFrame(rafId2);
     }
 
     // Prev/next buttons (rendered on the centred card only -- see render
-    // below): advance/retreat exactly one card from wherever the carousel
+    // below): advance/retreat exactly one slot from wherever the carousel
     // actually is right now (read live off scrollLeft, not off React state
     // -- avoids a stale read from inside this plain DOM-event closure).
-    // Bounded, not infinite-loop: tapping next on the last card, or prev on
-    // the first, is a no-op (scrollToIndex clamps and the `< 1px change`
-    // check above skips the animation entirely) -- a deliberate
-    // simplification from the old arc system's wraparound, which isn't
-    // something native CSS scroll-snap does cleanly or reliably across
-    // engines without cloning DOM nodes at both ends; six project cards
-    // don't need an infinite ring to browse comfortably.
+    // Closed-circle, not a dead end (fix #25): tapping next past the last
+    // real card, or prev past the first, glides onto that end's clone slot
+    // and finishAt() then silently continues the loop onto the matching
+    // real card -- see scrollToIndex()/finishAt() above.
     navRef.current = {
       prev: () => scrollToIndex(Math.round(track.scrollLeft / PAGE_W) - 1),
       next: () => scrollToIndex(Math.round(track.scrollLeft / PAGE_W) + 1),
@@ -363,6 +485,7 @@ export default function HomeMobile() {
     return () => {
       clearTimeout(scrollTimer);
       if (autoScrollCancel) autoScrollCancel();
+      cancelAnimationFrame(rafId);
       track.removeEventListener('scroll', onScroll);
       if (hasScrollEnd) track.removeEventListener('scrollend', onScrollEnd);
       track.removeEventListener('pointerdown', onPointerDown);
@@ -409,8 +532,10 @@ export default function HomeMobile() {
 
           <div className="car2">
             <div className="car2-track" ref={trackRef} role="group" aria-roledescription="carousel" aria-label="Projects">
-              {LABELS.map((label, i) => {
+              {Array.from({ length: EXT_COUNT }, (_, p) => p).map((p) => {
+                const i = realIndexOf(p); // real card index this strip position renders -- see realIndexOf()
                 const Art = CARD_ART[i];
+                const label = LABELS[i];
                 const href = `/proyectos#${i}`;
                 const gradient = GRADIENTS[i];
                 const isCurrent = i === currentIndex;
@@ -418,11 +543,11 @@ export default function HomeMobile() {
                 return (
                   <div
                     className="card-slot"
-                    style={{ '--i': i }}
+                    style={{ '--i': p }}
                     ref={(el) => {
-                      cardSlotRefs.current[i] = el;
+                      cardSlotRefs.current[p] = el;
                     }}
-                    key={i}
+                    key={p}
                   >
                     <Link
                       className={`card-face${isCurrent ? ' is-current' : ''}`}

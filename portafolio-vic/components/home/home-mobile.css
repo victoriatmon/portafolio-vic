@@ -222,6 +222,12 @@
 @media (prefers-reduced-motion: reduce) {
   .home-mobile-scope .card-nav { transition: none; }
 }
+/* Fix #17 -- tone match: the arrows used to sit at 55% white opacity (a
+   dimmer, lower-emphasis tertiary tone than everything else on the card).
+   Victoria asked for them to read at the same tone as the word "Discover"
+   itself (full #F5F5F5, same as .btn-primary's resting `color`), not a
+   washed-out version of it -- the lower-emphasis affordance here is the
+   lack of fill/border, not a dimmer text color. */
 .home-mobile-scope .btn-tertiary.btn-nav-arrow {
   all: unset;
   cursor: pointer;
@@ -231,7 +237,7 @@
   width: 44px;
   height: 44px;
   border-radius: 999px;
-  color: rgba(245,245,245,0.55);
+  color: #F5F5F5;
   -webkit-tap-highlight-color: transparent;
   transition: color 0.15s ease, background 0.15s ease;
 }
@@ -251,8 +257,11 @@
   font-size: 20px;
   line-height: 1;
 }
+/* Fix #17 -- pressed state turns blue (same #0066FF brand accent as
+   .btn-primary:active's pressed text color elsewhere on this card),
+   keeping the same pressed-circle background this already had. */
 .home-mobile-scope .btn-tertiary.btn-nav-arrow:active {
-  color: #F5F5F5;
+  color: #0066FF;
   background: rgba(255,255,255,0.08);
 }
 

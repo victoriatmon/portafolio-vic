@@ -391,12 +391,30 @@ export default function HomeMobile() {
     // realIndexOf(0) and realIndexOf(EXT_COUNT-1) already equal the real
     // last/first card's index, so this sets the SAME currentIndex whether
     // extIdx is a clone position or its real counterpart.
+    //
+    // markSuppressed() runs here UNCONDITIONALLY, not just on the two
+    // clone/correction positions -- found necessary while testing fix #25
+    // live: 'scrollend' turned out not to fire reliably for ANY sequence of
+    // plain JS scrollLeft writes in this environment (confirmed both for
+    // the single instant correction jump below AND for scrollToIndex()'s
+    // own 420ms rAF tween, which also writes scrollLeft directly, once per
+    // frame, rather than through a native scrollTo({behavior:'smooth'})
+    // call the browser recognises as one continuous "scroll" -- apparently
+    // neither pattern reliably ends in a 'scrollend'). Without this,
+    // scrollToIndex()'s own completion had the same failure mode the
+    // mount-jump regression above did: autoScrolling flips back to false
+    // synchronously, before the 'scroll' event from that same final write
+    // has actually been dispatched, so that trailing event lands in
+    // onScroll's NORMAL (non-autoScrolling) branch, sets currentIndex to
+    // -1, and -- with no 'scrollend' arriving afterward to run settle() --
+    // nothing ever set it back. A short suppress window after every settle
+    // (native-scroll-driven or not) absorbs that trailing event too.
     function finishAt(extIdx) {
       setCurrentIndex(realIndexOf(extIdx));
       if (extIdx === 0 || extIdx === EXT_COUNT - 1) {
         track.scrollLeft = (extIdx === 0 ? COUNT : 1) * PAGE_W;
-        markSuppressed();
       }
+      markSuppressed();
     }
 
     // Reads the track's current rest position and converts it to an

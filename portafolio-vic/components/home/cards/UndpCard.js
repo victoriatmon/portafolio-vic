@@ -170,11 +170,9 @@ const UNDP_SVG = `<svg class="ud-card" aria-hidden="true" width="300" height="40
 <feBlend in="rg" in2="bo" mode="screen"></feBlend>
 </filter>
 <clipPath id="udBand0"><rect x="-20" y="1" width="340" height="29"></rect></clipPath><clipPath id="udBand1"><rect x="-20" y="30" width="340" height="22"></rect></clipPath><clipPath id="udBand2"><rect x="-20" y="52" width="340" height="40"></rect></clipPath><clipPath id="udBand3"><rect x="-20" y="92" width="340" height="36"></rect></clipPath><clipPath id="udBand4"><rect x="-20" y="128" width="340" height="44"></rect></clipPath><clipPath id="udBand5"><rect x="-20" y="172" width="340" height="29"></rect></clipPath><clipPath id="udBand6"><rect x="-20" y="201" width="340" height="37"></rect></clipPath><clipPath id="udBand7"><rect x="-20" y="238" width="340" height="46"></rect></clipPath><clipPath id="udBand8"><rect x="-20" y="284" width="340" height="38"></rect></clipPath><clipPath id="udBand9"><rect x="-20" y="322" width="340" height="38"></rect></clipPath><clipPath id="udBand10"><rect x="-20" y="360" width="340" height="41"></rect></clipPath>
-<clipPath id="udCardClip"><rect x="1" y="1" width="300" height="400" rx="15"></rect></clipPath>
 <pattern id="udScanPat" width="4" height="3" patternUnits="userSpaceOnUse"><rect width="4" height="1" fill="#000" fill-opacity=".2"></rect></pattern>
 </defs>
 <g filter="url(#filter0_f_89_931)">
-<g clip-path="url(#udCardClip)">
 <g class="ud-stage">
 <use href="#udA" class="ud-a"></use>
 <use href="#udB" class="ud-b"></use>
@@ -191,7 +189,6 @@ const UNDP_SVG = `<svg class="ud-card" aria-hidden="true" width="300" height="40
 <g clip-path="url(#udBand10)"><use href="#udA" class="ud-s ud-sa10"></use><use href="#udB" class="ud-s ud-sb10"></use></g>
 <rect class="ud-scan" x="-10" y="1" width="320" height="400" fill="url(#udScanPat)"></rect>
 <rect class="ud-bar" x="-10" y="1" width="320" height="12" fill="#FFF0E9" style="mix-blend-mode:difference"></rect>
-</g>
 </g>
 </g>
 </svg>`;
@@ -228,6 +225,35 @@ const UNDP_SVG = `<svg class="ud-card" aria-hidden="true" width="300" height="40
 // way `udCardClip` did: filters degrade to `filter:none` (no RGB-split
 // flash during the glitch), not an invisible card -- an acceptable, far
 // less severe gap versus rewriting shared CSS to fix it.
+//
+// Fix #44 (2026-10-28, next conversation): `udCardClip` itself is gone
+// now, def and wrapping `<g clip-path>` both -- not a reversal of fix
+// #27's lesson above, a different question entirely. Fix #27 was about
+// a *duplicate* id failing to resolve across two cloned instances; this
+// is about whether the clip was doing anything in a single instance,
+// and it wasn't. Its rect (`x=1 y=1 width=300 height=400 rx=15`)
+// matches this SVG's own `viewBox="1 1 300 400"` exactly, and `.card-
+// face` (shared by every card) already clips everything to rounded
+// corners itself via `overflow: hidden; border-radius: 22px` -- the
+// identical no-visual-effect-by-construction shape already proven on
+// Mapfre (fix #39), Phantom (fix #41) and AXA (fix #42), all four
+// being Figma-export artifacts with the same redundant ancestor clip.
+// Removing the id entirely sidesteps fix #27's collision risk rather
+// than reintroducing it -- nothing references `udCardClip` any more,
+// so there's nothing left for two instances to collide over. Motivated
+// by Victoria's report that this card's glitch animation "tarda en
+// empezar" (takes a while to start) even after fix #38's FIRST_HOLD_MS
+// split: unlike Mapfre/Phantom/AXA this isn't a visible-corruption
+// complaint, it's a timing one, so this fix rests on a weaker link --
+// the theory is that the same WebKit "ancestor clip blocks repaint on
+// a descendant's state change" bug can surface as a perceived delay
+// (the ud-in/ud-out class swap fires exactly on schedule, but WebKit
+// doesn't paint the result until some unrelated event forces a
+// repaint) rather than a frozen/corrupted frame. Not verified on an
+// actual iPhone (no device access here); if this doesn't resolve it,
+// the delay is more likely just FIRST_HOLD_MS (700ms) reading as slow
+// at a glance than an actual repaint bug, and the next lever is
+// shortening that constant rather than more SVG surgery.
 const UNDP_INTERNAL_IDS = [
   'clip0_89_931',
   'clip0_89_949',
@@ -245,7 +271,6 @@ const UNDP_INTERNAL_IDS = [
   'pattern1_89_949',
   'udA',
   'udB',
-  'udCardClip',
   'udScanPat',
   'udBand0',
   'udBand1',

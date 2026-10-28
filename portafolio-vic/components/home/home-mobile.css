@@ -469,6 +469,31 @@
    next suspect the clip-path on MapfreCard.js's outer <g> itself. */
 .home-mobile-scope .mp-tile{ transform-box: fill-box; transform-origin: center; transition: transform 0.8s cubic-bezier(.77,0,.18,1); will-change: transform; }
 .home-mobile-scope .mp-word{ transition: transform 0.7s cubic-bezier(.77,0,.18,1), opacity 0.35s ease; will-change: transform, opacity; }
+/* Fix #43 (2026-10-28): after fix #39 (removing the ancestor clip-path)
+   the mosaic finally renders on Victoria's iPhone, but she reports it
+   "plays once abruptly, then stops" instead of looping like desktop's
+   version. Checked desktop's CSS (home.css) -- it's the exact same
+   one-shot `transition`, gated by `:hover`/`:focus-visible`, NOT an
+   `animation`, so desktop doesn't actually loop either: what reads as
+   looping there is the mouse naturally drifting in and out of the card
+   while browsing, re-triggering the staggered reveal on every hover-
+   enter. Mobile's equivalent trigger, `.is-current`, is a plain class
+   applied once when the card centers and left on for as long as it
+   stays centered -- nothing re-triggers it, so it only ever plays once,
+   exactly as reported. `.mp-off` below is an additive class (toggled
+   from MapfreCard.js's new mobile-only activate() loop, see that file)
+   that forces every tile/word back to its rest transform while
+   present; removing it lets the normal `.is-current .mp-tN` rule pull
+   them forward again over the same transition/delay as before -- a
+   JS-driven stand-in for the repeated hover-enter/leave desktop gets
+   for free, matching this card's own fix #39 comment anticipating this
+   exact escalation. `!important` here is deliberate, not sloppiness:
+   it has to outrank the individual `.mp-tN{transform:...}` rules below
+   (same specificity, but earlier in source) without duplicating all 27
+   of them under a second selector. Not verified on an actual iPhone
+   (no device access here). */
+.home-mobile-scope .mp-card-wrap.mp-off .mp-tile,
+.home-mobile-scope .mp-card-wrap.mp-off .mp-word { transform: none !important; }
 .home-mobile-scope .mp-t0{transition-delay:0.051s}.home-mobile-scope .card-face.is-current .mp-t0,.home-mobile-scope .card-face:focus-visible .mp-t0{transform:translate(0.000px,0.000px) scale(1)}
 .home-mobile-scope .mp-t1{transition-delay:0.084s}.home-mobile-scope .card-face.is-current .mp-t1,.home-mobile-scope .card-face:focus-visible .mp-t1{transform:translate(0.000px,0.000px) scale(0)}
 .home-mobile-scope .mp-t2{transition-delay:0.117s}.home-mobile-scope .card-face.is-current .mp-t2,.home-mobile-scope .card-face:focus-visible .mp-t2{transform:translate(0.000px,0.000px) scale(0)}
@@ -545,17 +570,43 @@
    animation-only-while-current + base-rule-transition shape) but isn't
    touched here -- their `step-end` keyframes are already intentionally
    jerky, which plausibly masks the same bug well enough that Victoria
-   never flagged VictorAI, so there's nothing reported to fix there. Not
-   verified on an actual iPhone (no device access here) -- if this
-   doesn't resolve it, next suspect would be the SVG's own filter/blur
-   defs needing a paint on first appearance, independent of this
-   transition/animation interaction entirely. */
+   never flagged VictorAI, so there's nothing reported to fix there.
+   Fix #41 (2026-10-28, same day): fix #40 above was NOT sufficient --
+   Victoria sent a real iPhone recording and the star still glitches,
+   now visibly in the photo itself when the card centers, not just at
+   the instant the animation attaches. Frame-by-frame analysis of her
+   video showed the star jumping from resting size to its full 1.35x
+   scale within ~2 consecutive frames (~66ms) instead of easing over
+   the ~2.5s the keyframe calls for -- a near-instant snap, not a
+   skipped transition race. Checked PhantomCard.js's SVG and found
+   `.ph-star` is a descendant of an ancestor `<g clip-path="url(#clip0_
+   80_156)">` that wraps the whole card's art -- the EXACT structural
+   shape already proven buggy on Mapfre (fix #39: WebKit's "content
+   clipped by an ancestor fails to repaint when a descendant's visual
+   state changes" bug) and independently found on AXA and Undp's SVGs
+   too, all four being Figma-export artifacts whose clip rect matches
+   the SVG's own viewBox exactly -- doubly redundant besides, since
+   `.card-face` (shared by every card) already clips to rounded
+   corners via its own `overflow: hidden; border-radius: 22px`. Fixed
+   by removing that ancestor `<g clip-path>` (and its now-unreferenced
+   `<clipPath id="clip0_80_156">` def) from PhantomCard.js, same
+   no-visual-effect-by-construction technique as fix #39. `will-change`
+   added below too, belt-and-suspenders: it's the fix that worked for
+   Mapfre's OTHER animation bug (fix #14, a plain compositing/paint-cost
+   issue, not the clip-path one) and costs nothing if the clip-path fix
+   alone turns out to be the whole story. Still not verified on an
+   actual iPhone (no device access here) -- this sandbox is Chromium-
+   only, so if the glitch persists on her next real-device test, next
+   suspect is the `feGaussianBlur` in `filter0_f_80_156` needing a
+   repaint of its own on first appearance, independent of the clip-path
+   removed here. */
 .home-mobile-scope .ph-star {
   transform-box: fill-box;
   transform-origin: center;
   rotate: 0deg;
   scale: 1;
   transition: rotate 0.4s ease, scale 0.4s ease;
+  will-change: rotate, scale;
 }
 .home-mobile-scope .card-face.is-current .ph-star, .home-mobile-scope .card-face:focus-visible .ph-star {
   animation: ph-spin 14s linear infinite, ph-pulse 5s ease-in-out infinite;

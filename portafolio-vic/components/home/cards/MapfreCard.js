@@ -17,8 +17,9 @@
 // (post base64-extraction), so correctness here rests on the extraction
 // step, not on manual attribute-by-attribute conversion.
 
-import { memo, useMemo, useRef } from 'react';
+import { memo, useEffect, useMemo, useRef } from 'react';
 import { namespaceSvgIds } from '@/lib/svgNamespace';
+import { prefersReducedMotion } from '@/lib/cardTransition';
 
 const MAPFRE_SVG =`<svg class="mp-card" aria-hidden="true" width="300" height="400" viewBox="0 0 300 400" fill="none" xmlns="http://www.w3.org/2000/svg">
 <g clip-path="url(#clip1_80_51)">
@@ -144,26 +145,64 @@ const MAPFRE_SVG =`<svg class="mp-card" aria-hidden="true" width="300" height="4
 // black" report when the carousel wraps onto this card's cloned slot.
 const MAPFRE_IDS = ['clip1_80_51', 'image0_80_51', 'image1_80_51', 'pattern0_80_51', 'pattern1_80_51', 'm'];
 
-function MapfreCard({ uid = '' } = {}) {
+// Fix #43 (2026-10-28): `active` is new -- see the `.mp-off` comment in
+// home-mobile.css for the full "why". `active === undefined` (desktop,
+// HomeDesktop.js never passes this prop) changes nothing: the effect
+// below bails out immediately, so desktop's output and behaviour stay
+// byte-identical to before this fix, same convention AXACard.js/
+// UndpCard.js already use to tell the two call sites apart. On mobile,
+// `active` flips to `true` once when this slot becomes the centred card
+// and `false` once it stops being centred (see HomeMobile.js's `<Art
+// active={isCurrent} ... />`); while `true`, a timer repeatedly toggles
+// the `.mp-off` class on the wrapper so the tiles/words fall back to
+// rest and reveal again, looping for as long as the card stays current
+// -- a JS-driven stand-in for the repeated hover-enter/leave cycle that
+// makes desktop's identical one-shot transition read as a loop. Skips
+// the loop entirely under prefers-reduced-motion, matching home-mobile.
+// css's existing `transition: none` override for `.mp-tile`/`.mp-word`
+// there (toggling `.mp-off` with transitions already disabled would
+// just flicker instantly between states for no benefit).
+function MapfreCard({ uid = '', active } = {}) {
   const wrapRef = useRef(null);
   // Only actually rewrites anything when `uid` is non-empty -- HomeDesktop.js
   // never passes one (it only ever mounts a single instance), so desktop's
   // output is byte-identical to before this fix.
   const svg = useMemo(() => namespaceSvgIds(MAPFRE_SVG, MAPFRE_IDS, uid), [uid]);
 
+  useEffect(() => {
+    if (active === undefined) return; // desktop: untouched, pure CSS :hover
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    if (!active || prefersReducedMotion()) {
+      wrap.classList.remove('mp-off');
+      return;
+    }
+    // Longest tile/word transition + delay below is ~0.8s + 0.3s stagger
+    // spread; REST_MS gives that room to finish before revealing again.
+    const REVEAL_MS = 1800; // how long to sit fully revealed before cycling
+    const REST_MS = 900; // how long to sit at rest before revealing again
+    let timer;
+    const cycle = (toOff) => {
+      wrap.classList.toggle('mp-off', toOff);
+      timer = setTimeout(() => cycle(!toOff), toOff ? REST_MS : REVEAL_MS);
+    };
+    cycle(false); // start revealed immediately -- matches the pre-fix-#43 first play
+    return () => {
+      clearTimeout(timer);
+      wrap.classList.remove('mp-off');
+    };
+  }, [active]);
+
   return <div ref={wrapRef} className="mp-card-wrap" dangerouslySetInnerHTML={{ __html: svg }} />;
 }
 
-// Memoized: `uid` (fix #27) is the only prop, and it's stable for the
-// lifetime of a given mounted slot (HomeMobile.js passes the strip
-// position, which never changes for an already-mounted instance), so this
-// still never re-renders in practice once mounted, even though it's
-// re-mounted inside the mobile/desktop carousel whose parent re-renders on
-// every `setPos()`/scroll tick (see HomeMobile.js/HomeDesktop.js). Without
-// memo, React would re-run and re-diff this ~100KB inline SVG tree on every
-// one of those renders -- six (now eight, fix #25) times over -- which is
-// the main cause of the janky/slow drag feel reported on mobile. memo()
-// skips all of that entirely here, same reasoning as AXACard.js/
-// UndpCard.js (which still take `active` and so still re-render when it
-// changes).
+// Memoized: `uid` and now `active` (fix #43) are the only props. `uid` is
+// stable for the lifetime of a given mounted slot (HomeMobile.js passes
+// the strip position, which never changes for an already-mounted
+// instance); `active` changes exactly when this slot's centred state
+// changes, same as AXACard.js/UndpCard.js, which re-render on that too.
+// Without memo, React would re-run and re-diff this ~100KB inline SVG
+// tree on every parent render -- six (now eight, fix #25) times over --
+// which is the main cause of the janky/slow drag feel reported on
+// mobile; memo() keeps that to just the renders `active` actually causes.
 export default memo(MapfreCard);

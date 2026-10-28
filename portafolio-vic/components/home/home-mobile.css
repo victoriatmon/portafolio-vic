@@ -341,12 +341,16 @@
    is .is-current instead of :hover, same as the rest of this block) ===== */
 @media (prefers-reduced-motion: reduce) {
   .home-mobile-scope .mp-tile, .home-mobile-scope .mp-word { transition: none !important; }
-  .home-mobile-scope .card-face.is-current .ph-star,
-  .home-mobile-scope .card-face:focus-visible .ph-star { animation-play-state: paused !important; }
+  /* Fix #18 -- ph-star/vs-s1/vs-s2/vs-s3 no longer get `animation` at the
+     base rule (see those sections below), only on .is-current/
+     :focus-visible, so there's no running animation left to pause here --
+     this instead kills the new settle-back `transition` those elements
+     gained, so reduced-motion still snaps instantly with no motion, same
+     intent as before. */
+  .home-mobile-scope .ph-star,
+  .home-mobile-scope .vs-s1, .home-mobile-scope .vs-s2, .home-mobile-scope .vs-s3 { transition: none !important; }
   .home-mobile-scope .card-face.is-current .pu-circles,
   .home-mobile-scope .card-face:focus-visible .pu-circles { animation-play-state: paused !important; }
-  .home-mobile-scope .card-face.is-current .vs-star,
-  .home-mobile-scope .card-face:focus-visible .vs-star { animation-play-state: paused !important; }
 }
 
 /* The six card-art blocks below mirror home.css's "Mapfre card art" through
@@ -437,8 +441,24 @@
   z-index: 0;
 }
 .home-mobile-scope .ph-card { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
-.home-mobile-scope .ph-star { transform-box: fill-box; transform-origin: center; animation: ph-spin 14s linear infinite, ph-pulse 5s ease-in-out infinite; animation-play-state: paused; }
-.home-mobile-scope .card-face.is-current .ph-star, .home-mobile-scope .card-face:focus-visible .ph-star { animation-play-state: running; }
+/* Fix #18: instead of always running `animation` and only toggling
+   play-state (which freezes the star at an arbitrary mid-spin/mid-pulse
+   pose on deactivation -- jarring compared to Pulso's slow linear drift),
+   the animation itself is only attached while the card is current/focused.
+   The base rule instead declares a rest pose (rotate 0 / scale 1) with its
+   own `transition`, so when the animation is removed on deactivation the
+   star eases smoothly from wherever the animation left it back to rest,
+   instead of snapping or sitting frozen off-pose. */
+.home-mobile-scope .ph-star {
+  transform-box: fill-box;
+  transform-origin: center;
+  rotate: 0deg;
+  scale: 1;
+  transition: rotate 0.4s ease, scale 0.4s ease;
+}
+.home-mobile-scope .card-face.is-current .ph-star, .home-mobile-scope .card-face:focus-visible .ph-star {
+  animation: ph-spin 14s linear infinite, ph-pulse 5s ease-in-out infinite;
+}
 
 /* ===== Pulso card art (ported from the artifact, card index 2 --
    "Unlocking Health Access") =====
@@ -492,11 +512,19 @@
   z-index: 0;
 }
 .home-mobile-scope .vs-card { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+/* Fix #18: same animation-to-transition handoff as .ph-star above. The
+   step-end keyframes (vs-s1-a/vs-s2-a/vs-s3-a) are intentionally jerky --
+   a stop-motion "boiling" look -- which is fine while running, but
+   freezing them mid-cycle via play-state looked abrupt on deactivation.
+   Now the animation only attaches while current/focused; the base rule's
+   rest pose + transition eases each piece smoothly back to rest instead. */
 .home-mobile-scope .vs-star { transform-box: fill-box; transform-origin: center; }
-.home-mobile-scope .vs-s1 { animation: vs-s1-a 1500ms step-end infinite; animation-play-state: paused; }
-.home-mobile-scope .vs-s2 { animation: vs-s2-a 1250ms step-end infinite; animation-play-state: paused; }
-.home-mobile-scope .vs-s3 { animation: vs-s3-a 1750ms step-end infinite; animation-play-state: paused; }
-.home-mobile-scope .card-face.is-current .vs-star, .home-mobile-scope .card-face:focus-visible .vs-star { animation-play-state: running; }
+.home-mobile-scope .vs-s1 { rotate: 0deg; scale: 1; translate: 0px 0px; transition: rotate 0.4s ease, scale 0.4s ease, translate 0.4s ease; }
+.home-mobile-scope .vs-s2 { rotate: 0deg; scale: 1; translate: 0px 0px; transition: rotate 0.4s ease, scale 0.4s ease, translate 0.4s ease; }
+.home-mobile-scope .vs-s3 { rotate: 0deg; scale: 1; translate: 0px 0px; transition: rotate 0.4s ease, scale 0.4s ease, translate 0.4s ease; }
+.home-mobile-scope .card-face.is-current .vs-s1, .home-mobile-scope .card-face:focus-visible .vs-s1 { animation: vs-s1-a 1500ms step-end infinite; }
+.home-mobile-scope .card-face.is-current .vs-s2, .home-mobile-scope .card-face:focus-visible .vs-s2 { animation: vs-s2-a 1250ms step-end infinite; }
+.home-mobile-scope .card-face.is-current .vs-s3, .home-mobile-scope .card-face:focus-visible .vs-s3 { animation: vs-s3-a 1750ms step-end infinite; }
 
 /* ===== UNDP card art (ported from the artifact, card index 5 --
    "Inclusive finance architecture") =====

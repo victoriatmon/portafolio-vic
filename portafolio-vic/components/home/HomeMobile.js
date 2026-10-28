@@ -655,26 +655,42 @@ export default function HomeMobile() {
                     >
                       Discover
                     </Link>
-                    {card.isCurrent ? (
-                      <div className="card-nav">
-                        <button
-                          type="button"
-                          className="btn-tertiary btn-nav-arrow"
-                          aria-label="Previous project"
-                          onClick={() => navRef.current.prev()}
-                        >
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 6 9 12 15 18" /></svg>
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-tertiary btn-nav-arrow"
-                          aria-label="Next project"
-                          onClick={() => navRef.current.next()}
-                        >
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 6 15 12 9 18" /></svg>
-                        </button>
-                      </div>
-                    ) : null}
+                    {/* Fix #16: always rendered now, for every card -- not just
+                        the current one -- and hidden/shown via the
+                        `.card-face.is-current ~ .card-cta .card-nav` CSS rule
+                        in home-mobile.css instead of this JSX conditional. The
+                        old `card.isCurrent ? ... : null` mounted/unmounted this
+                        whole block, and isCurrent flips false the instant
+                        commitTo() runs (same tick as the tap that calls
+                        navRef.current.next()/prev()) -- so the very button just
+                        tapped was torn out of the DOM immediately, and nothing
+                        had a .card-nav again until the settle finished 220ms
+                        later. See home-mobile.css for the fade that replaces it. */}
+                    <div className="card-nav">
+                      <button
+                        type="button"
+                        className="btn-tertiary btn-nav-arrow"
+                        aria-label="Previous project"
+                        tabIndex={card.isCurrent ? 0 : -1}
+                        onClick={() => navRef.current.prev()}
+                      >
+                        {/* Icon style (fix #16): same arrow-glyph-in-Manrope
+                            treatment as the "See next case" button at the
+                            bottom of each project (see proj-next-case /
+                            mapfre-next-case in Proyectos), not a separate SVG
+                            icon -- see home-mobile.css for the sizing. */}
+                        <span aria-hidden="true">&larr;</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-tertiary btn-nav-arrow"
+                        aria-label="Next project"
+                        tabIndex={card.isCurrent ? 0 : -1}
+                        onClick={() => navRef.current.next()}
+                      >
+                        <span aria-hidden="true">&rarr;</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
                 );

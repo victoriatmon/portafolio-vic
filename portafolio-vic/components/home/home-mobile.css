@@ -162,10 +162,34 @@
    stays the primary way to move the carousel, Discover stays the one
    filled CTA). 44px tap target for comfortable touch access even though
    the icon itself is small. */
+/* Fix #16 -- flicker on tap: .card-nav used to be MOUNTED/UNMOUNTED by React
+   (HomeMobile.js's `card.isCurrent ? <div className="card-nav">...` ternary)
+   instead of just hidden. Tapping an arrow calls commitTo(), which flips
+   `settled` to false in the SAME synchronous update -- and `isCurrent` is
+   derived from `settled` (see buildCards()), so the very button just
+   tapped, and its whole wrapper, was torn out of the DOM the instant it was
+   clicked, then a brand new .card-nav mounted on a different card 220ms
+   later once the settle finished. No card had a .card-nav at all for that
+   whole 220ms window -- read as the arrows (and the row they sit in)
+   blinking out and back. HomeMobile.js now always renders .card-nav for
+   every card; visibility is driven by this CSS instead, keyed off the same
+   .is-current class that already gates everything else, so the DOM node
+   itself never disappears -- it only cross-fades, and a quick tap can never
+   again unmount the element it just received. */
 .home-mobile-scope .card-nav {
   display: flex;
   align-items: center;
   gap: 6px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+.home-mobile-scope .card-face.is-current ~ .card-cta .card-nav {
+  opacity: 1;
+  pointer-events: auto;
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-mobile-scope .card-nav { transition: none; }
 }
 .home-mobile-scope .btn-tertiary.btn-nav-arrow {
   all: unset;
@@ -180,7 +204,22 @@
   -webkit-tap-highlight-color: transparent;
   transition: color 0.15s ease, background 0.15s ease;
 }
-.home-mobile-scope .btn-tertiary.btn-nav-arrow svg { display: block; }
+/* Icon style (fix #16): swapped the polyline-chevron SVG for the same
+   arrow-glyph-in-Manrope treatment as the "See next case" button at the
+   bottom of each project (ProyectosMobile.js/ProyectosDesktop.js's
+   `.proj-next-case`/`.mapfre-next-case` -- a plain `&rarr;`/`&larr;`
+   character, not an icon asset), so the portfolio uses one consistent
+   arrow style instead of two different ones. Sized up from that button's
+   14px (which sits next to a text label) to 20px, since here the glyph is
+   the entire content of a 44px icon-only button and needs to read clearly
+   on its own. */
+.home-mobile-scope .btn-tertiary.btn-nav-arrow span {
+  display: block;
+  font-family: 'Manrope', sans-serif;
+  font-weight: 500;
+  font-size: 20px;
+  line-height: 1;
+}
 .home-mobile-scope .btn-tertiary.btn-nav-arrow:active {
   color: #F5F5F5;
   background: rgba(255,255,255,0.08);

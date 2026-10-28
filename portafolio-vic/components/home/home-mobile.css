@@ -200,8 +200,23 @@
   z-index: 0;
 }
 .home-mobile-scope .mp-card{ position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
-.home-mobile-scope .mp-tile{ transform-box: fill-box; transform-origin: center; transition: transform 0.8s cubic-bezier(.77,0,.18,1); }
-.home-mobile-scope .mp-word{ transition: transform 0.7s cubic-bezier(.77,0,.18,1), opacity 0.35s ease; }
+/* will-change on .mp-tile/.mp-word (fix #14): Victoria reported the Mapfre
+   card art never animating in on iPhone Safari (stuck on its rest look),
+   both on load and after swiping to it -- while the other 5 cards (which
+   all use a continuously-running `animation` toggled via
+   animation-play-state, not a one-shot `transition`) were fine. Mapfre's
+   tiles/words are wrapped in an SVG <g clip-path="..."> ancestor (see
+   MapfreCard.js) and are the only card-art here driven by a plain,
+   discrete `transition` -- WebKit has a known class of bugs where content
+   clipped by an ancestor fails to repaint when a descendant's `transform`
+   changes via a one-shot CSS transition (a continuously-ticking
+   `animation` doesn't hit this, since it forces a repaint every frame
+   regardless). `will-change` forces these elements onto their own
+   compositing layer, which is the standard workaround. Not verified on an
+   actual iPhone (no device access here) -- if this doesn't resolve it,
+   next suspect the clip-path on MapfreCard.js's outer <g> itself. */
+.home-mobile-scope .mp-tile{ transform-box: fill-box; transform-origin: center; transition: transform 0.8s cubic-bezier(.77,0,.18,1); will-change: transform; }
+.home-mobile-scope .mp-word{ transition: transform 0.7s cubic-bezier(.77,0,.18,1), opacity 0.35s ease; will-change: transform, opacity; }
 .home-mobile-scope .mp-t0{transition-delay:0.051s}.home-mobile-scope .card-face.is-current .mp-t0,.home-mobile-scope .card-face:focus-visible .mp-t0{transform:translate(0.000px,0.000px) scale(1)}
 .home-mobile-scope .mp-t1{transition-delay:0.084s}.home-mobile-scope .card-face.is-current .mp-t1,.home-mobile-scope .card-face:focus-visible .mp-t1{transform:translate(0.000px,0.000px) scale(0)}
 .home-mobile-scope .mp-t2{transition-delay:0.117s}.home-mobile-scope .card-face.is-current .mp-t2,.home-mobile-scope .card-face:focus-visible .mp-t2{transform:translate(0.000px,0.000px) scale(0)}

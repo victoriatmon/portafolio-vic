@@ -24,8 +24,8 @@ const MAPFRE_SVG =`<svg class="mp-card" aria-hidden="true" width="300" height="4
 <g clip-path="url(#clip1_80_51)">
 <rect width="300" height="400" rx="15" fill="#E34234"/>
 </g>
-<mask id="m" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="300" height="400"><rect class="mp-tile mp-t0" x="71.0215" y="10.0000" width="52.0279" height="52.0279" rx="5" fill="#E34234"/><rect class="mp-tile mp-t1" x="124.1740" y="10.0000" width="52.0279" height="52.0279" rx="5" fill="#E34234"/><rect class="mp-tile mp-t2" x="177.3240" y="10.0000" width="52.0279" height="52.0279" rx="5" fill="#E34234"/><rect class="mp-tile mp-t3" x="17.8711" y="63.8989" width="52.0279" height="52.0279" rx="5" fill="#E34234"/><rect class="mp-tile mp-t4" x="71.0215" y="63.8989" width="52.0279" height="52.0279" rx="5" fill="#E34234"/><rect class="mp-tile mp-t5" x="124.1740" y="63.8989" width="52.0279" height="52.0279" rx="5" fill="#E34234"/><rect class="mp-tile mp-t6" x="177.3240" y="63.8989" width="52.0279" height="52.0279" rx="5" fill="#E34234"/><rect class="mp-tile mp-t7" x="17.8711" y="117.7990" width="52.0279" height="52.0279" rx="5" fill="#E34234"/><rect class="mp-tile mp-t8" x="71.0215" y="117.7990" width="52.0279" height="52.0279" rx="5" fill="#E34234"/><rect class="mp-tile mp-t9" x="17.8711" y="171.6980" width="52.0279" height="52.0279" rx="5" fill="#E34234"/><rect class="mp-tile mp-t10" x="71.0215" y="171.6980" width="52.0279" height="52.0279" rx="5" fill="#E34234"/><rect class="mp-tile mp-t11" x="124.1740" y="171.6980" width="52.0279" height="52.0279" rx="5" fill="#E34234"/><rect class="mp-tile mp-t12" x="177.3240" y="171.6980" width="52.0279" height="52.0279" rx="5" fill="#E34234"/><rect class="mp-tile mp-t13" x="124.1740" y="225.5970" width="52.0279" height="52.0279" rx="5" fill="#E34234"/><rect class="mp-tile mp-t14" x="177.3240" y="225.5970" width="52.0279" height="52.0279" rx="5" fill="#E34234"/><rect class="mp-tile mp-t15" x="230.1020" y="10.0000" width="52.0279" height="52.0279" rx="5" fill="#E34234"/><rect class="mp-tile mp-t16" x="230.1020" y="63.8989" width="52.0279" height="52.0279" rx="5" fill="#E34234"/><rect class="mp-tile mp-t17" x="230.1020" y="117.7990" width="52.0279" height="52.0279" rx="5" fill="#E34234"/><rect class="mp-tile mp-t18" x="230.1020" y="171.6980" width="52.0279" height="52.0279" rx="5" fill="#E34234"/><rect class="mp-tile mp-t19" x="230.1020" y="225.9720" width="52.0279" height="52.0279" rx="5" fill="#E34234"/></mask>
-<g mask="url(#m)">
+<clipPath id="m"><rect class="mp-tile mp-t0" x="71.0215" y="10.0000" width="52.0279" height="52.0279" rx="5" fill="#E34234"/><rect class="mp-tile mp-t1" x="124.1740" y="10.0000" width="52.0279" height="52.0279" rx="5" fill="#E34234"/><rect class="mp-tile mp-t2" x="177.3240" y="10.0000" width="52.0279" height="52.0279" rx="5" fill="#E34234"/><rect class="mp-tile mp-t3" x="17.8711" y="63.8989" width="52.0279" height="52.0279" rx="5" fill="#E34234"/><rect class="mp-tile mp-t4" x="71.0215" y="63.8989" width="52.0279" height="52.0279" rx="5" fill="#E34234"/><rect class="mp-tile mp-t5" x="124.1740" y="63.8989" width="52.0279" height="52.0279" rx="5" fill="#E34234"/><rect class="mp-tile mp-t6" x="177.3240" y="63.8989" width="52.0279" height="52.0279" rx="5" fill="#E34234"/><rect class="mp-tile mp-t7" x="17.8711" y="117.7990" width="52.0279" height="52.0279" rx="5" fill="#E34234"/><rect class="mp-tile mp-t8" x="71.0215" y="117.7990" width="52.0279" height="52.0279" rx="5" fill="#E34234"/><rect class="mp-tile mp-t9" x="17.8711" y="171.6980" width="52.0279" height="52.0279" rx="5" fill="#E34234"/><rect class="mp-tile mp-t10" x="71.0215" y="171.6980" width="52.0279" height="52.0279" rx="5" fill="#E34234"/><rect class="mp-tile mp-t11" x="124.1740" y="171.6980" width="52.0279" height="52.0279" rx="5" fill="#E34234"/><rect class="mp-tile mp-t12" x="177.3240" y="171.6980" width="52.0279" height="52.0279" rx="5" fill="#E34234"/><rect class="mp-tile mp-t13" x="124.1740" y="225.5970" width="52.0279" height="52.0279" rx="5" fill="#E34234"/><rect class="mp-tile mp-t14" x="177.3240" y="225.5970" width="52.0279" height="52.0279" rx="5" fill="#E34234"/><rect class="mp-tile mp-t15" x="230.1020" y="10.0000" width="52.0279" height="52.0279" rx="5" fill="#E34234"/><rect class="mp-tile mp-t16" x="230.1020" y="63.8989" width="52.0279" height="52.0279" rx="5" fill="#E34234"/><rect class="mp-tile mp-t17" x="230.1020" y="117.7990" width="52.0279" height="52.0279" rx="5" fill="#E34234"/><rect class="mp-tile mp-t18" x="230.1020" y="171.6980" width="52.0279" height="52.0279" rx="5" fill="#E34234"/><rect class="mp-tile mp-t19" x="230.1020" y="225.9720" width="52.0279" height="52.0279" rx="5" fill="#E34234"/></clipPath>
+<g clip-path="url(#m)">
 <rect x="18" y="-136" width="319" height="479" rx="5" fill="url(#pattern0_80_51)"/>
 </g>
 <path d="M266.646 309.012V308.812C266.646 308.184 266.533 307.715 266.307 307.406C266.08 307.098 265.801 306.943 265.469 306.943H265.357C264.959 306.943 264.633 307.08 264.379 307.354C264.129 307.623 264.004 307.998 264.004 308.479L263.986 308.66L263.975 308.906V309.158L263.969 309.346V309.527C263.969 310.207 264.031 310.641 264.156 310.828C264.34 311.105 264.641 311.244 265.059 311.244H265.117C265.59 311.244 265.963 311.045 266.236 310.646C266.51 310.248 266.646 309.703 266.646 309.012ZM263.447 306.381C263.561 306.381 263.678 306.412 263.799 306.475C263.92 306.533 264.002 306.562 264.045 306.562C264.088 306.562 264.295 306.49 264.666 306.346C265.037 306.197 265.381 306.123 265.697 306.123H265.826C266.115 306.123 266.395 306.188 266.664 306.316C266.934 306.441 267.162 306.627 267.35 306.873C267.701 307.334 267.877 307.898 267.877 308.566V308.977C267.877 309.402 267.809 309.824 267.672 310.242C267.535 310.664 267.35 311.004 267.115 311.262C266.635 311.793 265.988 312.059 265.176 312.059C264.973 312.059 264.781 312.039 264.602 312C264.426 311.965 264.305 311.947 264.238 311.947C264.047 311.947 263.951 312.363 263.951 313.195C263.951 313.676 263.898 314.01 263.793 314.197C263.691 314.385 263.527 314.479 263.301 314.479H263.195C263.047 314.479 262.939 314.434 262.873 314.344C262.811 314.258 262.779 314.104 262.779 313.881V313.758L262.785 313.629L262.809 312.586L262.844 311.268L262.879 309.141C262.879 307.594 262.885 306.795 262.896 306.744C262.955 306.502 263.139 306.381 263.447 306.381ZM272.781 308.619L272.77 308.332C272.77 307.957 272.688 307.672 272.523 307.477C272.359 307.281 272.129 307.184 271.832 307.184H271.615C271.424 307.184 271.227 307.24 271.023 307.354C270.824 307.467 270.664 307.613 270.543 307.793C270.305 308.152 270.186 308.678 270.186 309.369L270.191 309.428C270.191 309.963 270.273 310.367 270.438 310.641C270.656 311.008 270.943 311.191 271.299 311.191H271.457C271.852 311.191 272.168 311.051 272.406 310.77C272.645 310.488 272.764 310.049 272.764 309.451C272.771 309.373 272.775 309.314 272.775 309.275L272.787 308.977V308.678L272.781 308.619ZM269.207 309.111V308.795C269.207 308.463 269.268 308.123 269.389 307.775C269.514 307.424 269.662 307.146 269.834 306.943C270.217 306.49 270.775 306.264 271.51 306.264C271.787 306.264 272.088 306.316 272.412 306.422C272.736 306.527 273.012 306.58 273.238 306.58C273.602 306.58 273.822 306.719 273.9 306.996C273.982 307.273 274.023 308.148 274.023 309.621V310.436L274.035 310.893C274.043 311.092 274.047 311.193 274.047 311.197V311.977C274.047 312.812 273.822 313.477 273.373 313.969C273.143 314.219 272.846 314.408 272.482 314.537C272.123 314.67 271.766 314.736 271.41 314.736H271.246C270.871 314.736 270.508 314.668 270.156 314.531C269.809 314.395 269.635 314.221 269.635 314.01C269.635 313.768 269.824 313.646 270.203 313.646C270.242 313.646 270.352 313.656 270.531 313.676C270.711 313.695 270.916 313.705 271.146 313.705C271.623 313.705 272.02 313.562 272.336 313.277C272.656 312.996 272.816 312.625 272.816 312.164C272.816 311.941 272.75 311.83 272.617 311.83L271.809 311.912C270.605 311.912 269.809 311.383 269.418 310.324C269.277 309.934 269.207 309.529 269.207 309.111ZM276.355 305.889C276.039 305.846 275.881 305.719 275.881 305.508C275.881 305.293 276.059 305.064 276.414 304.822C277.078 304.373 277.57 304.148 277.891 304.148C278.133 304.148 278.281 304.291 278.336 304.576V307.283L278.307 308.326C278.307 309.037 278.312 309.441 278.324 309.539C278.336 309.633 278.393 309.812 278.494 310.078C278.6 310.344 278.652 310.639 278.652 310.963C278.652 311.283 278.529 311.555 278.283 311.777C278.131 311.914 277.906 311.982 277.609 311.982C277.312 311.982 277.072 311.896 276.889 311.725C276.705 311.549 276.613 311.307 276.613 310.998C276.613 310.861 276.693 310.553 276.854 310.072C277.014 309.592 277.094 309.139 277.094 308.713L277.105 308.49L277.111 308.156C277.111 307.969 277.111 307.781 277.111 307.594C277.111 306.781 277.049 306.279 276.924 306.088C276.865 305.994 276.676 305.928 276.355 305.889Z" fill="#141413"/>
@@ -64,52 +64,49 @@ const MAPFRE_SVG =`<svg class="mp-card" aria-hidden="true" width="300" height="4
 </defs>
 </svg>`;
 
-// This card previously took an `active` prop (controlled-mode signal from
-// HomeMobile.js: card centred in the mobile carousel -- the same prop
-// AXACard.js/UndpCard.js still take) solely to drive fix #15's mask-reset
-// effect below, now reverted by fix #17. Mapfre no longer does anything
-// with `active` -- it relies purely on the `.is-current`/`:hover` CSS
-// transition in home-mobile.css/home.css, exactly like it always has on
-// desktop and like the other 5 cards already do on both viewports.
+// This card takes no props and has no JS logic at all -- it relies purely
+// on the `.is-current`/`:hover` CSS transition in home-mobile.css/home.css,
+// exactly like Phantom/Pulso/victorai do, on both desktop and mobile.
 //
-// Fix #15 (reverted by fix #17, kept here for the record): Safari has a
-// long-documented class of bugs where it fails to regenerate an SVG mask's
-// rendered bitmap when the mask's content changes only via a CSS
-// *transition* (a continuously-ticking `animation` sidesteps this, which
-// is why Phantom/Pulso/victorai -- all `animation`-based -- were never
-// reported broken). The 20 `.mp-tile` rects here are shape data inside a
-// single `<mask id="m">`, which one `<g mask="url(#m)">` uses to carve a
-// window into the pattern-image rect underneath it, so this card looked
-// like a plausible match for that bug class. Fix #14's `will-change` on the
-// tiles didn't help (the tiles themselves are never painted directly, only
-// the mask's *derived* bitmap is, a separate pipeline stage `will-change`
-// doesn't reach), so fix #15 instead forced Safari to drop and recompute
-// the mask by toggling the `mask` attribute off and back on the `<g
-// mask="url(#m)">` element itself, with a layout read forced in between.
-// Fix #17 reverts fix #15's mask-attribute-toggle hack (below, kept only in
-// this comment for the record): on `active` flipping, it removed and
-// re-added the `mask="url(#m)"` attribute on the SVG's masking <g>, meant
-// to force Safari to recompute a mask bitmap it was suspected of failing to
-// repaint on its own. Never confirmed fixed on a real iPhone, and Victoria
-// has now reported something worse and specific on mobile: the card
-// flickers once when centred, then the tile mosaic never animates at all --
-// consistent with the attribute removal/re-add (and the forced layout read
-// between them) stepping on the mp-tile/mp-word elements' own in-flight CSS
-// `transition` (triggered by `.is-current`, same render) rather than fixing
-// anything, since that toggle runs on a DIFFERENT element (the masking <g>)
-// than the ones actually transitioning. Desktop never ran this hack at all
-// -- it only triggers when `active !== undefined`, and HomeDesktop.js never
-// passes that prop -- which is exactly why Victoria sees it animate
-// correctly there: desktop's Mapfre card has always relied on nothing more
-// than the plain `.is-current`/`:hover` CSS transition the other five cards
-// already use successfully. Removing the hack here makes mobile rely on
-// that same already-proven mechanism instead of the unconfirmed JS
-// workaround that was likely the actual cause of the new flicker-then-
-// static symptom. If a Safari-specific non-repaint bug turns out to still
-// be real and resurfaces, the next step (per fix #15's own note) is to stop
-// depending on the browser repainting an SVG <mask> at all and drive the
-// tile geometry from React state/JS instead -- not another attribute-
-// toggle variant of this same hack.
+// History of this card's Safari/iPhone bug (Victoria reported the tile
+// mosaic never animating on her phone, repeatedly, across three different
+// fix attempts):
+// - Fix #14: added `will-change` to the `.mp-tile`/`.mp-word` elements.
+//   Didn't help -- confirmed by Victoria.
+// - Fix #15: added an `active` prop + a `useEffect` that toggled the `<g
+//   mask="...">` element's `mask` attribute off and back on every time the
+//   card centred/un-centred, meant to force Safari to recompute a mask
+//   bitmap suspected of going stale. Never confirmed fixed on a real
+//   iPhone, and Victoria then reported something worse and more specific:
+//   the card flickered once when centred, then the mosaic never animated
+//   at all -- consistent with the attribute toggle itself interrupting the
+//   tiles'/words' own in-flight CSS transition rather than fixing
+//   anything.
+// - Fix #17d reverted fix #15's hack back to plain CSS (no JS at all,
+//   `active` prop removed). Chromium here never reproduced any of this
+//   (desktop, which never ran the hack, always animated fine too), so this
+//   could only be confirmed as "doesn't regress anything," not as "fixes
+//   the bug" -- and Victoria confirmed it was STILL broken on her device.
+// - Fix #18 (this version): rather than trying a fourth variant of
+//   poking the mask from JS, the SVG was changed to not use an SVG
+//   `<mask>` at all. The `.mp-tile` rects here were always simple,
+//   solid-fill shapes (no partial opacity/color blending) used only to
+//   carve a binary visible/hidden window into the pattern-image rect
+//   below them -- exactly what an SVG `<clipPath>` does too, through a
+//   completely different rendering pipeline that doesn't share the
+//   `<mask>`-bitmap-goes-stale class of WebKit bugs fix #15 was chasing.
+//   `<mask id="m">`/`mask="url(#m)"` became `<clipPath id="m">`/
+//   `clip-path="url(#m)"`, with no other change to the tile geometry,
+//   CSS, or transitions -- the mosaic should look and animate identically
+//   everywhere this bug was never seen (this environment, desktop), and
+//   this sidesteps the suspected cause everywhere it might still exist.
+//   Still not verified on an actual iPhone. If this ALSO doesn't resolve
+//   it, the bug isn't about `<mask>` specifically (already ruled out by
+//   this fix) -- next suspect the `<g clip-path="...">`'s own ancestor
+//   `<g clip-path="url(#clip0_80_51)">` wrapper, or abandon SVG clipping
+//   for this card entirely and compute the tile window in JS/React,
+//   setting each tile's visible region via individual positioned
+//   <image>/<rect> elements instead of a shared clip region.
 function MapfreCard() {
   const wrapRef = useRef(null);
 

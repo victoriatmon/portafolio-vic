@@ -783,11 +783,26 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
   overflow: hidden;
   transition: opacity 0.2s ease, filter 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
+/* Fix #21: both the open centre card and the side peek ("ghost") cards got
+   16px taller at Victoria's request. For is-current, top:0 already anchors
+   it right under the pills row, so adding the 16px to height via calc()
+   grows it straight down -- the pills and the pills-to-card gap never move.
+   For is-prev/is-next, height stays a plain calc(70% + 16px) too, but their
+   vertical position is still the top:50%/translateY(-50%) centering trick,
+   so they grow ~8px up and ~8px down around their existing centre rather
+   than purely downward (they don't sit next to the pills, so that doesn't
+   touch Victoria's "don't move the pills/gap" requirement -- just flagging
+   the asymmetry here for the next person reading this). The same calc()
+   additions are mirrored on every other selector that shares these two
+   magic numbers (70%/96%) for the deck-slide-morph choreography below --
+   .deck-ghost and its -at-prev/-at-next/-at-center variants, and the
+   deck-dir-*.deck-anim-current shrink states -- so nothing jumps size
+   mid-transition. */
 .project-card-lg.is-current {
   left: 50%;
   top: 0;
   width: 1550px;
-  height: 96%;
+  height: calc(96% + 16px);
   transform: translateX(-50%);
   z-index: 3;
   align-items: stretch;
@@ -797,7 +812,7 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
 }
 .project-card-lg.is-prev, .project-card-lg.is-next {
   width: 320px;
-  height: 70%;
+  height: calc(70% + 16px);
   transform: translateY(-50%) scale(0.94);
   z-index: 2;
   opacity: 1;
@@ -899,12 +914,12 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
    motion to see, just an instant swap that read as a flicker or a jump
    backward right before the ghost's own forward grow. */
 .projects-stage.deck-dir-next.deck-anim-current .project-card-lg.is-current {
-  left: calc(-390px - var(--peek-extra, 0px)); top: 50%; width: 320px; height: 70%;
+  left: calc(-390px - var(--peek-extra, 0px)); top: 50%; width: 320px; height: calc(70% + 16px);
   transform: translateY(-50%) scale(0.94);
   background: #202020 !important; box-shadow: 0 30px 70px -20px rgba(0,0,0,0.6);
 }
 .projects-stage.deck-dir-prev.deck-anim-current .project-card-lg.is-current {
-  left: calc(1620px + var(--peek-extra, 0px)); top: 50%; width: 320px; height: 70%;
+  left: calc(1620px + var(--peek-extra, 0px)); top: 50%; width: 320px; height: calc(70% + 16px);
   transform: translateY(-50%) scale(0.94);
   background: #202020 !important; box-shadow: 0 30px 70px -20px rgba(0,0,0,0.6);
 }
@@ -924,7 +939,7 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
   left: calc(-390px - var(--peek-extra, 0px));
   display: block;
   width: 320px;
-  height: 70%;
+  height: calc(70% + 16px);
   transform: translateY(-50%) scale(0.94);
   border-radius: 28px;
   overflow: hidden;
@@ -944,9 +959,9 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
   opacity: 0;
 }
 .deck-ghost.deck-ghost-show { opacity: 1; }
-.deck-ghost.deck-ghost-at-prev { left: calc(-390px - var(--peek-extra, 0px)); width: 320px; height: 70%; transform: translateY(-50%) scale(0.94); background: #202020; box-shadow: 0 30px 70px -20px rgba(0,0,0,0.6); }
-.deck-ghost.deck-ghost-at-next { left: calc(1620px + var(--peek-extra, 0px)); width: 320px; height: 70%; transform: translateY(-50%) scale(0.94); background: #202020; box-shadow: 0 30px 70px -20px rgba(0,0,0,0.6); }
-.deck-ghost.deck-ghost-at-center { left: 50%; top: 0; width: 1550px; height: 96%; transform: translateX(-50%); background: #181818; box-shadow: 0 50px 100px -20px rgba(0,0,0,0.7), 0 20px 34px rgba(0,0,0,0.5); }
+.deck-ghost.deck-ghost-at-prev { left: calc(-390px - var(--peek-extra, 0px)); width: 320px; height: calc(70% + 16px); transform: translateY(-50%) scale(0.94); background: #202020; box-shadow: 0 30px 70px -20px rgba(0,0,0,0.6); }
+.deck-ghost.deck-ghost-at-next { left: calc(1620px + var(--peek-extra, 0px)); width: 320px; height: calc(70% + 16px); transform: translateY(-50%) scale(0.94); background: #202020; box-shadow: 0 30px 70px -20px rgba(0,0,0,0.6); }
+.deck-ghost.deck-ghost-at-center { left: 50%; top: 0; width: 1550px; height: calc(96% + 16px); transform: translateX(-50%); background: #181818; box-shadow: 0 50px 100px -20px rgba(0,0,0,0.7), 0 20px 34px rgba(0,0,0,0.5); }
 .deck-ghost.deck-ghost-at-prev::before,
 .deck-ghost.deck-ghost-at-next::before { opacity: 0.5; }
 .deck-ghost.deck-ghost-at-center::before { opacity: 0; }

@@ -124,8 +124,14 @@ const SPACING = RC * Math.sin((STEP * Math.PI) / 180);
 // quadratic ease-out this replaced (easings.net's "easeOutQuad") -- not
 // mathematically identical to a CSS cubic-bezier, but visually
 // indistinguishable, which is all that's needed here.
-const EASE_DUR_MS = 220;
-const EASE_CURVE = 'cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+// Fix #18: Victoria reported the card-move settle was STILL abrupt after
+// fix #13 landed this duration/curve -- bumped from 220ms/easeOutQuad to
+// 300ms/easeOutCubic (slower deceleration, holds the "soft landing" tail
+// longer) so a swipe/wheel/focus settle reads as a deliberate glide
+// rather than a quick snap, same intent as fix #17's NAV_EASE change
+// below but for the settle Victoria hadn't singled out by name.
+const EASE_DUR_MS = 300;
+const EASE_CURVE = 'cubic-bezier(0.22, 0.61, 0.36, 1)';
 // Fix #17: a tap on the prev/next buttons settles with its own, gentler
 // timing instead of reusing the swipe/wheel/focus settle's 220ms snap
 // above. A swipe already supplies its own physical "speed" via the
@@ -139,8 +145,12 @@ const EASE_CURVE = 'cubic-bezier(0.25, 0.46, 0.45, 0.94)';
 // how this is selected per call, and buildCards()/ticksStyle for how it
 // reaches the CSS transition via the `--ease-dur`/`--ease-curve` custom
 // properties added in home-mobile.css.
-const NAV_EASE_DUR_MS = 360;
-const NAV_EASE_CURVE = 'cubic-bezier(0.45, 0, 0.15, 1)';
+// Fix #18: Victoria confirmed the prev/next-button settle was STILL
+// abrupt even after fix #17's 360ms/ease-in-out change -- lengthened
+// further to 480ms with a gentler, more symmetrical ease-in-out curve so
+// both the wind-up and the landing are unmistakably soft.
+const NAV_EASE_DUR_MS = 480;
+const NAV_EASE_CURVE = 'cubic-bezier(0.65, 0, 0.35, 1)';
 
 function buildCards(pos, currentIndex, easing, easeTiming) {
   return LABELS.map((label, i) => {
@@ -174,7 +184,7 @@ function buildCards(pos, currentIndex, easing, easeTiming) {
       isCurrent: i === currentIndex,
       // Only enabled during a committed settle, never during an active drag
       // -- a drag needs instant 1:1 tracking, this would otherwise add a
-      // laggy 220ms delay to every finger movement. Applied as a CLASS
+      // laggy multi-hundred-ms delay to every finger movement. Applied as a CLASS
       // (`.card-slot.is-easing` in home-mobile.css), not an inline
       // `transition` style: `.card-slot` already declares its own
       // `transition: opacity ...` for the load-time reveal (see that CSS),
@@ -217,7 +227,7 @@ export default function HomeMobile() {
   // `.card-slot.is-easing` class it drives in home-mobile.css. Narrower
   // than `settled`: `settled` is also false during an active drag, but
   // `easing` must NEVER be true then (a drag needs instant 1:1 tracking,
-  // not a 220ms-lagged one).
+  // not an EASE_DUR_MS/NAV_EASE_DUR_MS-lagged one).
   const [easing, setEasing] = useState(false);
   // Fix #17: which timing the CURRENTLY (or most recently) committed settle
   // should use -- defaults to the original swipe/wheel/focus timing;
@@ -712,8 +722,8 @@ export default function HomeMobile() {
                         commitTo() runs (same tick as the tap that calls
                         navRef.current.next()/prev()) -- so the very button just
                         tapped was torn out of the DOM immediately, and nothing
-                        had a .card-nav again until the settle finished 220ms
-                        later. See home-mobile.css for the fade that replaces it. */}
+                        had a .card-nav again until the settle finished (NAV_EASE_DUR_MS
+                        later). See home-mobile.css for the fade that replaces it. */}
                     <div className="card-nav">
                       <button
                         type="button"

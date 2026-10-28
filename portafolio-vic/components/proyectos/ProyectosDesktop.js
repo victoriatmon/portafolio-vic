@@ -263,7 +263,7 @@ export const PROJECTS = [
     slug: 'pulso',
     companyLabel: '',
     title: 'Pulso: Unlocking Health Access',
-    status: 'Paused startup project',
+    status: 'Startup project',
     meta: [
       { label: 'Role', value: 'UX Designer & Co-Founder' },
       { label: 'Timeline', value: '2025' },

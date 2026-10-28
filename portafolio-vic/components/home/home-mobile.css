@@ -103,7 +103,14 @@
   display: flex;
   align-items: flex-end;
   width: 100%;
-  height: 100%;
+  /* Explicit, not 100% -- `.card-slot` is an auto-height flex column (card
+     face, then the Discover/arrows row below it) as of the 2026-10-28
+     rebuild, so there's no longer a sized ancestor for a percentage height
+     to resolve against (the old `.card-slot` was absolutely positioned at
+     a hardcoded 400px). 340px is that same on-screen card height (the old
+     400px box at its 0.85 CSS scale), reached directly now that there's no
+     scale transform to reduce it through. */
+  height: 340px;
   border-radius: 22px;
   cursor: pointer;
   box-shadow: 0 40px 80px -20px rgba(0,0,0,0.65), 0 16px 30px rgba(0,0,0,0.45);

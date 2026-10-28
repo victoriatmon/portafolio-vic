@@ -412,7 +412,26 @@ export default function HomeMobile() {
     function finishAt(extIdx) {
       setCurrentIndex(realIndexOf(extIdx));
       if (extIdx === 0 || extIdx === EXT_COUNT - 1) {
+        // Found while testing fix #25 live, instrumenting every scrollLeft
+        // write/scroll event on an actual wraparound: `scroll-snap-stop:
+        // always` on every `.card-slot` (there so a fast real flick can
+        // never skip past a card -- see that rule's own comment in
+        // home-mobile.css) makes the browser treat THIS jump -- an instant
+        // teleport PAST several intermediate snap points, e.g. strip
+        // position 7 straight to position 1 -- as something it must itself
+        // enforce by smooth-scrolling through every point in between,
+        // overriding the instant jump with its own animation. Observed
+        // landing somewhere else entirely (not even the intended target)
+        // once that kicked in. Turning CSS scroll-snap off for the single
+        // frame this jump happens in, then back on next frame (standard
+        // technique for an infinite/looping scroll-snap strip), sidesteps
+        // it: with snapping off, there's nothing for the browser to
+        // enforce, so the instant jump just lands exactly where written.
+        track.style.scrollSnapType = 'none';
         track.scrollLeft = (extIdx === 0 ? COUNT : 1) * PAGE_W;
+        requestAnimationFrame(() => {
+          track.style.scrollSnapType = '';
+        });
       }
       markSuppressed();
     }

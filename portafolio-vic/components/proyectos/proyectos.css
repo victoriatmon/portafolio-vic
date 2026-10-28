@@ -1365,18 +1365,19 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
    frame (size, radius, margin) but fills it edge to edge instead of
    centering a caption inside the padded box. Victoria asked for the 3
    Pulso lead videos (pulso-video-1/2/3) to run taller than the shared
-   272px Pulso placeholder height above -- originally 288px (+16px), now
-   308px (+36px) -- scoped to .proj-video so a future non-video Pulso
-   placeholder stays at 272px. Written as `#pulso .proj-image.proj-video`
-   (not the bare `.proj-image.proj-video` this used to be) because on
-   Pulso the bare class-only selector loses the cascade to
-   `#pulso .proj-image` right above: an ID selector always outranks any
-   number of class selectors, so a bare `.proj-image.proj-video`
-   (specificity 0,2,0) can never beat `#pulso .proj-image` (0,1,1,0) no
-   matter how many classes it chains -- confirmed live, the original
-   288px never actually painted until this rule also carried #pulso. */
+   272px Pulso placeholder height above -- 288px (+16px), then 308px
+   (+36px), now 324px (+52px) -- scoped to .proj-video so a future
+   non-video Pulso placeholder stays at 272px. Written as
+   `#pulso .proj-image.proj-video` (not the bare `.proj-image.proj-video`
+   this used to be) because on Pulso the bare class-only selector loses
+   the cascade to `#pulso .proj-image` right above: an ID selector always
+   outranks any number of class selectors, so a bare
+   `.proj-image.proj-video` (specificity 0,2,0) can never beat
+   `#pulso .proj-image` (0,1,1,0) no matter how many classes it chains --
+   confirmed live, the original 288px never actually painted until this
+   rule also carried #pulso. */
 #pulso .proj-image.proj-video {
-  height: 308px;
+  height: 324px;
   padding: 0;
   overflow: hidden;
   background: #C1C1C1;
@@ -1406,7 +1407,8 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
    surfaces (the site, the Contact Center agent, the Dashboard) without ever
    being retyped. That continuity is the entire pitch of "The system behind
    the storefront" below it, just told without words. Same box model as
-   .proj-image (180px tall, 16px radius, same 56px bottom margin) so it
+   .proj-image (originally 180px tall, now 183px -- see this rule's own
+   comment below for why --, 16px radius, same 56px bottom margin) so it
    drops into the same lead-image slot.
    Light theme throughout: a flat #EBEBEB canvas with a plain white card
    (shadow, no border) while the request is composed and synced, then each
@@ -1423,9 +1425,18 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
      41%  -> 58%  sync    -- a brief loading state
      60%  -> 98%  live    -- the same request resolved on each of the 3
                    surfaces in turn, before the whole thing resets and loops. */
+/* Victoria asked for this (and .undp-demo, the matching box model just
+   below) a bit taller, reading the on-screen rendered height off her own
+   browser rather than this design-space value (114px -> 116px on her
+   screen, which is this .x-stage's dynamic viewport-fit scale applied to
+   whatever design px value lives here -- see the .x-stage fit effect in
+   ProyectosDesktop.js and fix #20c's note on the scale/getComputedStyle
+   distinction). Converted by ratio (116/114 * the old 180px design value,
+   scale-independent since the same unknown scale cancels out) rather than
+   guessing her absolute scale: 180px -> 183px. */
 .mapfre-section .axo-demo {
   position: relative;
-  height: 180px;
+  height: 183px;
   margin: 0 0 56px;
   border-radius: 16px;
   overflow: hidden;
@@ -1673,7 +1684,8 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
    photo-grain wash, and four of the actual questions the project had to
    answer, white Manrope Extrabold caps, two lines each (hard-broken, not
    left to wrap), one at a time, as large as the card can hold. Same box
-   model as .axo-demo otherwise (180px tall, 16px radius, 56px bottom
+   model as .axo-demo otherwise (183px tall -- see that rule's own
+   comment for why it's not a round number --, 16px radius, 56px bottom
    margin) so it drops into the same lead-image slot. The cut between
    questions runs the actual channel-split filter the landing card's own
    glitch uses (see udRGB1/2/3 and .ud-card in Main.dc.html): three
@@ -1706,7 +1718,7 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
    quarter mark, 1.75 points before that quarter's question swaps in. */
 .mapfre-section .undp-demo {
   position: relative;
-  height: 180px;
+  height: 183px;
   margin: 0 0 56px;
   border-radius: 16px;
   overflow: hidden;
@@ -1789,11 +1801,15 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
 /* VictorAI's own lead demo: the three hand-drawn stars from its landing
    card (same paths, same #EB2628 red) scattered loosely over a white
    canvas while a typewriter line plays on loop. Same box model as
-   .axo-demo (180px tall, 16px radius, 56px bottom margin) so it drops
-   into the same lead-image slot. */
+   .axo-demo/.undp-demo (16px radius, same lead-image slot) but always ran
+   its own taller height (204px, not their 180px/183px). Victoria asked
+   for this one taller too, reading the rendered height off her own
+   screen (130px -> 140px) rather than this design-space value -- same
+   ratio-conversion approach as .axo-demo's comment above: 204 * (140/130)
+   = 219.69, rounded to 220px. */
 .vai-demo {
   position: relative;
-  height: 204px;
+  height: 220px;
   margin: 0 0 40px;
   border-radius: 16px;
   overflow: hidden;
@@ -1852,7 +1868,7 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
   white-space: nowrap;
   font-family: 'Pavanam', 'Manrope', sans-serif;
   font-weight: 400;
-  font-size: 20px;
+  font-size: 22px;
   line-height: 1.3;
   color: #1A1414;
 }
@@ -1861,12 +1877,15 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
    again while it erases -- and goes dark during the quiet read-it hold
    in between, instead of blinking through that pause as if still
    composing something. */
+/* Height matches .vai-demo-type-text's own font-size (not its line-height)
+   so the caret bar reads as cap-height tall next to the type -- bumped
+   alongside the text's 20px->22px size change above for the same reason. */
 .vai-demo-caret {
   position: absolute;
   top: 0;
   left: 0%;
   width: 2px;
-  height: 20px;
+  height: 22px;
   background: #EB2628;
   animation: vaiCaretPos 8s infinite, vaiCaretBlink 8s steps(1, end) infinite;
 }

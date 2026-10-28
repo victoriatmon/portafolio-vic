@@ -14,7 +14,9 @@
 // Like AXA, this uses document-level pointerover/pointerout delegation
 // (they bubble, pointerenter/leave don't) scoped to this component's own
 // .card-face via a ref/closure instead of the artifact's WeakMap-keyed
-// version (this portfolio only ever renders one UNDP card). Also like
+// version (desktop only ever renders one UNDP card; mobile can briefly
+// mount a second one -- see fix #25/#27 below -- but each instance scopes
+// its own listeners to its own .card-face, so that's fine). Also like
 // AXA: the live SVG node is looked up by class name inside wrap on every
 // toggle rather than captured once at mount, since this component
 // re-renders (and can have its dangerouslySetInnerHTML subtree replaced)
@@ -22,8 +24,9 @@
 // AXA card, where a one-time captured reference went stale and animated
 // an orphaned, invisible node.
 
-import { useEffect, useRef, memo } from 'react';
+import { useEffect, useMemo, useRef, memo } from 'react';
 import { prefersReducedMotion } from '@/lib/cardTransition';
+import { namespaceSvgIds } from '@/lib/svgNamespace';
 
 const GLITCH_MS = 700; // length of each glitch (matches the CSS animation)
 const HOLD_MS = 1600; // how long each version stays on screen between glitches
@@ -184,8 +187,40 @@ const UNDP_SVG = `<svg class="ud-card" aria-hidden="true" width="300" height="40
 // what tells the effect below to fall back to the original real-pointer
 // hover/pointerout wiring -- see AXACard.js's matching comment for the same
 // pattern.
-function UndpCard({ active } = {}) {
+// Fix #27 (2026-10-28): same bug, same fix as MapfreCard.js's matching
+// comment -- HomeMobile.js now mounts TWO instances of this card at once
+// (fix #25's clone), and this SVG's hardcoded numeric ids collided across
+// them, breaking the second instance's headshot clip/pattern (the same
+// "renders solid black" failure Victoria reported on Mapfre's clone, just
+// not yet seen by her on this card's clone since that requires scrolling
+// PAST the first card going backwards -- same root cause, fixed the same
+// way preemptively). Deliberately only the plain numeric clip/pattern/
+// mask/filter ids below, NOT this card's other, hand-named ids (`udA`,
+// `udBand0`, `udRGB1`, etc.) -- see lib/svgNamespace.js's header comment
+// for why those are safe to leave shared.
+const UNDP_INTERNAL_IDS = [
+  'clip0_89_931',
+  'clip0_89_949',
+  'clip1_89_931',
+  'clip1_89_949',
+  'filter0_f_89_931',
+  'filter1_f_89_931',
+  'filter1_f_89_949',
+  'image0_89_931',
+  'mask0_89_931',
+  'mask0_89_949',
+  'pattern0_89_931',
+  'pattern0_89_949',
+  'pattern1_89_931',
+  'pattern1_89_949',
+];
+
+function UndpCard({ active, uid = '' } = {}) {
   const wrapRef = useRef(null);
+  // Only actually rewrites anything when `uid` is non-empty -- HomeDesktop.js
+  // never passes one (it only ever mounts a single instance), so desktop's
+  // output is byte-identical to before this fix.
+  const svg = useMemo(() => namespaceSvgIds(UNDP_SVG, UNDP_INTERNAL_IDS, uid), [uid]);
   // Imperative activate/deactivate, shared by the controlled (`active`
   // prop) and uncontrolled (real pointerover/pointerout) paths -- see
   // AXACard.js's apiRef for the same reasoning. Replaced on every mount by
@@ -315,7 +350,7 @@ function UndpCard({ active } = {}) {
     else apiRef.current.deactivate();
   }, [active]);
 
-  return <div className="ud-card-wrap" ref={wrapRef} dangerouslySetInnerHTML={{ __html: UNDP_SVG }} />;
+  return <div className="ud-card-wrap" ref={wrapRef} dangerouslySetInnerHTML={{ __html: svg }} />;
 }
 
 // Memoized -- see MapfreCard.js's comment, and AXACard.js's matching note

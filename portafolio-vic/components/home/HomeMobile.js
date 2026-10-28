@@ -197,17 +197,33 @@ const PAGE_W = CARD_W + CARD_GAP;
 
 // Arc visual: rotate()/translateY() layered on top of the native scroll
 // position, same shape of math as HomeDesktop.js's own RC/STEP (see that
-// file) -- `ang = d*STEP`, `translateY = RC*(1-cos(ang))` -- but re-tuned
-// for mobile's narrower viewport rather than copying desktop's RC=1400/
-// STEP=17deg verbatim. These numbers reuse the pre-fix-#20 mobile arc's own
-// RC=900, with STEP derived the same way that system derived it: the angle
-// at which the arc's chord length equals PAGE_W, so adjacent cards keep
-// landing visually close to PAGE_W apart even though the arc's true
-// horizontal placement is non-linear (this value is only used for the
-// rotation/vertical-drop added on top here; actual left-right placement
-// still comes from native scroll, see the effect below and this file's
-// header comment).
-const RC = 900;
+// file) -- `ang = d*STEP`, `translateY = RC*(1-cos(ang))`. STEP is derived
+// (not a fixed degree count, unlike desktop's own STEP=17) from RC and
+// PAGE_W: the angle at which the arc's chord length equals PAGE_W, so
+// adjacent cards keep landing visually close to PAGE_W apart even though
+// the arc's true horizontal placement is non-linear (this value is only
+// used for the rotation/vertical-drop added on top here; actual left-right
+// placement still comes from native scroll, see the effect below and this
+// file's header comment). Raising RC flattens the whole arc -- same
+// derivation, gentler curve -- without breaking that chord-length
+// invariant, which is the lever fix #28 below pulls.
+//
+// Fix #28 (2026-10-28): RC was 900 (reusing the pre-fix-#20 mobile arc's
+// own value) until Victoria reported the carousel "tilting toward the
+// bottom-right corner" on every swipe/arrow tap. At RC=900 the nearest
+// visible neighbour (d=1) rotated ~15 deg and dropped ~32px, growing to
+// ~35 deg / ~163px at the ARC_HIDE_AT cutoff -- fine as an occasional,
+// chunky jump under the PRE-fix-#24 throttled updates, but fix #24 made
+// this same transform recompute every frame, so a real swipe now visibly
+// sweeps a card through that full rotation+drop as it slides toward
+// centre -- which is exactly what reads as "the whole thing tilts". RC=2600
+// (~3x) keeps the arc (Victoria asked fix #23 restore it, not remove it)
+// but cuts that sweep to ~5 deg / ~11px at d=1, ~12 deg / ~57px at the
+// cutoff -- still a visible curve, just no longer dramatic enough to read
+// as a tilt. ARC_HIDE_AT left as-is; raising RC alone already shrinks the
+// worst-case rotation/drop at every distance, no need to also hide cards
+// sooner.
+const RC = 2600;
 const STEP = (Math.asin(PAGE_W / RC) * 180) / Math.PI;
 // Cards beyond this many slots from centre are hidden outright (matches
 // desktop's own cutoff, scaled -- six cards never need more than ~2 to be
@@ -630,8 +646,14 @@ export default function HomeMobile() {
                       {Art ? (
                         // `active` only matters to AXA/UNDP (the two JS-driven
                         // cards); the other four read `.is-current` from CSS
-                        // instead and silently ignore this prop.
-                        <Art active={isCurrent} />
+                        // instead and silently ignore this prop. `uid` (fix
+                        // #27) only matters to Mapfre/UndpCard, the two cards
+                        // fix #25's cloning mounts twice at once -- see
+                        // lib/svgNamespace.js. Passed unconditionally (the
+                        // strip position `p` is already unique per slot) so
+                        // nothing here needs to know which two cards happen
+                        // to be first/last; every other card ignores it.
+                        <Art active={isCurrent} uid={String(p)} />
                       ) : (
                         <>
                           <div className="card-art" style={{ background: gradient }} aria-hidden="true" />

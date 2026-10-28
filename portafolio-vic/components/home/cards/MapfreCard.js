@@ -17,7 +17,8 @@
 // (post base64-extraction), so correctness here rests on the extraction
 // step, not on manual attribute-by-attribute conversion.
 
-import { memo, useRef } from 'react';
+import { memo, useMemo, useRef } from 'react';
+import { namespaceSvgIds } from '@/lib/svgNamespace';
 
 const MAPFRE_SVG =`<svg class="mp-card" aria-hidden="true" width="300" height="400" viewBox="0 0 300 400" fill="none" xmlns="http://www.w3.org/2000/svg">
 <g clip-path="url(#clip0_80_51)">
@@ -107,19 +108,37 @@ const MAPFRE_SVG =`<svg class="mp-card" aria-hidden="true" width="300" height="4
 //   for this card entirely and compute the tile window in JS/React,
 //   setting each tile's visible region via individual positioned
 //   <image>/<rect> elements instead of a shared clip region.
-function MapfreCard() {
-  const wrapRef = useRef(null);
+//
+// Fix #27 (2026-10-28): every id this SVG defines, all private to this
+// card's own clipping/texturing (none referenced from outside -- see
+// lib/svgNamespace.js's header comment for why that matters). HomeMobile.js
+// now mounts TWO instances of this exact card at once (the real slot plus
+// its fix-#25 clone, see that file), and without a per-instance suffix on
+// these the two instances' identical `id="clip0_80_51"` etc. collide --
+// confirmed live as the cause of Victoria's "next card renders solid
+// black" report when the carousel wraps onto this card's cloned slot.
+const MAPFRE_IDS = ['clip0_80_51', 'clip1_80_51', 'image0_80_51', 'image1_80_51', 'pattern0_80_51', 'pattern1_80_51', 'm'];
 
-  return <div ref={wrapRef} className="mp-card-wrap" dangerouslySetInnerHTML={{ __html: MAPFRE_SVG }} />;
+function MapfreCard({ uid = '' } = {}) {
+  const wrapRef = useRef(null);
+  // Only actually rewrites anything when `uid` is non-empty -- HomeDesktop.js
+  // never passes one (it only ever mounts a single instance), so desktop's
+  // output is byte-identical to before this fix.
+  const svg = useMemo(() => namespaceSvgIds(MAPFRE_SVG, MAPFRE_IDS, uid), [uid]);
+
+  return <div ref={wrapRef} className="mp-card-wrap" dangerouslySetInnerHTML={{ __html: svg }} />;
 }
 
-// Memoized: this component takes no props and never changes its own
-// output, but it's re-mounted inside the mobile/desktop drag carousel,
-// whose parent re-renders on every `setPos()` during a drag/momentum tick
-// (see HomeMobile.js/HomeDesktop.js). Without memo, React would re-run and
-// re-diff this ~100KB inline SVG tree on every one of those renders -- six
-// times over (one per card) -- which is the main cause of the janky/slow
-// drag feel reported on mobile. memo() skips all of that entirely here,
-// same reasoning as AXACard.js/UndpCard.js (which still take `active` and
-// so still re-render when it changes).
+// Memoized: `uid` (fix #27) is the only prop, and it's stable for the
+// lifetime of a given mounted slot (HomeMobile.js passes the strip
+// position, which never changes for an already-mounted instance), so this
+// still never re-renders in practice once mounted, even though it's
+// re-mounted inside the mobile/desktop carousel whose parent re-renders on
+// every `setPos()`/scroll tick (see HomeMobile.js/HomeDesktop.js). Without
+// memo, React would re-run and re-diff this ~100KB inline SVG tree on every
+// one of those renders -- six (now eight, fix #25) times over -- which is
+// the main cause of the janky/slow drag feel reported on mobile. memo()
+// skips all of that entirely here, same reasoning as AXACard.js/
+// UndpCard.js (which still take `active` and so still re-render when it
+// changes).
 export default memo(MapfreCard);

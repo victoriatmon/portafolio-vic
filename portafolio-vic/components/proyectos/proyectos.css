@@ -3023,23 +3023,35 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
    back then, so once the card grew (see proyectos.css history on
    .project-card-lg.is-current), a long non-last value like Pulso's "Team
    with" roster kept wrapping onto 2 lines even with plenty of real estate
-   free on the card. CSS Grid auto-fit + minmax fixes that at the source:
-   every column sizes to its own natural one-line width (`max-content`) by
-   default, shrinking toward the 160px floor -- and wrapping -- only once
-   the row actually runs out of room for however many columns a given
-   project's meta needs (3 for most projects, 4 for Pulso/AXA with "Team
-   with"). Scales automatically with however wide .mapfre-content is, so
-   there's no per-project tuning and no magic px cap to revisit the next
-   time the card's own width changes. */
+   free on the card. A later attempt (CSS Grid auto-fit + minmax, sizing
+   every column to its own `max-content`) was meant to fix that at the
+   source, but didn't: when the combined max-content width of ALL columns
+   overflows the row, Grid's track-sizing algorithm distributes the deficit
+   across every flexible (non-last-row) track by its own formula, not just
+   the column(s) that are actually too wide -- confirmed live on AXA, where
+   "Team with" and "Skills" (two columns with very different natural
+   widths) both got squeezed down to the exact same compressed width and
+   both wrapped to 3 lines, and on ONU/PNUD, where "Skills" alone wrapped
+   to 2 lines despite Role/Timeline/Team with having room to spare. Victoria
+   flagged this as the 48px gap no longer reading as even/consistent across
+   Pulso, AXA, VictorAI and ONU/PNUD the way it does on Mapfre and AI Cash
+   Flow Predictor (whose short "Team with"/no-"Team with" values never
+   trigger it). Flexbox fixes it properly: each item keeps its own natural
+   one-line width (shrinking only down to the 160px floor) and, if a whole
+   row of items doesn't fit, the items that don't fit wrap AS WHOLE ITEMS
+   onto the next line -- never squeezed to share a compressed width with an
+   unrelated neighbor. The same 48px/32px gap stays exactly even both
+   between items on a line and between wrapped lines, for any project's
+   meta data, however long, without per-project tuning. */
 .mapfre-meta-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, max-content));
+  display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   gap: 32px 48px;
   margin: 0 0 40px;
   scroll-margin-top: 20px;
 }
-.mapfre-meta-grid > div { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; }
+.mapfre-meta-grid > div { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; flex: 0 0 auto; min-width: 160px; max-width: 100%; }
 .mapfre-meta-label {
   margin: 0;
   font-family: 'Pavanam', 'Manrope', sans-serif;

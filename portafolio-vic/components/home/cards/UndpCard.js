@@ -30,6 +30,21 @@ import { namespaceSvgIds } from '@/lib/svgNamespace';
 
 const GLITCH_MS = 700; // length of each glitch (matches the CSS animation)
 const HOLD_MS = 1600; // how long each version stays on screen between glitches
+// Fix #38 (2026-10-28, next conversation): Victoria reported Undp "tarda
+// mucho en empezar la animación cuando está en el centro" -- this is the
+// mobile-only `activate()` pause below (fix #19), which deliberately
+// waited the full HOLD_MS before the first glitch so centering itself
+// never looked like a glitch-in. That earlier request and this one pull
+// in opposite directions (same structural shape as the carousel arc's
+// reposo-vs-movimiento tension -- see HomeMobile.js's "Fix #33/#34"
+// comment), so this splits them into two separate constants instead of
+// picking one value that can't satisfy both: FIRST_HOLD_MS is a short
+// pause just long enough to read as an intentional beat rather than an
+// instant glitch-on-arrival, used ONLY for the very first activation
+// after a card becomes centered; HOLD_MS (unchanged, 1600ms) still governs
+// every later loop iteration's cadence, and desktop's real-hover path
+// (mobileControlled === false below) is untouched either way.
+const FIRST_HOLD_MS = 700;
 
 const UNDP_SVG = `<svg class="ud-card" aria-hidden="true" width="300" height="400" viewBox="1 1 300 400" fill="none" xmlns="http://www.w3.org/2000/svg">
 <defs>
@@ -304,9 +319,12 @@ function UndpCard({ active, uid = '' } = {}) {
         if (mobileControlled) {
           // Show the clean poster A immediately (it's already the CSS
           // rest state, nothing to animate) and let the glitch loop start
-          // after the same HOLD_MS pause every later iteration uses --
-          // so centering never itself looks like a glitch-in.
-          state.timer = setTimeout(toggle, HOLD_MS);
+          // after a short FIRST_HOLD_MS beat (fix #38) -- long enough that
+          // centering doesn't itself read as a glitch-in, short enough
+          // that the card doesn't sit inert for a noticeable stretch.
+          // Every later iteration of the loop still uses the full HOLD_MS,
+          // via the `toggle` function's own setTimeout above.
+          state.timer = setTimeout(toggle, FIRST_HOLD_MS);
         } else if (state.target === 'A') {
           toggle();
         } else {

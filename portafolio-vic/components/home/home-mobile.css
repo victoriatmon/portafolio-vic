@@ -70,33 +70,38 @@
      request) -> 154px (fix #23, +16px: Victoria then said #20's 138px sat
      too close to the title and asked for at least 16px more air) -> 160px
      (fix #26: the card shrink below frees ~80px of vertical room overall,
-     most of which goes to the BOTTOM gap -- see .car2-track/.card-cta --
-     but a little also went back into this top gap, since Victoria's real-
-     device video showed the cards still reading as glued to the title even
-     after fix #23). Still moving the WHOLE group together -- cards AND
-     Discover/arrows -- same as fix #20, no counter-offset needed) -> 168px
-     (fix #32, 2026-10-28, next conversation: Victoria asked for 8px more). */
+     most of which goes to the BOTTOM gap -- see .car2-track below, and
+     the (now-removed) Discover CTA's old comment history -- but a little
+     also went back into this top gap, since Victoria's real-device video
+     showed the cards still reading as glued to the title even after fix
+     #23). Still moving the WHOLE group together -- cards AND Discover/
+     arrows -- same as fix #20, no counter-offset needed) -> 168px (fix
+     #32, 2026-10-28, next conversation: Victoria asked for 8px more). */
   top: 168px;
+  /* Fix #36 (2026-10-28, next conversation): 440 unchanged on purpose.
+     Removing Discover (fix #35) and growing the card 216x288 -> 252x336
+     (see .card-slot below) both eat into the same vertical budget this
+     section had, but from opposite ends -- the arithmetic still clears
+     440 with room to spare (336 card + ~30 card-to-arrows gap + 44 arrow
+     row = 410, 30px slack), so there's no reason to also grow this
+     section's own height. */
   height: 440px;
   user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
 }
 .home-mobile-scope .car2-track {
   position: absolute;
-  /* Explicit height (not auto): `.card-cta` below is absolutely
-     positioned (so the whole `.card-slot` box is exactly the card's own
-     size, matching how desktop's own `.card-slot` -- sized to CARD_W x
-     CARD_H with Discover absolutely positioned below it -- is laid out;
-     while the arc transform existed, fix #23-#32, this also made it pivot
-     around the card as a rigid unit -- moot since fix #33 removed that
-     transform, but the absolute-positioning technique itself is kept for
-     the layout-consistency reason, independent of the arc). That means
-     `.card-cta`'s content no longer adds to the flex row's own layout
-     height, so the track needs an explicit height tall enough to not clip
-     it under `overflow-y: hidden` below. Fix #26: 288 card + 26 gap + ~82
-     Discover/arrows stack ≈ 396, 440 leaves real slack this time (not just
-     a sliver) -- see .card-cta below for where the rest of the freed-up
-     height actually went: the arrows-to-bottom-chrome gap Victoria's video
-     showed as too tight. */
+  /* Explicit height (not auto): `.card-slot` is sized to the card only
+     (see below), so a plain flex row's own content height would only be
+     as tall as the card -- the persistent `.car2-nav` arrows that sit
+     below it are a SEPARATE absolutely-positioned element (outside this
+     track entirely, see .car2-nav below), not part of any flex child's
+     box, so the track needs an explicit height tall enough to cover
+     where the arrows land or they'd clip under `overflow-y: hidden`
+     below. Fix #26: 288 card + 26 gap + ~82 Discover/arrows stack ≈ 396,
+     440 leaves real slack. Fix #36 (2026-10-28, next conversation):
+     Discover is gone and the card grew to 336 (see .card-slot below) --
+     336 + ~30 gap + 44 arrow row ≈ 410, still comfortably inside 440, so
+     this explicit height didn't need to change. */
   left: 0; right: 0; top: 0;
   height: 440px;
   display: flex;
@@ -113,9 +118,12 @@
   /* (100vw - CARD_W) / 2 -- lets the first/last card still reach dead
      centre instead of stopping at the track's own edge. Fix #26: 127.5px
      (CARD_W/2 at the old 255px) -> 108px (CARD_W/2 at the new 216px, see
-     .card-slot below). */
-  padding: 0 calc(50vw - 108px);
-  gap: 20px; /* CARD_GAP -- with the 216px card width below, gives the same 236px centre-to-centre spacing (PAGE_W) HomeMobile.js's scroll math assumes */
+     .card-slot below). Fix #36 (2026-10-28, next conversation): 108px ->
+     126px (CARD_W/2 at the new 252px -- Discover's removal freed the
+     vertical room that let the card grow, see .card-slot below; keep in
+     sync with HomeMobile.js's CARD_W). */
+  padding: 0 calc(50vw - 126px);
+  gap: 20px; /* CARD_GAP -- with the 252px card width below, gives the same 272px centre-to-centre spacing (PAGE_W) HomeMobile.js's scroll math assumes */
   scrollbar-width: none;
   -ms-overflow-style: none;
   /* No explicit touch-action override (the old arc system needed
@@ -134,10 +142,17 @@
      report from a real iPhone -- the card is by far the single biggest
      vertical element in a fixed-height `.stage2`, so shrinking it is what
      actually frees up room for the title gap above and the arrows-to-
-     bottom-chrome gap below, both of which she called out as too tight. */
-  flex: 0 0 216px; /* CARD_W -- keep in sync with HomeMobile.js's CARD_W */
-  width: 216px;
-  height: 288px; /* CARD_H -- sized to the card ONLY (not the Discover/arrows stack below, which is absolutely positioned) so the arc transform HomeMobile.js writes to this element's style rotates/drops it around the card's own centre, same as desktop. */
+     bottom-chrome gap below, both of which she called out as too tight.
+     Fix #36 (2026-10-28, next conversation): 216x288 -> 252x336 (same 3:4
+     ratio again). Removing Discover entirely (fix #35) frees the ~74px of
+     vertical room its own box + the two gaps around it used to occupy
+     (26px card-to-Discover + ~36px Discover's own unscaled layout box +
+     12px Discover-to-arrows) -- Victoria asked for that freed space to go
+     back into the card itself rather than just becoming extra breathing
+     room, so it does. */
+  flex: 0 0 252px; /* CARD_W -- keep in sync with HomeMobile.js's CARD_W */
+  width: 252px;
+  height: 336px; /* CARD_H -- sized to the card ONLY (Discover is gone as of fix #35; nothing else is absolutely positioned off this box any more). */
   scroll-snap-align: center;
   scroll-snap-stop: always; /* a fast flick still only ever advances one card, never skips past */
   /* Used to also get a `will-change: transform` hint here -- HomeMobile.js
@@ -218,75 +233,17 @@
   text-align: left;
 }
 
-/* Wraps the Discover CTA only, as of fix #31 -- the prev/next arrows used
-   to render here too (a second row below Discover, shown only on the
-   centred card via the `.is-current` sibling rule this comment used to
-   describe). Victoria reported that made the arrows read as disappearing
-   (every swipe/tap sets currentIndex to -1, so NO slot's copy was current
-   for the scroll's duration) and shifting (each slot's own copy only ever
-   matched that slot's own, separately-transformed position). The arrows
-   now live in `.car2-nav` below instead -- one persistent pair, outside
-   `.car2-track`, never opacity-toggled -- see HomeMobile.js's header
-   comment (fix #31) for the full reasoning.
-   Fix #34 (2026-10-28, next conversation): this whole element is now only
-   RENDERED (by HomeMobile.js, in JSX -- not just hidden/shown by CSS) on
-   the centred slot, so there's at most one `.card-cta` in the DOM at a
-   time. Previously it rendered unconditionally on every slot, including
-   partially-visible neighbours -- a deliberate feature while the arc (fix
-   #23-#32) kept most neighbours mostly out of reach, but once fix #33
-   flattened the carousel and neighbours sat clearly visible at the sides,
-   Victoria asked for Discover to show only on the current card to reduce
-   clutter; tapping a neighbouring card anywhere still opens its project
-   via `.card-face`'s own Link, unaffected by this. */
-.home-mobile-scope .card-cta {
-  /* Back to absolutely positioned (this fix) -- `.card-slot` is sized to
-     the card only now (see above), so Discover/arrows sit below it via
-     left:50%/translateX(-50%) + a top offset, same technique as before
-     fix #20 and as desktop's own `.card-slot` -- this is what makes the
-     whole slot (card + its own Discover/arrows) rotate as one rigid unit
-     under the arc transform, matching desktop's look. */
-  position: absolute;
-  left: 50%;
-  /* Fix #26: 34px -> 26px (card-to-Discover) and the flex `gap` below,
-     16px -> 12px (Discover-to-arrows), both trimmed slightly to put more
-     of the room freed up by the smaller card (see .card-slot above) into
-     the gap below the arrows instead -- that's the one Victoria's video
-     showed sitting closest to Safari's own bottom chrome. */
-  top: calc(100% + 26px); /* on-screen gap between card and Discover */
-  transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-}
-.home-mobile-scope .btn-primary {
-  all: unset;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  background: #141414;
-  color: #F5F5F5;
-  padding: 16px 26px;
-  border-radius: 999px;
-  font-weight: 500;
-  font-size: 14px;
-  transition: color 0.15s ease, background 0.15s ease;
-}
-.home-mobile-scope .btn-primary:active { background: #0A1130; color: #0066FF; }
-.home-mobile-scope .btn-discover {
-  /* Centering/placement now comes from the `.card-cta` parent above --
-     this only keeps its own visual scale-up. */
-  transform: scale(1.1765);
-  background: #2A2A2A;
-  font-size: 12px;
-  line-height: 1;
-  padding: 12px 22px;
-  gap: 8px;
-  white-space: nowrap;
-  -webkit-tap-highlight-color: transparent;
-}
-.home-mobile-scope .btn-discover:active { background: #2A2A2A; }
+/* Fix #35 (2026-10-28, next conversation): Discover is gone entirely --
+   previously rendered here (`.card-cta`/`.btn-primary`/`.btn-discover`,
+   see fix #31/#34's history in HomeMobile.js's header comment for how it
+   got here), now removed from the JSX outright per Victoria's explicit
+   request, so these rules have nothing left to style. Removing them here
+   is safe: desktop has its own identically-named `.card-cta`/
+   `.btn-primary`/`.btn-discover` rules under `.home-desktop-scope` in
+   home.css, a completely separate stylesheet scope -- confirmed via grep
+   that no selector is shared between the two. Tapping a card anywhere
+   still opens its project via `.card-face`'s own Link, unaffected by
+   this -- that was already the unconditional behaviour since fix #20. */
 
 /* Prev/next arrows: tertiary hierarchy, per Victoria's request -- no fill,
    no border, icon only, the lowest-emphasis affordance on the card (swipe
@@ -313,17 +270,21 @@
   transform: translateX(-50%);
   /* Fixed at the same on-screen spot the arrows always sat at under the
      old per-card-slot layout, measured from the top of `.car2`/
-     `.car2-track` (both start at the same y): card (288, CARD_H) + the
-     card-to-Discover gap (26, see `.card-cta`'s `top` above) + Discover's
-     own unscaled layout box (~36px: 12px top/bottom padding + a 12px,
-     line-height:1 text line -- `.btn-discover`'s `scale(1.1765)` enlarges
-     it visually without changing this box) + the Discover-to-arrows gap
-     that used to come from `.card-cta`'s own flex `gap` (12) = 362px. Not
-     derived automatically any more (fix #31 deliberately broke that
-     coupling to get the arrows out of the per-slot, transformed strip) --
-     if Discover's own size/padding/gap ever changes, this number needs a
-     matching manual update. */
-  top: 362px;
+     `.car2-track` (both start at the same y). Was 362px (card 288 +
+     card-to-Discover gap 26 + Discover's own unscaled box ~36 + Discover-
+     to-arrows gap 12 -- see git history for the full breakdown while
+     Discover still existed).
+     Fix #36 (2026-10-28, next conversation): Discover is gone (fix #35),
+     so the arrows now sit directly below the (bigger) card with a single
+     gap between them -- new CARD_H (336) + a 30px gap = 366px. The 30px
+     gap splits the difference between the two gaps Discover used to sit
+     between (26 above it, 12 below it = 38 total) and a cleaner round
+     number, erring slightly larger since the arrows are now the only
+     thing below the card and can afford a touch more breathing room. Not
+     derived automatically (fix #31 deliberately broke that coupling) --
+     if CARD_H or this gap ever changes, this number needs a matching
+     manual update. */
+  top: 366px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -557,7 +518,38 @@
    The base rule instead declares a rest pose (rotate 0 / scale 1) with its
    own `transition`, so when the animation is removed on deactivation the
    star eases smoothly from wherever the animation left it back to rest,
-   instead of snapping or sitting frozen off-pose. */
+   instead of snapping or sitting frozen off-pose.
+   Fix #40 (2026-10-28, next conversation): Victoria reported Phantom
+   glitching right as its animation starts (same complaint for AXA, a
+   JS-driven card with no CSS transition at all -- see AXACard.js, that
+   one needs a separate, not-yet-found cause). Root cause here: the
+   `.is-current`/`:focus-visible` rule below only ADDS `animation` -- it
+   never overrides `transition`, so the `rotate 0.4s ease, scale 0.4s
+   ease` declared on the base rule above is STILL the element's computed
+   `transition` value while the class is present, for as long as it's
+   present, not just at the instant the class is removed. Per spec, a
+   plain CSS Transition is only supposed to skip reacting to a property
+   change caused by a CSS Animation on that same property -- but this is
+   exactly the "ancestor/compositing edge case" class of bug this
+   project's history already flagged for Mapfre's clip-path (see
+   MapfreCard.js's fix #39 comment): at the precise moment `animation` is
+   newly attached, some WebKit versions still let the lingering
+   `transition` react to that first jump, racing a second, competing
+   0.4s ease against the animation's own interpolation right as it kicks
+   off -- a brief, visible stutter only at the START, which matches what
+   she described. Fix: explicitly clear `transition` while `animation` is
+   attached, so the two can never compete; removing the class still falls
+   back to the base rule's own `transition`, so the smooth ease-to-rest
+   on deactivation (the entire point of fix #18) is unaffected. Same
+   latent pattern exists in `.vs-s1/.vs-s2/.vs-s3` below (identical
+   animation-only-while-current + base-rule-transition shape) but isn't
+   touched here -- their `step-end` keyframes are already intentionally
+   jerky, which plausibly masks the same bug well enough that Victoria
+   never flagged VictorAI, so there's nothing reported to fix there. Not
+   verified on an actual iPhone (no device access here) -- if this
+   doesn't resolve it, next suspect would be the SVG's own filter/blur
+   defs needing a paint on first appearance, independent of this
+   transition/animation interaction entirely. */
 .home-mobile-scope .ph-star {
   transform-box: fill-box;
   transform-origin: center;
@@ -567,6 +559,7 @@
 }
 .home-mobile-scope .card-face.is-current .ph-star, .home-mobile-scope .card-face:focus-visible .ph-star {
   animation: ph-spin 14s linear infinite, ph-pulse 5s ease-in-out infinite;
+  transition: none; /* fix #40 -- see comment above: must not compete with the animation while it's attached */
 }
 
 /* ===== Pulso card art (ported from the artifact, card index 2 --

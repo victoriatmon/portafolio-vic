@@ -240,16 +240,77 @@
 // render below) -- the whole card remains tappable via `.card-face`'s own
 // Link/handleCardOpen regardless of centred state, so a neighbouring card
 // is still one tap away from its project, just without its own visible
-// button.
+// button. **Superseded by fix #35 below, same day -- Discover is gone
+// entirely now, not just hidden on neighbours.**
 //
-// What's left for JS to do (updated, post #33/#34):
+// ===== Fix #35/#36/#37 (2026-10-28, next conversation, from Victoria
+// re-testing the flat/#33 carousel) =====
+// Victoria confirmed the flat carousel read right, then asked for three
+// more changes in the same message: drop Discover entirely (not just hide
+// it on neighbours, fix #34's half-measure); make the cards bigger now
+// that Discover's old footprint is free; and make the prev/next BUTTON
+// glide feel as smooth as a native swipe, which she said still felt
+// "abrupta" by comparison.
+//
+// #35 -- Discover removed entirely: the whole `.card-cta`/Discover <Link>
+// block is gone from the render below, on every slot, not just non-
+// current ones. The card's own `.card-face` Link (handleCardOpen, same as
+// always) is the only way to open a project now -- true on mobile already
+// since fix #20 (tapping anywhere on a centred OR neighbouring card has
+// always opened it), so removing the redundant explicit button loses no
+// functionality, only the visual affordance that pointed at it. `.car2-
+// nav` (the arrows, fix #31) is unaffected -- it never depended on
+// `.card-cta` for anything except its own hardcoded `top` offset
+// (home-mobile.css), which this fix updates now that there's no Discover
+// box to measure past.
+//
+// #36 -- cards enlarged: with Discover's box + both its gaps (26px card-
+// to-Discover, ~36px Discover's own layout height, 12px Discover-to-
+// arrows) gone, CARD_W/CARD_H grew from 216x288 to 252x336 (same 3:4
+// ratio) -- see home-mobile.css's matching `.card-slot`/`.car2-track`
+// comment for the exact vertical accounting. `PAGE_W` (derived from
+// CARD_W+CARD_GAP below) grows with it, same as any other CARD_W change
+// (fix #26) -- nothing else about the scroll-snap math changes shape, just
+// scale.
+//
+// #37 -- arrow glide now native smooth-scroll, not a hand-rolled tween:
+// `scrollToIndex()` used to animate `track.scrollLeft` itself via a
+// `requestAnimationFrame` loop with a hand-picked easing curve
+// (`easeOutCubic`/320ms, fix #30) -- necessary back when mobile also had
+// the arc transform (fix #23-#29), since every `scrollLeft` write needed
+// to be on a frame-by-frame basis anyway to keep that transform in sync.
+// Fix #33 already removed the arc, so that constraint is gone -- and a
+// hand-rolled tween can only ever APPROXIMATE the native swipe's own
+// momentum/deceleration curve, never match it exactly, which is exactly
+// what Victoria flagged ("hay que hacerla más smooth para que se vea igual
+// a como si estuviera haciendo swipe"). The most direct way to GUARANTEE
+// the arrow glide feels identical to a swipe is to have it use the exact
+// same mechanism: `scrollToIndex()` now calls the track's own
+// `scrollTo({ left, behavior: 'smooth' })` instead of writing `scrollLeft`
+// by hand -- the browser's native smooth-scroll animates it with the same
+// physics/easing it already uses for momentum scrolling and programmatic
+// smooth-scrolls generally, so "arrow glide" and "swipe" are now, by
+// construction, the same code path doing the scrolling, just triggered
+// two different ways. `NAV_EASE_MS`/`easeOutCubic` (fix #30) are gone --
+// nothing left to tune by hand. `autoScrollCancel`/`autoScrolling` and the
+// rAF-cancellation plumbing they existed for are gone too: native smooth-
+// scroll doesn't need an explicit cancel handle the way a hand-rolled tween
+// did -- calling `scrollTo()` again (a quick double-tap on an arrow) or a
+// real touch starting mid-glide both simply retarget/interrupt the
+// browser's own in-flight smooth-scroll, standard behaviour, no JS needed
+// to arbitrate between the two. `onPointerDown`'s old explicit cancel call
+// is gone for the same reason -- a real touch already wins over a
+// programmatic smooth-scroll without any help.
+//
+// What's left for JS to do (updated, post #33-#37):
 //   1. Know which REAL card is centred (0..COUNT-1, never a clone's
-//      position), to drive `.is-current` (and now also whether Discover
-//      renders at all, fix #34) -- done by reading the track's scrollLeft
-//      once scrolling goes idle and mapping it through realIndexOf() (see
-//      finishAt()/settle() below).
+//      position), to drive `.is-current` -- done by reading the track's
+//      scrollLeft once scrolling goes idle and mapping it through
+//      realIndexOf() (see finishAt()/settle() below).
 //   2. Drive a prev/next BUTTON tap's glide (scrollToIndex below) -- native
-//      swipe/wheel scrolling never touches this at all.
+//      swipe/wheel scrolling never touches this at all. As of fix #37 this
+//      is a thin wrapper over the track's own native `scrollTo({behavior:
+//      'smooth'})`, not a hand-rolled per-frame tween.
 //   3. Silently correct the scroll position back onto a real slot whenever
 //      native scrolling (or a button glide) settles on one of the two
 //      cloned end slots (fix #25) -- see finishAt() below.
@@ -334,10 +395,15 @@ function realIndexOf(p) {
 // directly at the same effective on-screen size instead). MUST stay in
 // sync with home-mobile.css's `.card-slot`/`.car2-track` rules, which
 // hardcode these same numbers (cross-referenced in a comment there too).
-// Fix #26: shrunk from 255x340 -- see home-mobile.css's matching comment on
-// why this (not just trimming the gaps around it) is the real lever for
-// the "cramped" complaint; aspect ratio (3:4) kept identical.
-const CARD_W = 216;
+// Fix #26: shrunk from 255x340 to 216x288 (same 3:4 ratio) to fix a
+// "cramped" complaint. Fix #36 (2026-10-28, next conversation): grown
+// again, to 252x336 (still 3:4) -- fix #35's removal of Discover freed up
+// the vertical room Discover + its two gaps used to occupy, and Victoria
+// asked for that freed space to go into making the cards themselves
+// bigger rather than just sitting empty. See home-mobile.css's matching
+// `.card-slot`/`.car2-track`/`.car2-nav` comment for the exact vertical
+// accounting of where the freed space went.
+const CARD_W = 252;
 const CARD_GAP = 20;
 // Centre-to-centre scroll distance between adjacent cards. Since every
 // card is the same width with a fixed gap, and the track's side padding is
@@ -356,27 +422,19 @@ const PAGE_W = CARD_W + CARD_GAP;
 // rest also reads as "falling" in motion, and no constant satisfies both).
 // Do not re-add this without re-reading that section first.
 
-// Duration/easing for the prev/next BUTTON glide only -- native swipe/wheel
-// scrolling bypasses this entirely and is driven purely by the browser's
-// own scroll-snap physics (no JS in the loop, so no per-frame React cost
-// to worry about, unlike the old arc system's settle tween). Chosen to
-// read as a deliberate, soft glide; not tuned against the old system's
-// NAV_EASE_DUR_MS/CURVE numbers, since the underlying motion mechanism
-// (compositor-driven native scroll vs. a CSS transform transition) is
-// fundamentally different now.
-// Fix #30 (2026-10-28, next conversation): was 420ms + easeInOutCubic.
-// Victoria reported the arrow glide specifically (not swipe) felt
-// unresponsive, "like it's loading" -- easeInOutCubic spends its first
-// ~150-200ms barely moving (a slow ease-IN) before visibly picking up,
-// which reads as a dead zone right after the tap rather than an immediate
-// response to it. Switched to a plain ease-OUT curve (full speed from the
-// first frame, decelerating only into the landing) and trimmed the
-// duration, matching how a native swipe's own deceleration already feels
-// much more closely than the old symmetric ease did.
-const NAV_EASE_MS = 320;
-function easeOutCubic(t) {
-  return 1 - Math.pow(1 - t, 3);
-}
+// The prev/next BUTTON glide used to be driven by a hand-rolled
+// requestAnimationFrame tween right here (NAV_EASE_MS/easeOutCubic, fix
+// #30) -- necessary while the arc transform (fix #23-#29) existed, since
+// every scrollLeft write needed to happen frame-by-frame to keep that
+// transform in sync regardless of what drove the scroll. Fix #33 removed
+// the arc, so that constraint is gone; fix #37 (2026-10-28, next
+// conversation) replaced the hand-rolled tween with the track's own native
+// `scrollTo({behavior:'smooth'})` instead -- see scrollToIndex() below and
+// this file's header comment, "Fix #35/#36/#37" section, for the full why
+// (Victoria asked the arrow glide to feel identical to a swipe, and the
+// most direct way to guarantee that is to have both use the exact same
+// underlying scroll mechanism). No easing constant left to tune here --
+// the browser owns that now.
 
 export default function HomeMobile() {
   // -1 while the track is mid-scroll (dragging, flicking, or an in-flight
@@ -450,8 +508,6 @@ export default function HomeMobile() {
     if (!track) return;
 
     let scrollTimer = null; // idle-detection fallback, cleared below on unmount
-    let autoScrollCancel = null; // cancels an in-flight prev/next glide, see scrollToIndex()
-    let autoScrolling = false; // true only while scrollToIndex()'s own rAF loop is writing scrollLeft
     // Newer engines fire a real 'scrollend' event the instant native
     // scrolling (including momentum/snap) comes to rest -- far more
     // precise than guessing from an idle timer. Where it's missing
@@ -497,21 +553,19 @@ export default function HomeMobile() {
     //
     // markSuppressed() runs here UNCONDITIONALLY, not just on the two
     // clone/correction positions -- found necessary while testing fix #25
-    // live: 'scrollend' turned out not to fire reliably for ANY sequence of
-    // plain JS scrollLeft writes in this environment (confirmed both for
-    // the single instant correction jump below AND for scrollToIndex()'s
-    // own 420ms rAF tween, which also writes scrollLeft directly, once per
-    // frame, rather than through a native scrollTo({behavior:'smooth'})
-    // call the browser recognises as one continuous "scroll" -- apparently
-    // neither pattern reliably ends in a 'scrollend'). Without this,
-    // scrollToIndex()'s own completion had the same failure mode the
-    // mount-jump regression above did: autoScrolling flips back to false
-    // synchronously, before the 'scroll' event from that same final write
-    // has actually been dispatched, so that trailing event lands in
-    // onScroll's NORMAL (non-autoScrolling) branch, sets currentIndex to
-    // -1, and -- with no 'scrollend' arriving afterward to run settle() --
-    // nothing ever set it back. A short suppress window after every settle
-    // (native-scroll-driven or not) absorbs that trailing event too.
+    // live: 'scrollend' turned out not to fire reliably for a plain JS
+    // scrollLeft write in this environment (confirmed on the instant
+    // correction jump right below). A short suppress window after every
+    // settle absorbs whatever stray trailing 'scroll'/'scrollend' noise
+    // that non-gesture write provokes. (Fix #37, 2026-10-28, next
+    // conversation: this used to also cover scrollToIndex()'s own
+    // hand-rolled rAF tween, which wrote scrollLeft directly once per frame
+    // and had the exact same unreliable-scrollend problem -- that tween is
+    // gone now, replaced by the track's native scrollTo({behavior:
+    // 'smooth'}), which the browser recognises as one continuous scroll and
+    // so is expected to behave like any other native scroll here, same as
+    // a real swipe -- see scrollToIndex() below. The hasScrollEnd idle-timer
+    // fallback a few lines down remains the safety net either way.)
     function finishAt(extIdx) {
       setCurrentIndex(realIndexOf(extIdx));
       if (extIdx === 0 || extIdx === EXT_COUNT - 1) {
@@ -562,7 +616,6 @@ export default function HomeMobile() {
       // 'scrollend' to run settle() afterward -- confirmed while testing
       // this fix, see suppressSettleRef's comment).
       if (suppressSettleRef.current) return;
-      if (autoScrolling) return; // scrollToIndex() drives its own currentIndex updates, see below
       setCurrentIndex((prev) => (prev === -1 ? prev : -1));
       if (!hasScrollEnd) {
         clearTimeout(scrollTimer);
@@ -571,34 +624,43 @@ export default function HomeMobile() {
     }
     function onScrollEnd() {
       if (suppressSettleRef.current) return; // same reasoning as onScroll above
-      if (autoScrolling) return;
       clearTimeout(scrollTimer);
       settle();
     }
-    // A real touch/mouse drag starting on the track takes over scrollLeft
-    // natively -- cancel any JS-driven prev/next glide still in flight so
-    // the two never fight over the same property in the same frame (same
-    // "an interrupt always wins cleanly" principle as the old system's
-    // stopEasing(), just far simpler here since there's no visual position
-    // to reconstruct -- the browser already knows exactly where the
-    // content is mid-drag).
-    function onPointerDown() {
-      if (autoScrollCancel) {
-        autoScrollCancel();
-        autoScrollCancel = null;
-      }
-      autoScrolling = false;
-    }
+    // Fix #37 (2026-10-28, next conversation) removed the old onPointerDown
+    // handler that used to live here: it existed only to cancel an
+    // in-flight hand-rolled rAF tween (scrollToIndex()'s old mechanism, fix
+    // #30) the instant a real touch/drag took over, so the two never fought
+    // over scrollLeft in the same frame. Now that scrollToIndex() uses the
+    // track's own native scrollTo({behavior:'smooth'}) instead (see below),
+    // there's nothing left to cancel by hand -- a real touch/drag starting
+    // on the track already interrupts any in-flight native smooth-scroll on
+    // its own, standard browser behaviour, no JS needed.
 
-    // Animates track.scrollLeft to the target extended-strip position's
-    // snap position over NAV_EASE_MS with easeInOutCubic. Used by the
-    // prev/next buttons only -- see this file's header comment for why
-    // native swipe/wheel never run this. Safe to call again mid-glide (a
-    // quick double-tap on an arrow): it starts its `from` at the track's
-    // actual current scrollLeft, same "pick up from wherever it visually
-    // is" principle as the old commitTo()/currentVisualPos(), simpler here
-    // because scrollLeft IS the visual position already, nothing to
-    // reconstruct. Clamped to the FULL extended range (0..EXT_COUNT-1,
+    // Animates the track to the target extended-strip position's snap
+    // point. Used by the prev/next buttons only -- see this file's header
+    // comment for why native swipe/wheel never run this. Fix #37
+    // (2026-10-28, next conversation): this used to drive its own
+    // requestAnimationFrame tween with a hand-picked easing curve
+    // (NAV_EASE_MS/easeOutCubic, fix #30) -- necessary while the arc
+    // transform (fix #23-#29) existed, since every scrollLeft write needed
+    // to happen frame-by-frame to stay in sync with it regardless of what
+    // drove the scroll. Fix #33 removed that constraint along with the arc
+    // itself, and Victoria separately asked the arrow glide to feel
+    // identical to a swipe ("que se vea igual a como si estuviera haciendo
+    // swipe") -- a hand-rolled tween can only ever approximate the native
+    // swipe's own momentum/deceleration curve, never match it exactly, so
+    // this now calls the track's own native scrollTo({behavior:'smooth'})
+    // instead: the browser animates it with the SAME physics/easing it
+    // already uses for a real swipe's momentum, guaranteeing an identical
+    // feel by construction rather than approximating it by trial and error.
+    // onScroll/onScrollEnd (above) handle the rest exactly as they would
+    // for a real swipe -- no special-casing needed here any more: there's
+    // no separate "programmatic vs. real scroll" state to track any more
+    // (the old autoScrolling/autoScrollCancel are gone), and a quick
+    // double-tap on an arrow just redirects the browser's own in-flight
+    // smooth-scroll to the new target, standard behaviour, no cancellation
+    // code required. Clamped to the FULL extended range (0..EXT_COUNT-1,
     // fix #25) rather than the real 0..COUNT-1 range -- tapping prev on
     // the first real card (or next on the last) now glides one slot
     // further, onto the matching clone, and finishAt() (below) silently
@@ -606,36 +668,12 @@ export default function HomeMobile() {
     function scrollToIndex(idx) {
       const clamped = Math.max(0, Math.min(EXT_COUNT - 1, idx));
       const target = clamped * PAGE_W;
-      if (autoScrollCancel) {
-        autoScrollCancel();
-        autoScrollCancel = null;
-      }
-      const start = track.scrollLeft;
-      const change = target - start;
-      if (Math.abs(change) < 1 || prefersReducedMotion()) {
+      if (Math.abs(target - track.scrollLeft) < 1 || prefersReducedMotion()) {
         track.scrollLeft = target;
-        autoScrolling = false;
         finishAt(clamped);
         return;
       }
-      autoScrolling = true;
-      setCurrentIndex(-1);
-      const startTime = performance.now();
-      let rafId2;
-      function step(now) {
-        const frac = Math.min(1, (now - startTime) / NAV_EASE_MS);
-        track.scrollLeft = start + change * easeOutCubic(frac);
-        if (frac < 1) {
-          rafId2 = requestAnimationFrame(step);
-          autoScrollCancel = () => cancelAnimationFrame(rafId2);
-        } else {
-          autoScrolling = false;
-          autoScrollCancel = null;
-          finishAt(clamped);
-        }
-      }
-      rafId2 = requestAnimationFrame(step);
-      autoScrollCancel = () => cancelAnimationFrame(rafId2);
+      track.scrollTo({ left: target, behavior: 'smooth' });
     }
 
     // Prev/next buttons (rendered on the centred card only -- see render
@@ -653,15 +691,12 @@ export default function HomeMobile() {
 
     track.addEventListener('scroll', onScroll, { passive: true });
     if (hasScrollEnd) track.addEventListener('scrollend', onScrollEnd);
-    track.addEventListener('pointerdown', onPointerDown);
 
     return () => {
       clearTimeout(scrollTimer);
       clearTimeout(suppressTimer);
-      if (autoScrollCancel) autoScrollCancel();
       track.removeEventListener('scroll', onScroll);
       if (hasScrollEnd) track.removeEventListener('scrollend', onScrollEnd);
-      track.removeEventListener('pointerdown', onPointerDown);
     };
   }, []);
 
@@ -744,33 +779,18 @@ export default function HomeMobile() {
                         </>
                       )}
                     </Link>
-                    {/* Discover: used to render on every slot (prev/next
-                        arrows also used to live here, until fix #31 pulled
-                        those out into the persistent `.car2-nav` below).
-                        Fix #34 (2026-10-28, next conversation): now renders
-                        ONLY on the centred slot (`isCurrent`) -- Victoria
-                        asked for this once neighbour cards stopped sitting
-                        mostly out of reach under the arc (fix #33) and
-                        started showing flat and clearly visible at the
-                        sides, where a second/third visible Discover button
-                        either side of the centred one just read as
-                        clutter. The whole card stays tappable regardless
+                    {/* Discover is gone entirely as of fix #35 (2026-10-28,
+                        next conversation) -- used to render per-slot, then
+                        (fix #34) only on the centred slot. Victoria asked
+                        for it to be dropped altogether now that the whole
+                        card has always been tappable to open its project
                         (`.card-face`'s own Link/handleCardOpen, above,
-                        isn't gated on `isCurrent`), so a neighbouring card
-                        is still one tap away from its project -- it just
-                        no longer shows its own button to say so. */}
-                    {isCurrent && (
-                      <div className="card-cta">
-                        <Link
-                          className="btn-primary btn-discover"
-                          href={href}
-                          draggable="false"
-                          onClick={(e) => handleCardOpen(e, card)}
-                        >
-                          Discover
-                        </Link>
-                      </div>
-                    )}
+                        since fix #20 -- true for centred AND neighbouring
+                        cards alike), so the explicit button was a redundant
+                        affordance. The vertical room it used to occupy
+                        (card-to-Discover gap + Discover's own box + gap to
+                        the arrows) went into making the card itself bigger
+                        instead -- see fix #36/CARD_W/CARD_H below. */}
                   </div>
                 );
               })}

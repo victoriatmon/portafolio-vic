@@ -31,8 +31,18 @@
    moved it down, Victoria wanted up): 170px -> 162px. .car2-ring/.car2-ticks
    and every .card-slot (cards, Discover, prev/next) are all positioned
    relative to THIS element, so moving .car2's own `top` moves the whole
-   group together in one place instead of touching each child's offset. */
-.home-mobile-scope .car2 { position: absolute; left: 0; right: 0; top: 162px; height: 520px; touch-action: pan-y; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+   group together in one place instead of touching each child's offset.
+   Fix #17: Victoria then asked for the CARD ART ONLY to move another 8px
+   up, while Discover + the prev/next arrows stay exactly where fix #16 put
+   them. .car2's `top` is the one offset shared by every descendant, so
+   moving it alone (162px -> 154px) shifts everything -- cards AND
+   Discover/arrows -- up together. To cancel that for just the CTA row,
+   .card-cta's own `top` below gained a matching +8px (18px -> 26px): since
+   .card-cta is positioned relative to .card-slot (not directly to .car2),
+   that local +8px exactly offsets the -8px all of .car2's children just
+   inherited, so Discover + the arrows land back at their fix #16 screen
+   position while the card face is the only thing that actually moved. */
+.home-mobile-scope .car2 { position: absolute; left: 0; right: 0; top: 154px; height: 520px; touch-action: pan-y; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .home-mobile-scope .car2-ring { position: absolute; left: 50%; top: 210px; width: 0; height: 0; }
 .home-mobile-scope .car2-ticks { position: absolute; left: calc(50% - 910px); top: 200px; width: 1820px; height: 1820px; border-radius: 50%; pointer-events: none;
   background: repeating-conic-gradient(from -0.06deg at 50% 50%, rgba(255,255,255,0.30) 0deg 0.12deg, transparent 0.12deg 1.1deg);
@@ -138,7 +148,11 @@
 .home-mobile-scope .card-cta {
   position: absolute;
   left: 50%;
-  top: calc(100% + 18px);
+  /* +8px (fix #17, was +18px): counteracts .car2's own -8px `top` move
+     above, so this row (Discover + the prev/next arrows) keeps its fix #16
+     screen position while the card face above it moves up on its own --
+     see the comment on .car2's `top` for the full reasoning. */
+  top: calc(100% + 26px);
   transform: translateX(-50%);
   display: flex;
   flex-direction: column;

@@ -19,6 +19,12 @@
 // if its content needs more height than the viewport.
 //
 // ===== Carousel, rebuilt 2026-10-28, arc visual restored same day =====
+// NOTE (next conversation, fix #33): the arc described in this whole
+// history section -- and every fix below that tunes it (#23/#27/#28/#29) --
+// was ultimately REMOVED entirely. Kept here for history/context (and so a
+// future session doesn't re-add it without reading why first); see the
+// "Fix #33/#34" section below, right after fix #32, for the removal itself
+// and the reasoning.
 // The project carousel below was rewritten from scratch, replacing a
 // trigonometric ARC layout (each card placed via sin/cos around a 900px-
 // radius circle, advanced by a hand-rolled pointer-drag + CSS-transition
@@ -169,19 +175,87 @@
 // `top` (160px -> 168px) -- same lever fix #20/#23/#26 already used for
 // this exact gap, just nudged once more per this round's explicit request.
 //
-// What's left for JS to do (updated):
+// ===== Fix #33/#34 (2026-10-28, next conversation, from Victoria's video of
+// #29-32 live) =====
+// Victoria sent a screen recording of the #29-32 preview and reported the
+// carousel now read as "más como una línea recta" (more like a straight
+// line) instead of curved, and that both swipe- and arrow-driven motion
+// still "se ve muy raro" (looks weird) to her -- despite #29/#30 being
+// specifically aimed at calming that same motion down. She asked directly
+// why this kept being so complicated for what should be "una experiencia
+// normal de un carrusel" (a normal carousel experience), and described her
+// actual target: a centred card, the previous card visibly leaving on the
+// left, the next card peeking on the right, swipe OR the arrows advancing
+// one card at a time -- a plain flat carousel, no curve requirement stated
+// at all. She also asked whether removing Discover from the non-centred
+// cards would help.
+//
+// Root cause, diagnosed this round rather than tuned around again: the
+// rotate()+translateY() arc is ONE transform trying to satisfy two
+// requests that are in direct tension through that same mechanism. The
+// translateY term is what reads as "curved" when a card is at rest (fix
+// #23's original ask) -- but that exact term is also what reads as
+// "weight"/"falling" the instant it's animated continuously via the fix
+// #24 rAF loop during a swipe or arrow glide (fix #28/#29's complaints).
+// Turning translateY down (DROP_SCALE, fix #29) to kill the falling feeling
+// necessarily flattens the curve too, since the rotation component alone
+// (~5deg at d=1, even before DROP_SCALE) is too subtle on its own to read
+// as "curved" -- which is exactly what Victoria's video showed. This
+// tension, not a wrong constant, is why fix #23 -> #28 -> #29 kept
+// trading one complaint for the other instead of converging: no single
+// RC/DROP_SCALE/STEP value satisfies both "curved at rest" and "doesn't
+// feel heavy in motion" through one rotate+translateY transform.
+// Recommended (and, via AskUserQuestion, Victoria-approved) resolution:
+// remove the arc transform entirely rather than attempt a fourth tuning
+// round. This reverts the carousel's visual shape to the flat, scroll-
+// snap-only layout fix #20 already proved rock-solid (zero bugs across
+// every round since) -- which also happens to be a literal description of
+// Victoria's own stated target UX above. Concretely: applyArc(), the
+// tick()/rafId loop, and the RC/DROP_SCALE/STEP/ARC_HIDE_AT constants are
+// gone; `.card-slot` is never written a `transform` by JS any more, so
+// cards simply sit at their native flex-row position, left-to-right, same
+// as any other horizontally-paged mobile UI. The now-unnecessary per-slot
+// `visibility`/`zIndex` writes applyArc() used to also do (to hide cards
+// beyond ARC_HIDE_AT and layer the centred one on top, both needed only
+// because rotated cards could visually overlap) are gone too -- with no
+// rotation, cards never overlap, and `.car2-track`'s own
+// `overflow-x: auto` already clips anything outside the viewport, so a
+// neighbour simply "peeks" in from each side by construction (exactly the
+// look Victoria asked for), no JS visibility logic required. Everything
+// else from the #20/#24(partial)/#25/#27/#30/#31/#32 era is UNCHANGED: the
+// wraparound clone mechanism (realIndexOf()/EXT_COUNT/finishAt()'s
+// correction), the SVG id-namespacing (lib/svgNamespace.js), the
+// scrollToIndex() easeOutCubic glide for the prev/next buttons (fix #30 --
+// nothing about that easing was ever about the arc, only about how the
+// horizontal motion itself feels), the persistent `.car2-nav` arrows (fix
+// #31), and the 8px spacing (fix #32).
+//
+// #34 -- Discover hidden on non-centred cards: approved in the same
+// AskUserQuestion exchange. Previously every visible slot (including
+// partially-visible neighbours) rendered its own Discover button --
+// reasonable when neighbours sat mostly out of reach under the arc, but
+// now that neighbours sit flat and clearly visible at the sides, two
+// visible Discover buttons either side of the centred one read as
+// clutter. Discover now renders only when a slot `isCurrent` (see the
+// render below) -- the whole card remains tappable via `.card-face`'s own
+// Link/handleCardOpen regardless of centred state, so a neighbouring card
+// is still one tap away from its project, just without its own visible
+// button.
+//
+// What's left for JS to do (updated, post #33/#34):
 //   1. Know which REAL card is centred (0..COUNT-1, never a clone's
-//      position), to drive `.is-current` -- done by reading the track's
-//      scrollLeft once scrolling goes idle and mapping it through
-//      realIndexOf() (see finishAt()/settle() below).
+//      position), to drive `.is-current` (and now also whether Discover
+//      renders at all, fix #34) -- done by reading the track's scrollLeft
+//      once scrolling goes idle and mapping it through realIndexOf() (see
+//      finishAt()/settle() below).
 //   2. Drive a prev/next BUTTON tap's glide (scrollToIndex below) -- native
 //      swipe/wheel scrolling never touches this at all.
-//   3. Continuously recompute and write each slot's arc transform, at the
-//      display's own frame rate, independent of 'scroll' event timing
-//      (fix #24) -- see applyArc()/the tick() loop in the effect below.
-//   4. Silently correct the scroll position back onto a real slot whenever
+//   3. Silently correct the scroll position back onto a real slot whenever
 //      native scrolling (or a button glide) settles on one of the two
 //      cloned end slots (fix #25) -- see finishAt() below.
+// (The old #3 here -- continuously recomputing/writing an arc transform at
+// the display's own frame rate, fix #24 -- is gone along with the arc
+// itself, fix #33.)
 // Card width (CARD_W/CARD_GAP below) is direct pixel sizing, no extra scale
 // transform -- see home-mobile.css's matching .card-slot/.car2-track rules,
 // which MUST stay numerically in sync with these. Card HEIGHT lives only in
@@ -249,7 +323,7 @@ const EXT_COUNT = COUNT + 2;
 // card, positions 1..COUNT are the real cards in order, and position
 // EXT_COUNT-1 is a clone of the FIRST real card -- so this wraps cleanly
 // with a single modulo, no special-casing needed anywhere it's used
-// (render, applyArc, the wraparound correction in finishAt): the two clone
+// (render, the wraparound correction in finishAt): the two clone
 // positions simply map to the same real index as their real counterpart.
 function realIndexOf(p) {
   return ((p - 1) % COUNT + COUNT) % COUNT;
@@ -273,53 +347,14 @@ const CARD_GAP = 20;
 // scrollLeft pointing at".
 const PAGE_W = CARD_W + CARD_GAP;
 
-// Arc visual: rotate()/translateY() layered on top of the native scroll
-// position, same shape of math as HomeDesktop.js's own RC/STEP (see that
-// file) -- `ang = d*STEP`, `translateY = RC*(1-cos(ang))`. STEP is derived
-// (not a fixed degree count, unlike desktop's own STEP=17) from RC and
-// PAGE_W: the angle at which the arc's chord length equals PAGE_W, so
-// adjacent cards keep landing visually close to PAGE_W apart even though
-// the arc's true horizontal placement is non-linear (this value is only
-// used for the rotation/vertical-drop added on top here; actual left-right
-// placement still comes from native scroll, see the effect below and this
-// file's header comment). Raising RC flattens the whole arc -- same
-// derivation, gentler curve -- without breaking that chord-length
-// invariant, which is the lever fix #28 below pulls.
-//
-// Fix #28 (2026-10-28): RC was 900 (reusing the pre-fix-#20 mobile arc's
-// own value) until Victoria reported the carousel "tilting toward the
-// bottom-right corner" on every swipe/arrow tap. At RC=900 the nearest
-// visible neighbour (d=1) rotated ~15 deg and dropped ~32px, growing to
-// ~35 deg / ~163px at the ARC_HIDE_AT cutoff -- fine as an occasional,
-// chunky jump under the PRE-fix-#24 throttled updates, but fix #24 made
-// this same transform recompute every frame, so a real swipe now visibly
-// sweeps a card through that full rotation+drop as it slides toward
-// centre -- which is exactly what reads as "the whole thing tilts". RC=2600
-// (~3x) keeps the arc (Victoria asked fix #23 restore it, not remove it)
-// but cuts that sweep to ~5 deg / ~11px at d=1, ~12 deg / ~57px at the
-// cutoff -- still a visible curve, just no longer dramatic enough to read
-// as a tilt. ARC_HIDE_AT left as-is; raising RC alone already shrinks the
-// worst-case rotation/drop at every distance, no need to also hide cards
-// sooner.
-//
-// Fix #29 (2026-10-28, next conversation): RC=2600 cut the SWEEP, but
-// Victoria still read the combined rotate+translateY as the card "falling"
-// toward the bottom-right corner (worse on the arrow glide -- see fix #30
-// and this file's header comment for the full report). The translateY
-// term is what actually looks like weight/gravity pulling a card down;
-// the rotation alone just reads as a lean/tilt (the part Victoria asked
-// fix #23 to bring back). DROP_SCALE lets the drop be dialled down
-// independently of the rotation, instead of pushing RC even higher (which
-// would flatten the rotation too). Still using the same `ang`/STEP as the
-// rotation -- see applyArc() below -- just multiplying the resulting `y`
-// by this fraction before writing it.
-const RC = 2600;
-const DROP_SCALE = 0.45;
-const STEP = (Math.asin(PAGE_W / RC) * 180) / Math.PI;
-// Cards beyond this many slots from centre are hidden outright (matches
-// desktop's own cutoff, scaled -- six cards never need more than ~2 to be
-// visible either side in a strip this narrow anyway).
-const ARC_HIDE_AT = 2.3;
+// Arc visual (rotate()/translateY() layered on top of the native scroll
+// position, same shape of math as HomeDesktop.js's own RC/STEP) used to be
+// defined right here -- RC/DROP_SCALE/STEP/ARC_HIDE_AT, tuned across fix
+// #23/#27/#28/#29. Removed entirely by fix #33 (2026-10-28, next
+// conversation) -- see this file's header comment, "Fix #33/#34" section,
+// for the full why (the same translateY term that reads as "curved" at
+// rest also reads as "falling" in motion, and no constant satisfies both).
+// Do not re-add this without re-reading that section first.
 
 // Duration/easing for the prev/next BUTTON glide only -- native swipe/wheel
 // scrolling bypasses this entirely and is driven purely by the browser's
@@ -364,13 +399,6 @@ export default function HomeMobile() {
   // can reach the scrollToIndex() closure defined inside that effect
   // without re-creating it on every render.
   const navRef = useRef({ prev() {}, next() {} });
-  // One DOM node per STRIP POSITION (0..EXT_COUNT-1, including the two
-  // fix-#25 clone slots), set via the inline ref callback in the render
-  // below -- applyArc() (in the effect below) writes the rotate()/
-  // translateY() arc transform straight to these on every animation frame,
-  // bypassing React state/re-render entirely (see this file's header
-  // comment).
-  const cardSlotRefs = useRef([]);
   // True for a short window after a scrollLeft write this effect makes on
   // its own (the fix-#25 initial positioning jump, or a wraparound
   // correction in finishAt()), so the 'scroll'/'scrollend' noise that
@@ -448,56 +476,12 @@ export default function HomeMobile() {
     // for a stray event to slip through before this call.
     markSuppressed();
 
-    // Writes the arc transform (rotate + vertical drop, see RC/STEP above)
-    // to every slot in the EXTENDED strip (fix #25 -- includes the two
-    // cloned end slots, same math, no special-casing needed) for a given
-    // continuous centre position `pos` (a float -- the fractional strip
-    // position the track is currently scrolled to, NOT just the settled
-    // integer position). Direct DOM writes, no setState -- see the
-    // continuous rAF loop below (fix #24) that drives this every frame;
-    // going through React here would reintroduce exactly the per-frame-
-    // re-render cost fix #13 moved away from (see
-    // contexto-portafolio-vercel.md).
-    function applyArc(pos) {
-      const cards = cardSlotRefs.current;
-      for (let i = 0; i < EXT_COUNT; i++) {
-        const el = cards[i];
-        if (!el) continue;
-        const d = i - pos; // signed, continuous distance from centre, over the extended strip
-        const ang = d * STEP;
-        // DROP_SCALE (fix #29): same `ang` drives the rotation as always;
-        // only the vertical-drop term is scaled down independently, so the
-        // "lean" stays but the "falls toward the corner" sensation doesn't.
-        const y = RC * (1 - Math.cos((ang * Math.PI) / 180)) * DROP_SCALE;
-        el.style.transform = `rotate(${ang.toFixed(3)}deg) translateY(${y.toFixed(2)}px)`;
-        el.style.visibility = Math.abs(d) > ARC_HIDE_AT ? 'hidden' : 'visible';
-        el.style.zIndex = String(Math.round(100 - Math.abs(d) * 10));
-      }
-    }
-    // Fix #24: a plain rAF loop polling track.scrollLeft every frame,
-    // instead of only recomputing inside the 'scroll' event handler (the
-    // old scheduleArc()/arcScheduled). WebKit on iOS coalesces/throttles
-    // 'scroll' dispatch far more than Chrome during native momentum, which
-    // made the old approach update the arc in occasional big jumps on a
-    // real iPhone -- reading as "robotic"/stepped motion -- even though it
-    // looked smooth in this environment's Chromium test browser (which
-    // doesn't throttle the same way). Polling scrollLeft directly,
-    // independent of whether/when 'scroll' fires, decouples the arc's
-    // update rate from the engine's event cadence entirely: it now runs at
-    // the display's own refresh rate regardless of engine. The loop runs
-    // for the component's whole lifetime (cancelled on unmount below) --
-    // the per-frame cost is trivial (EXT_COUNT little trig calcs + style
-    // writes), so there's no real benefit to pausing it while idle, and
-    // pausing/resuming it correctly around every possible interaction
-    // (touch, wheel, button glide, programmatic correction) would be far
-    // more code than the loop itself.
-    let rafId;
-    function tick() {
-      applyArc(track.scrollLeft / PAGE_W);
-      rafId = requestAnimationFrame(tick);
-    }
-    applyArc(track.scrollLeft / PAGE_W); // correct from first paint, before the loop's first frame
-    rafId = requestAnimationFrame(tick);
+    // Fix #33 removed the arc transform entirely -- this effect used to
+    // also run a per-frame rAF loop (fix #24) writing rotate()/translateY()
+    // to every `.card-slot` here. No replacement is needed: with no
+    // transform, cards simply sit at their native flex-row position, so
+    // there's nothing left to continuously recompute (see this file's
+    // header comment, "Fix #33/#34" section, for the full why).
 
     // Sets currentIndex from a settled extended-strip position AND, if
     // that position is one of the two fix-#25 clone slots, silently
@@ -675,7 +659,6 @@ export default function HomeMobile() {
       clearTimeout(scrollTimer);
       clearTimeout(suppressTimer);
       if (autoScrollCancel) autoScrollCancel();
-      cancelAnimationFrame(rafId);
       track.removeEventListener('scroll', onScroll);
       if (hasScrollEnd) track.removeEventListener('scrollend', onScrollEnd);
       track.removeEventListener('pointerdown', onPointerDown);
@@ -734,9 +717,6 @@ export default function HomeMobile() {
                   <div
                     className="card-slot"
                     style={{ '--i': p }}
-                    ref={(el) => {
-                      cardSlotRefs.current[p] = el;
-                    }}
                     key={p}
                   >
                     <Link
@@ -764,45 +744,52 @@ export default function HomeMobile() {
                         </>
                       )}
                     </Link>
-                    {/* Discover only, as of fix #31 -- the prev/next arrows
-                        used to render here too (hidden on every slot but
-                        the current one via a CSS opacity rule keyed to
-                        `.is-current`), which is what made them read as
-                        disappearing/shifting on every advance: see this
-                        file's header comment and `.car2-nav` below, which
-                        replaces them with one persistent pair outside the
-                        scrolling/transformed strip entirely. Discover
-                        itself deliberately keeps rendering per-slot,
-                        unchanged -- letting a tap reach a neighbouring,
-                        partially-visible card's own project directly is a
-                        real feature, not something Victoria has asked to
-                        change. */}
-                    <div className="card-cta">
-                      <Link
-                        className="btn-primary btn-discover"
-                        href={href}
-                        draggable="false"
-                        onClick={(e) => handleCardOpen(e, card)}
-                      >
-                        Discover
-                      </Link>
-                    </div>
+                    {/* Discover: used to render on every slot (prev/next
+                        arrows also used to live here, until fix #31 pulled
+                        those out into the persistent `.car2-nav` below).
+                        Fix #34 (2026-10-28, next conversation): now renders
+                        ONLY on the centred slot (`isCurrent`) -- Victoria
+                        asked for this once neighbour cards stopped sitting
+                        mostly out of reach under the arc (fix #33) and
+                        started showing flat and clearly visible at the
+                        sides, where a second/third visible Discover button
+                        either side of the centred one just read as
+                        clutter. The whole card stays tappable regardless
+                        (`.card-face`'s own Link/handleCardOpen, above,
+                        isn't gated on `isCurrent`), so a neighbouring card
+                        is still one tap away from its project -- it just
+                        no longer shows its own button to say so. */}
+                    {isCurrent && (
+                      <div className="card-cta">
+                        <Link
+                          className="btn-primary btn-discover"
+                          href={href}
+                          draggable="false"
+                          onClick={(e) => handleCardOpen(e, card)}
+                        >
+                          Discover
+                        </Link>
+                      </div>
+                    )}
                   </div>
                 );
               })}
             </div>
             {/* Fix #31: a single, persistent prev/next pair, outside
-                `.car2-track` entirely -- never inside anything the arc
-                transform (applyArc(), above) touches, and never opacity-
-                toggled by `.is-current`. Previously these were duplicated
-                once per `.card-slot` and hidden/shown by CSS, which is what
-                made them read as disappearing (every swipe/tap sets
-                currentIndex to -1 for the scroll's whole duration, so no
-                slot's copy was "current" meanwhile) and shifting (each
-                copy's on-screen spot only matched up to whatever that
-                slot's own live transform happened to be). One fixed DOM
-                node pair in one fixed CSS position (see home-mobile.css's
-                `.car2-nav`) has nothing left in it that could do either. */}
+                `.car2-track` entirely -- never inside anything per-slot
+                (at the time, the arc transform; fix #33 later removed that
+                transform too, but the structural reasoning for keeping the
+                arrows OUT of the per-slot strip still holds for any future
+                per-slot effect), and never opacity-toggled by `.is-current`.
+                Previously these were duplicated once per `.card-slot` and
+                hidden/shown by CSS, which is what made them read as
+                disappearing (every swipe/tap sets currentIndex to -1 for
+                the scroll's whole duration, so no slot's copy was "current"
+                meanwhile) and shifting (each copy's on-screen spot only
+                matched up to whatever that slot's own live transform
+                happened to be). One fixed DOM node pair in one fixed CSS
+                position (see home-mobile.css's `.car2-nav`) has nothing
+                left in it that could do either. */}
             <div className="car2-nav">
               <button
                 type="button"

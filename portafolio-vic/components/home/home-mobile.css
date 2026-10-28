@@ -37,31 +37,29 @@
    this exact pair. */
 .home-mobile-scope .intro2-title { margin: 0 auto; max-width: 334px; text-wrap: balance; font-family: 'Pavanam', 'Manrope', sans-serif; font-weight: 400; font-size: 28px; line-height: 1.16; color: #E8E8E8; }
 .home-mobile-scope .intro2-title .accent-italic { font-family: 'Spectral', 'Pavanam', serif; font-style: italic; font-size: 31px; line-height: 1; }
-/* ===== Rebuilt 2026-10-28: scroll-snap-driven ARC carousel =====
+/* ===== Rebuilt 2026-10-28: scroll-snap-driven carousel =====
    Replaces the old trigonometric ARC layout (each card placed via sin/cos
    around a 900px-radius circle, advanced by a hand-rolled pointer-drag +
    CSS-transition "settle" -- see git history / the old revision of this
-   file for that system) with a hybrid: the browser's own CSS scroll-snap
-   now owns all HORIZONTAL motion (the same mechanism every other
-   horizontally-paged mobile UI on the web relies on, and which Chrome/
-   Safari both implement well -- this is the piece that fixed Victoria's
-   "never reliably centres" complaint), while HomeMobile.js layers the same
-   arc ROTATION + vertical drop desktop uses (RC/STEP, see HomeDesktop.js)
-   on top as a plain CSS transform, recomputed continuously from the
-   track's live `scrollLeft` and written straight to each `.card-slot`'s
-   style (no React state/re-render per scroll frame -- see fix #13's
-   dropped-frame lesson above). So: native scroll decides WHERE a card sits
-   left-to-right (reliable, finger-synced); the transform only adds the
-   rotate()/translateY() curve on top (visual only, doesn't affect layout
-   or the scroll-snap calculation, which is based on the untransformed
-   layout box). JS also still (a) reads the scroll position to know which
+   file for that system) with the browser's own CSS scroll-snap owning all
+   HORIZONTAL motion (the same mechanism every other horizontally-paged
+   mobile UI on the web relies on, and which Chrome/Safari both implement
+   well -- this is the piece that fixed Victoria's "never reliably centres"
+   complaint). HomeMobile.js briefly (fix #23-#32) layered the same arc
+   ROTATION + vertical drop desktop uses (RC/STEP) back on top as a plain
+   CSS transform written to each `.card-slot`, to visually match desktop --
+   but fix #33 (2026-10-28, next conversation) removed that transform
+   entirely again: the same translateY term that reads as "curved" at rest
+   also reads as "falling" in motion, and no tuning of it satisfied both
+   (see HomeMobile.js's header comment, "Fix #33/#34" section, for the full
+   diagnosis). So as of fix #33, native scroll is the ONLY thing deciding a
+   card's on-screen position -- no transform is written to `.card-slot` by
+   JS at all any more. JS still (a) reads the scroll position to know which
    card is centred -- driving the same `.is-current` trigger the six
    bespoke card-art animations below expect, unchanged -- and (b) drives a
-   plain `scrollLeft` glide for the prev/next BUTTONS only (which, being a
-   real scrollLeft change, fires the same native scroll events and so
-   re-triggers the same continuous arc update); native swipe/wheel
-   scrolling never touches JS for the horizontal motion itself. See
-   HomeMobile.js's header comment and its CARD_W/CARD_GAP/PAGE_W/RC/STEP
+   plain `scrollLeft` glide for the prev/next BUTTONS only; native
+   swipe/wheel scrolling never touches JS for the horizontal motion at all.
+   See HomeMobile.js's header comment and its CARD_W/CARD_GAP/PAGE_W
    constants -- the numbers below MUST stay in sync with those. Desktop
    (HomeDesktop.js/home.css, `.home-desktop-scope`) is untouched --
    confirmed no selectors are shared between the two scopes. */
@@ -84,18 +82,21 @@
 }
 .home-mobile-scope .car2-track {
   position: absolute;
-  /* Explicit height (not auto): `.card-cta` below is back to being
-     absolutely positioned (so the whole `.card-slot` box is exactly the
-     card's own size and the arc's rotate()/translateY() pivots around the
-     CARD, matching how desktop's own `.card-slot` -- sized to CARD_W x
-     CARD_H with Discover absolutely positioned below it -- rotates as a
-     unit). That means `.card-cta`'s content no longer adds to the flex
-     row's own layout height, so the track needs an explicit height tall
-     enough to not clip it under `overflow-y: hidden` below. Fix #26: 288
-     card + 26 gap + ~82 Discover/arrows stack ≈ 396, 440 leaves real slack
-     this time (not just a sliver) -- see .card-cta below for where the
-     rest of the freed-up height actually went: the arrows-to-bottom-chrome
-     gap Victoria's video showed as too tight. */
+  /* Explicit height (not auto): `.card-cta` below is absolutely
+     positioned (so the whole `.card-slot` box is exactly the card's own
+     size, matching how desktop's own `.card-slot` -- sized to CARD_W x
+     CARD_H with Discover absolutely positioned below it -- is laid out;
+     while the arc transform existed, fix #23-#32, this also made it pivot
+     around the card as a rigid unit -- moot since fix #33 removed that
+     transform, but the absolute-positioning technique itself is kept for
+     the layout-consistency reason, independent of the arc). That means
+     `.card-cta`'s content no longer adds to the flex row's own layout
+     height, so the track needs an explicit height tall enough to not clip
+     it under `overflow-y: hidden` below. Fix #26: 288 card + 26 gap + ~82
+     Discover/arrows stack ≈ 396, 440 leaves real slack this time (not just
+     a sliver) -- see .card-cta below for where the rest of the freed-up
+     height actually went: the arrows-to-bottom-chrome gap Victoria's video
+     showed as too tight. */
   left: 0; right: 0; top: 0;
   height: 440px;
   display: flex;
@@ -139,11 +140,12 @@
   height: 288px; /* CARD_H -- sized to the card ONLY (not the Discover/arrows stack below, which is absolutely positioned) so the arc transform HomeMobile.js writes to this element's style rotates/drops it around the card's own centre, same as desktop. */
   scroll-snap-align: center;
   scroll-snap-stop: always; /* a fast flick still only ever advances one card, never skips past */
-  /* rotate()/translateY() written here continuously by HomeMobile.js from
-     the track's live scroll position -- see this file's header comment.
-     will-change hints the browser to keep this on the GPU compositor
-     since it's updated every scroll frame. */
-  will-change: transform;
+  /* Used to also get a `will-change: transform` hint here -- HomeMobile.js
+     wrote a rotate()/translateY() arc transform to this element on every
+     scroll frame. Fix #33 (2026-10-28, next conversation) removed that
+     transform entirely (see HomeMobile.js's header comment, "Fix #33/#34"
+     section) -- cards now simply sit at their native flex-row position, so
+     there's nothing left here to hint the compositor about. */
 }
 .home-mobile-scope .card-face {
   all: unset;
@@ -225,8 +227,17 @@
    matched that slot's own, separately-transformed position). The arrows
    now live in `.car2-nav` below instead -- one persistent pair, outside
    `.car2-track`, never opacity-toggled -- see HomeMobile.js's header
-   comment (fix #31) for the full reasoning. Discover deliberately kept
-   its old per-slot behaviour; see that same comment for why. */
+   comment (fix #31) for the full reasoning.
+   Fix #34 (2026-10-28, next conversation): this whole element is now only
+   RENDERED (by HomeMobile.js, in JSX -- not just hidden/shown by CSS) on
+   the centred slot, so there's at most one `.card-cta` in the DOM at a
+   time. Previously it rendered unconditionally on every slot, including
+   partially-visible neighbours -- a deliberate feature while the arc (fix
+   #23-#32) kept most neighbours mostly out of reach, but once fix #33
+   flattened the carousel and neighbours sat clearly visible at the sides,
+   Victoria asked for Discover to show only on the current card to reduce
+   clutter; tapping a neighbouring card anywhere still opens its project
+   via `.card-face`'s own Link, unaffected by this. */
 .home-mobile-scope .card-cta {
   /* Back to absolutely positioned (this fix) -- `.card-slot` is sized to
      the card only now (see above), so Discover/arrows sit below it via
@@ -316,9 +327,10 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  /* Above every `.card-slot`'s own z-index (HomeMobile.js's applyArc() caps
-     that at 100, for the centred card) so the arrows never sit under a
-     card. */
+  /* Comfortably above any `.card-slot` (which no longer sets its own
+     z-index at all post fix #33 -- see that fix's comment -- but cards
+     never overlap any more anyway, now that they sit flat in a plain flex
+     row) so the arrows are guaranteed to never sit under a card. */
   z-index: 150;
 }
 /* Fix #17 -- tone match: the arrows used to sit at 55% white opacity (a
@@ -398,10 +410,9 @@
   opacity: 0;
   transition: opacity 0.5s ease;
   /* Left-to-right stagger by card index (--i, set inline per card in
-     HomeMobile.js). Note this is just the fade-in; the arc rotate()/
-     translateY() transform (this fix) is written to this same element's
-     style by JS and is already correct at mount (computed from
-     scrollLeft=0), so it doesn't need its own entrance treatment here. */
+     HomeMobile.js). This is just the fade-in -- no transform is written
+     to this element by JS any more (fix #33 removed the arc entirely), so
+     there's nothing else for an entrance treatment to account for here. */
   transition-delay: calc(var(--i, 0) * 60ms);
 }
 .home-mobile-scope .stage2.is-entered .intro2 {
@@ -416,11 +427,16 @@
   opacity: 1;
 }
 @media (prefers-reduced-motion: reduce) {
-  /* This fix: `.card-slot`'s `transform: none !important` here also wins
-     over the arc rotate()/translateY() HomeMobile.js writes inline on
-     every scroll frame (a stylesheet !important rule always beats a
-     plain inline style, regardless of write order) -- so reduced-motion
-     users keep getting flat, unrotated cards, same as before this fix. */
+  /* `.card-slot`'s `transform: none !important` here used to matter for a
+     second reason too: it won over the arc rotate()/translateY()
+     HomeMobile.js wrote inline on every scroll frame (a stylesheet
+     !important rule always beats a plain inline style, regardless of
+     write order), so reduced-motion users got flat, unrotated cards even
+     while everyone else saw the arc. Fix #33 removed that inline transform
+     for everyone, so this rule is now just the entrance-transition
+     override it always was for `.intro2`/`.car2` -- kept on `.card-slot`
+     too since it's harmless and this list doubles as "no transform-driven
+     motion for these three", which is still accurate. */
   .home-mobile-scope .intro2, .home-mobile-scope .car2, .home-mobile-scope .card-slot {
     transition: none !important;
     opacity: 1 !important;

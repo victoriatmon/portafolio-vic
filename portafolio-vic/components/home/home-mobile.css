@@ -545,10 +545,19 @@
 }
 /* UNDP card: glitch swap between two versions, driven by the ud-in / ud-out classes (see _udInit) */
 .home-mobile-scope .ud-card{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none}
-.home-mobile-scope .ud-card .ud-s{opacity:0}
-.home-mobile-scope .ud-card .ud-b{opacity:0}
-.home-mobile-scope .ud-card .ud-scan{opacity:0}
-.home-mobile-scope .ud-card .ud-bar{opacity:0}
+/* Fix #19: opacity `transition` added to all five of these base rules so
+   that when UndpCard.js's mobile-only deactivate() strips the ud-in/
+   ud-out classes directly (no reverse glitch, see that file), each
+   element eases to its rest opacity instead of snapping there. A CSS
+   `animation` (set only while .ud-in/.ud-out match, see below) still
+   takes priority over this `transition` while it's running, exactly like
+   the ph-star/vs-s* handoff above -- this only takes effect once the
+   class removal has nothing left animating the property. */
+.home-mobile-scope .ud-card .ud-a{transition: opacity 0.4s ease;}
+.home-mobile-scope .ud-card .ud-s{opacity:0; transition: opacity 0.4s ease;}
+.home-mobile-scope .ud-card .ud-b{opacity:0; transition: opacity 0.4s ease;}
+.home-mobile-scope .ud-card .ud-scan{opacity:0; transition: opacity 0.4s ease;}
+.home-mobile-scope .ud-card .ud-bar{opacity:0; transition: opacity 0.4s ease;}
 .home-mobile-scope .ud-card.ud-in .ud-a{animation-name:udBaseA;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
 .home-mobile-scope .ud-card.ud-out .ud-a{animation-name:udBaseA;animation-direction:reverse;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}
 .home-mobile-scope .ud-card.ud-in .ud-b{animation-name:udBaseB;animation-duration:0.7s;animation-timing-function:step-end;animation-fill-mode:both}

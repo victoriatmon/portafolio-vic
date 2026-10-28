@@ -223,17 +223,44 @@ function UndpCard({ active } = {}) {
       if (!reduce) state.timer = setTimeout(toggle, GLITCH_MS + HOLD_MS);
     };
 
+    // Fix #19 (mobile only): Victoria asked for the glitch effect to stay
+    // confined to the card's own ongoing loop -- not play as part of the
+    // card entering or leaving the carousel's centered position. Desktop's
+    // real hover (active === undefined) keeps the original behavior
+    // exactly (glitch-in the instant you hover, glitch-out the instant
+    // you leave), unchanged -- only the mobile `active`-prop-controlled
+    // path (active !== undefined) is affected.
+    const mobileControlled = active !== undefined;
+
     apiRef.current = {
       activate: () => {
         if (reduce) return;
         clearTimeout(state.timer);
-        if (state.target === 'A') toggle();
-        else state.timer = setTimeout(toggle, HOLD_MS);
+        if (mobileControlled) {
+          // Show the clean poster A immediately (it's already the CSS
+          // rest state, nothing to animate) and let the glitch loop start
+          // after the same HOLD_MS pause every later iteration uses --
+          // so centering never itself looks like a glitch-in.
+          state.timer = setTimeout(toggle, HOLD_MS);
+        } else if (state.target === 'A') {
+          toggle();
+        } else {
+          state.timer = setTimeout(toggle, HOLD_MS);
+        }
       },
       deactivate: () => {
         if (reduce) return;
         clearTimeout(state.timer);
-        if (state.target === 'B') {
+        if (mobileControlled) {
+          // Strip the glitch classes immediately instead of playing the
+          // reverse glitch (`ud-out`) -- the card falls back to its CSS
+          // rest state, which now carries its own opacity `transition`
+          // (see home-mobile.css) so it eases there smoothly rather than
+          // snapping or glitching on the way out.
+          state.target = 'A';
+          const card = liveCard();
+          if (card) card.classList.remove('ud-in', 'ud-out');
+        } else if (state.target === 'B') {
           play('ud-out');
           state.target = 'A';
         }

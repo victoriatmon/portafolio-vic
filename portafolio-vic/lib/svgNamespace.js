@@ -34,14 +34,24 @@
 // filter ids actually responsible for the reported bug.
 export function namespaceSvgIds(svg, ids, suffix) {
   if (!suffix) return svg; // no suffix (e.g. HomeDesktop.js, which never duplicates a card) -> untouched, zero risk there
+  // `-u${suffix}`, never a bare `${suffix}`: found live on the
+  // carousel-fixes-review preview -- Undp's own id list has BOTH
+  // `udBand1` and `udBand10`, and with no separator, renaming
+  // `udBand1` for suffix "0" produces the literal string `udBand10`,
+  // colliding with the DIFFERENT, still-unprocessed original id
+  // `udBand10` -- which then itself gets renamed on top, so two
+  // unrelated elements both end up `udBand100`. A short, SVG-id-legal
+  // separator makes `${id}${sep}${suffix}` unable to collide with any
+  // other `${id2}` in the list, however their numeric suffixes overlap.
+  const sep = '-u';
   let out = svg;
   for (const id of ids) {
     // `id="X"` -- the definition itself (<clipPath id="X">, <pattern id="X">, ...).
-    out = out.split(`id="${id}"`).join(`id="${id}${suffix}"`);
+    out = out.split(`id="${id}"`).join(`id="${id}${sep}${suffix}"`);
     // `#X"` -- a plain fragment reference, e.g. `href="#X"`.
-    out = out.split(`#${id}"`).join(`#${id}${suffix}"`);
+    out = out.split(`#${id}"`).join(`#${id}${sep}${suffix}"`);
     // `#X)` -- a `url(#X)` reference, e.g. `fill="url(#X)"`, `clip-path="url(#X)"`.
-    out = out.split(`#${id})`).join(`#${id}${suffix})`);
+    out = out.split(`#${id})`).join(`#${id}${sep}${suffix})`);
   }
   return out;
 }

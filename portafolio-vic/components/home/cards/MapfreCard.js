@@ -145,23 +145,34 @@ const MAPFRE_SVG =`<svg class="mp-card" aria-hidden="true" width="300" height="4
 // black" report when the carousel wraps onto this card's cloned slot.
 const MAPFRE_IDS = ['clip1_80_51', 'image0_80_51', 'image1_80_51', 'pattern0_80_51', 'pattern1_80_51', 'm'];
 
-// Fix #43 (2026-10-28): `active` is new -- see the `.mp-off` comment in
-// home-mobile.css for the full "why". `active === undefined` (desktop,
-// HomeDesktop.js never passes this prop) changes nothing: the effect
-// below bails out immediately, so desktop's output and behaviour stay
-// byte-identical to before this fix, same convention AXACard.js/
-// UndpCard.js already use to tell the two call sites apart. On mobile,
-// `active` flips to `true` once when this slot becomes the centred card
-// and `false` once it stops being centred (see HomeMobile.js's `<Art
-// active={isCurrent} ... />`); while `true`, a timer repeatedly toggles
-// the `.mp-off` class on the wrapper so the tiles/words fall back to
-// rest and reveal again, looping for as long as the card stays current
-// -- a JS-driven stand-in for the repeated hover-enter/leave cycle that
-// makes desktop's identical one-shot transition read as a loop. Skips
-// the loop entirely under prefers-reduced-motion, matching home-mobile.
-// css's existing `transition: none` override for `.mp-tile`/`.mp-word`
-// there (toggling `.mp-off` with transitions already disabled would
-// just flicker instantly between states for no benefit).
+// Fix #45 (2026-10-28, next conversation): replaces fix #43's `.mp-off`
+// (an additive class that only ever forced `transform`, never `opacity` --
+// see the long comment on home-mobile.css's `.mp-t0`/`.mp-w0` block for the
+// full diagnosis). `active === undefined` (desktop, HomeDesktop.js never
+// passes this prop) changes nothing: the effect below bails out
+// immediately, so desktop's output and behaviour stay byte-identical, same
+// convention AXACard.js/UndpCard.js already use to tell the two call sites
+// apart. On mobile, `active` flips to `true` once when this slot becomes
+// the centred card and `false` once it stops being centred (see
+// HomeMobile.js's `<Art active={isCurrent} ... />`); while `true`, a timer
+// toggles the NEW `.mp-on` class on the wrapper -- home-mobile.css's
+// `.mp-card-wrap.mp-on .mp-tN`/`.mp-wN` rules are now the ONLY thing
+// driving both layers' transform/opacity on mobile (desktop keeps its own
+// untouched `:hover`-driven copy in home.css). Each toggle is a real
+// remove-then-add of the class, with a forced synchronous reflow
+// (`void wrap.offsetHeight`) read in between, exactly like UndpCard.js's
+// `play()` -- the standard workaround for the WebKit "won't repaint a
+// transition-only change" bug class already on record for this card
+// (fixes #14/#18b/#39/#40), and the reason AXACard.js/UndpCard.js's own
+// JS-driven cards don't have this reported bug. A plain class toggle
+// without the forced reflow (what `.mp-off` effectively was, just with an
+// `!important` transform override layered on) left that WebKit repaint
+// bug free to keep misbehaving; this closes that gap for both the tile
+// mosaic and the word copy at once, instead of only the tile layer.
+// Skips the loop entirely under prefers-reduced-motion, matching
+// home-mobile.css's existing `transition: none` override for
+// `.mp-tile`/`.mp-word` there (toggling classes with transitions already
+// disabled would just flicker instantly between states for no benefit).
 function MapfreCard({ uid = '', active } = {}) {
   const wrapRef = useRef(null);
   // Only actually rewrites anything when `uid` is non-empty -- HomeDesktop.js
@@ -174,7 +185,7 @@ function MapfreCard({ uid = '', active } = {}) {
     const wrap = wrapRef.current;
     if (!wrap) return;
     if (!active || prefersReducedMotion()) {
-      wrap.classList.remove('mp-off');
+      wrap.classList.remove('mp-on');
       return;
     }
     // Longest tile/word transition + delay below is ~0.8s + 0.3s stagger
@@ -182,14 +193,24 @@ function MapfreCard({ uid = '', active } = {}) {
     const REVEAL_MS = 1800; // how long to sit fully revealed before cycling
     const REST_MS = 900; // how long to sit at rest before revealing again
     let timer;
-    const cycle = (toOff) => {
-      wrap.classList.toggle('mp-off', toOff);
-      timer = setTimeout(() => cycle(!toOff), toOff ? REST_MS : REVEAL_MS);
+    const setOn = (on) => {
+      // Remove first, force a synchronous reflow, then (maybe) re-add --
+      // never a bare toggle. Forcing the reflow on every call, not just
+      // the "turning on" ones, means the "turning off" half of the cycle
+      // gets the same repaint-forcing treatment, so a stale WebKit paint
+      // can't survive either transition direction.
+      wrap.classList.remove('mp-on');
+      void wrap.offsetHeight; // eslint-disable-line no-unused-expressions
+      if (on) wrap.classList.add('mp-on');
     };
-    cycle(false); // start revealed immediately -- matches the pre-fix-#43 first play
+    const cycle = (on) => {
+      setOn(on);
+      timer = setTimeout(() => cycle(!on), on ? REVEAL_MS : REST_MS);
+    };
+    cycle(true); // start revealed immediately -- matches the pre-fix-#43 first play
     return () => {
       clearTimeout(timer);
-      wrap.classList.remove('mp-off');
+      wrap.classList.remove('mp-on');
     };
   }, [active]);
 

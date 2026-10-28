@@ -30,21 +30,30 @@ import { namespaceSvgIds } from '@/lib/svgNamespace';
 
 const GLITCH_MS = 700; // length of each glitch (matches the CSS animation)
 const HOLD_MS = 1600; // how long each version stays on screen between glitches
-// Fix #38 (2026-10-28, next conversation): Victoria reported Undp "tarda
-// mucho en empezar la animación cuando está en el centro" -- this is the
-// mobile-only `activate()` pause below (fix #19), which deliberately
-// waited the full HOLD_MS before the first glitch so centering itself
-// never looked like a glitch-in. That earlier request and this one pull
-// in opposite directions (same structural shape as the carousel arc's
-// reposo-vs-movimiento tension -- see HomeMobile.js's "Fix #33/#34"
-// comment), so this splits them into two separate constants instead of
-// picking one value that can't satisfy both: FIRST_HOLD_MS is a short
-// pause just long enough to read as an intentional beat rather than an
-// instant glitch-on-arrival, used ONLY for the very first activation
-// after a card becomes centered; HOLD_MS (unchanged, 1600ms) still governs
-// every later loop iteration's cadence, and desktop's real-hover path
-// (mobileControlled === false below) is untouched either way.
-const FIRST_HOLD_MS = 700;
+// Fix #38 (2026-10-28): Victoria reported Undp "tarda mucho en empezar la
+// animación cuando está en el centro" -- the mobile-only `activate()`
+// pause below (fix #19) deliberately waited the full HOLD_MS before the
+// first glitch so centering itself never looked like a glitch-in. That
+// request and this one pulled in opposite directions (same structural
+// shape as the carousel arc's reposo-vs-movimiento tension -- see
+// HomeMobile.js's "Fix #33/#34" comment), so fix #38 split them into two
+// separate constants: FIRST_HOLD_MS (a short pause, only for the very
+// first activation) and HOLD_MS (unchanged, governs every later loop
+// iteration).
+//
+// Fix #48 (2026-10-28, next conversation): Victoria's new video shows
+// FIRST_HOLD_MS=700ms still reads as "tarda mucho en empezar" compared to
+// the other five cards, and her explicit new ask is for Undp to start "el
+// mismo tiempo que las otras cards" -- checked each of them (ph-star's
+// `animation`, pu-circles', vs-s1/s2/s3's) and every one starts the
+// instant `.is-current`/`.mp-on`-equivalent is applied, zero JS delay.
+// Fix #38's original concern (centering itself reading as a glitch-in)
+// is explicitly superseded by this newer, more specific request rather
+// than being re-litigated -- dropped FIRST_HOLD_MS to 0 so Undp matches
+// that same zero-delay baseline. HOLD_MS (the steady-state loop cadence)
+// is untouched, as is desktop's real-hover path (mobileControlled ===
+// false below).
+const FIRST_HOLD_MS = 0;
 
 const UNDP_SVG = `<svg class="ud-card" aria-hidden="true" width="300" height="400" viewBox="1 1 300 400" fill="none" xmlns="http://www.w3.org/2000/svg">
 <defs>

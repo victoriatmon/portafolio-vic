@@ -112,8 +112,33 @@
   /* Stops a horizontal swipe from also triggering the browser's
      edge-swipe back/forward navigation gesture -- replaces the old
      custom 28px-edge pointerdown exclusion hack, which isn't needed once
-     the browser is doing the scrolling natively. */
-  overscroll-behavior-x: contain;
+     the browser is doing the scrolling natively.
+     Fix #49 (2026-10-28, next conversation): was `contain`, changed to
+     `none`. Victoria's video shows the Phantom-peeking-in-after-wraparound
+     delay (open since fix #41-44, no mechanism confirmed until now): the
+     right edge of the viewport goes briefly BLANK (not even a sliver of
+     Phantom) for a few hundred ms before Phantom snaps in, right after the
+     carousel rests on the cloned last slot (position EXT_COUNT-1, nothing
+     after it in the strip) and before HomeMobile.js's `finishAt()`
+     wraparound correction fires. `finishAt()` only runs from `settle()`,
+     which (without a native `scrollend` -- see that function's own
+     comment) waits for a 120ms gap with no `scroll` events. `contain`
+     still lets this element show its OWN local rubber-band/bounce
+     overscroll effect (it only stops the bounce from chaining up to the
+     page) -- landing on the strip's actual last slot via a real swipe is
+     exactly when iOS's overscroll bounce fires, and a bounce animation
+     keeps emitting `scroll` events for several hundred ms, repeatedly
+     resetting that 120ms timer and delaying `settle()`/`finishAt()` (and
+     so Phantom's appearance) well past the bounce itself. `none` disables
+     the local bounce too, removing that extra tail of `scroll` events
+     entirely -- chaining to the page was already blocked either way, so
+     this only removes the bounce wobble (arguably a UX improvement on its
+     own for a looping carousel) and, with it, the delay. Not verified on
+     an actual iPhone (no device access here); if this doesn't fully
+     resolve it, the `hasScrollEnd` fallback path (120ms debounce on the
+     trailing edge of `scroll` events) is the next thing to shorten or
+     replace. */
+  overscroll-behavior-x: none;
   -webkit-overflow-scrolling: touch;
   /* (100vw - CARD_W) / 2 -- lets the first/last card still reach dead
      centre instead of stopping at the track's own edge. Fix #26: 127.5px
@@ -469,58 +494,75 @@
    next suspect the clip-path on MapfreCard.js's outer <g> itself. */
 .home-mobile-scope .mp-tile{ transform-box: fill-box; transform-origin: center; transition: transform 0.8s cubic-bezier(.77,0,.18,1); will-change: transform; }
 .home-mobile-scope .mp-word{ transition: transform 0.7s cubic-bezier(.77,0,.18,1), opacity 0.35s ease; will-change: transform, opacity; }
-/* Fix #43 (2026-10-28): after fix #39 (removing the ancestor clip-path)
-   the mosaic finally renders on Victoria's iPhone, but she reports it
-   "plays once abruptly, then stops" instead of looping like desktop's
-   version. Checked desktop's CSS (home.css) -- it's the exact same
-   one-shot `transition`, gated by `:hover`/`:focus-visible`, NOT an
-   `animation`, so desktop doesn't actually loop either: what reads as
-   looping there is the mouse naturally drifting in and out of the card
-   while browsing, re-triggering the staggered reveal on every hover-
-   enter. Mobile's equivalent trigger, `.is-current`, is a plain class
-   applied once when the card centers and left on for as long as it
-   stays centered -- nothing re-triggers it, so it only ever plays once,
-   exactly as reported. `.mp-off` below is an additive class (toggled
-   from MapfreCard.js's new mobile-only activate() loop, see that file)
-   that forces every tile/word back to its rest transform while
-   present; removing it lets the normal `.is-current .mp-tN` rule pull
-   them forward again over the same transition/delay as before -- a
-   JS-driven stand-in for the repeated hover-enter/leave desktop gets
-   for free, matching this card's own fix #39 comment anticipating this
-   exact escalation. `!important` here is deliberate, not sloppiness:
-   it has to outrank the individual `.mp-tN{transform:...}` rules below
-   (same specificity, but earlier in source) without duplicating all 27
-   of them under a second selector. Not verified on an actual iPhone
-   (no device access here). */
-.home-mobile-scope .mp-card-wrap.mp-off .mp-tile,
-.home-mobile-scope .mp-card-wrap.mp-off .mp-word { transform: none !important; }
-.home-mobile-scope .mp-t0{transition-delay:0.051s}.home-mobile-scope .card-face.is-current .mp-t0,.home-mobile-scope .card-face:focus-visible .mp-t0{transform:translate(0.000px,0.000px) scale(1)}
-.home-mobile-scope .mp-t1{transition-delay:0.084s}.home-mobile-scope .card-face.is-current .mp-t1,.home-mobile-scope .card-face:focus-visible .mp-t1{transform:translate(0.000px,0.000px) scale(0)}
-.home-mobile-scope .mp-t2{transition-delay:0.117s}.home-mobile-scope .card-face.is-current .mp-t2,.home-mobile-scope .card-face:focus-visible .mp-t2{transform:translate(0.000px,0.000px) scale(0)}
-.home-mobile-scope .mp-t3{transition-delay:0.051s}.home-mobile-scope .card-face.is-current .mp-t3,.home-mobile-scope .card-face:focus-visible .mp-t3{transform:translate(0.000px,0.000px) scale(1)}
-.home-mobile-scope .mp-t4{transition-delay:0.084s}.home-mobile-scope .card-face.is-current .mp-t4,.home-mobile-scope .card-face:focus-visible .mp-t4{transform:translate(-53.022px,-53.899px) scale(1)}
-.home-mobile-scope .mp-t5{transition-delay:0.118s}.home-mobile-scope .card-face.is-current .mp-t5,.home-mobile-scope .card-face:focus-visible .mp-t5{transform:translate(52.976px,54.101px) scale(1)}
-.home-mobile-scope .mp-t6{transition-delay:0.151s}.home-mobile-scope .card-face.is-current .mp-t6,.home-mobile-scope .card-face:focus-visible .mp-t6{transform:translate(0.000px,0.000px) scale(1)}
-.home-mobile-scope .mp-t7{transition-delay:0.085s}.home-mobile-scope .card-face.is-current .mp-t7,.home-mobile-scope .card-face:focus-visible .mp-t7{transform:translate(0.000px,0.000px) scale(1)}
-.home-mobile-scope .mp-t8{transition-delay:0.118s}.home-mobile-scope .card-face.is-current .mp-t8,.home-mobile-scope .card-face:focus-visible .mp-t8{transform:translate(0.000px,0.000px) scale(1)}
-.home-mobile-scope .mp-t9{transition-delay:0.118s}.home-mobile-scope .card-face.is-current .mp-t9,.home-mobile-scope .card-face:focus-visible .mp-t9{transform:translate(0.000px,54.302px) scale(1)}
-.home-mobile-scope .mp-t10{transition-delay:0.152s}.home-mobile-scope .card-face.is-current .mp-t10,.home-mobile-scope .card-face:focus-visible .mp-t10{transform:translate(52.978px,-53.698px) scale(1)}
-.home-mobile-scope .mp-t11{transition-delay:0.185s}.home-mobile-scope .card-face.is-current .mp-t11,.home-mobile-scope .card-face:focus-visible .mp-t11{transform:translate(0.000px,0.000px) scale(1)}
-.home-mobile-scope .mp-t12{transition-delay:0.218s}.home-mobile-scope .card-face.is-current .mp-t12,.home-mobile-scope .card-face:focus-visible .mp-t12{transform:translate(0.000px,0.000px) scale(1)}
-.home-mobile-scope .mp-t13{transition-delay:0.219s}.home-mobile-scope .card-face.is-current .mp-t13,.home-mobile-scope .card-face:focus-visible .mp-t13{transform:translate(-53.153px,0.403px) scale(1)}
-.home-mobile-scope .mp-t14{transition-delay:0.252s}.home-mobile-scope .card-face.is-current .mp-t14,.home-mobile-scope .card-face:focus-visible .mp-t14{transform:translate(0.000px,0.000px) scale(0)}
-.home-mobile-scope .mp-t15{transition-delay:0.150s}.home-mobile-scope .card-face.is-current .mp-t15,.home-mobile-scope .card-face:focus-visible .mp-t15{transform:translate(0.000px,0.000px) scale(1)}
-.home-mobile-scope .mp-t16{transition-delay:0.184s}.home-mobile-scope .card-face.is-current .mp-t16,.home-mobile-scope .card-face:focus-visible .mp-t16{transform:translate(0.000px,0.000px) scale(1)}
-.home-mobile-scope .mp-t17{transition-delay:0.217s}.home-mobile-scope .card-face.is-current .mp-t17,.home-mobile-scope .card-face:focus-visible .mp-t17{transform:translate(0.000px,0.000px) scale(1)}
-.home-mobile-scope .mp-t18{transition-delay:0.251s}.home-mobile-scope .card-face.is-current .mp-t18,.home-mobile-scope .card-face:focus-visible .mp-t18{transform:translate(0.000px,0.000px) scale(1)}
-.home-mobile-scope .mp-t19{transition-delay:0.285s}.home-mobile-scope .card-face.is-current .mp-t19,.home-mobile-scope .card-face:focus-visible .mp-t19{transform:translate(0.000px,0.000px) scale(0)}
-.home-mobile-scope .mp-w0{transition-delay:0s}.home-mobile-scope .card-face.is-current .mp-w0,.home-mobile-scope .card-face:focus-visible .mp-w0{transform:translateX(-320px);opacity:0}
-.home-mobile-scope .mp-w1{transition-delay:0.06s}.home-mobile-scope .card-face.is-current .mp-w1,.home-mobile-scope .card-face:focus-visible .mp-w1{transform:translateX(320px);opacity:0}
-.home-mobile-scope .mp-w2{transition-delay:0.12s}.home-mobile-scope .card-face.is-current .mp-w2,.home-mobile-scope .card-face:focus-visible .mp-w2{transform:translateX(-320px);opacity:0}
-.home-mobile-scope .mp-w3{transform:translateX(320px);opacity:0;transition-delay:0.12s}.home-mobile-scope .card-face.is-current .mp-w3,.home-mobile-scope .card-face:focus-visible .mp-w3{transform:none;opacity:1}
-.home-mobile-scope .mp-w4{transform:translateX(-320px);opacity:0;transition-delay:0.18s}.home-mobile-scope .card-face.is-current .mp-w4,.home-mobile-scope .card-face:focus-visible .mp-w4{transform:none;opacity:1}
-.home-mobile-scope .mp-w5{transform:translateX(-320px);opacity:0;transition-delay:0.24s}.home-mobile-scope .card-face.is-current .mp-w5,.home-mobile-scope .card-face:focus-visible .mp-w5{transform:none;opacity:1}
-.home-mobile-scope .mp-w6{transform:translateX(320px);opacity:0;transition-delay:0.3s}.home-mobile-scope .card-face.is-current .mp-w6,.home-mobile-scope .card-face:focus-visible .mp-w6{transform:none;opacity:1}
+/* Fix #45 (2026-10-28, next conversation): fix #43's `.mp-off` approach
+   (an additive class forcing `transform: none !important` on every tile/
+   word while present) looked right in this Chromium sandbox but Victoria's
+   new real-iPhone video shows the actual failure mode: the TILES visibly
+   cycle (so `.mp-off` is doing *something*), but the WORD COPY never
+   changes -- "DRIVING +35% YoY Growth" stays on screen the whole time,
+   with the alternate copy ("TYPO"/"+$21k"/etc, the `.mp-w3`-`.mp-w6`
+   group) only flashing once, briefly, right as the card first centers.
+   Root-caused by instrumenting this exact markup+CSS in a standalone
+   Playwright page (file://, no server, so the mobile/desktop UA split in
+   lib/device.js doesn't get in the way): `.mp-off` only ever set
+   `transform`, never `opacity`. For the tile layer that's enough (their
+   only animated property IS transform), but for `.mp-word`, `opacity` is
+   the property that actually makes a word visible or not -- and that was
+   still governed *exclusively* by `.card-face.is-current .mp-wN`, which
+   never turns off (the card stays `.is-current` for the entire time it's
+   centered). So once the one-shot entrance transition completes, `.mp-w0`-
+   `.mp-w2` (original copy) sit at `opacity: 0` permanently and `.mp-w3`-
+   `.mp-w6` (alternate copy) sit at `opacity: 1` permanently, regardless of
+   `.mp-off` -- confirmed with computed-style snapshots through several
+   on/off cycles, zero change in either word group's opacity after the
+   first reveal. (On a real iPhone the FIRST reveal itself is apparently
+   also unreliable -- same WebKit "ancestor doesn't repaint a descendant's
+   transition" family already on record for this card -- which is why
+   Victoria's video shows the opposite of this sandbox's prediction: the
+   *original* copy stuck on screen instead of the alternate. Either way,
+   the fix is the same: stop depending on a one-shot `transition` plus a
+   permanently-on `.is-current` to do this, for the same reason AXACard.js/
+   UndpCard.js don't.)
+
+   Fix: both layers are now driven by a single JS-toggled class,
+   `.mp-card-wrap.mp-on`, instead of `.card-face.is-current` -- MapfreCard.js
+   adds and removes it itself (mirroring UndpCard.js's `play()`: remove,
+   force a synchronous reflow, re-add), so every cycle is a real, complete
+   class add/remove the browser has to resolve from scratch, not a single
+   property override layered on top of a pseudo-class that's permanently
+   "on". `:focus-visible` is kept alongside it (still `.card-face`-scoped)
+   so keyboard/switch-control users get the same reveal on focus. `.mp-off`
+   and its `!important` overrides are gone -- nothing needs them once the
+   trigger itself toggles cleanly off and on. Desktop (home.css) is
+   untouched: it still uses its own `:hover`/`:focus-visible` copy of these
+   same 27 rules, unaffected by anything in this file. */
+.home-mobile-scope .mp-t0{transition-delay:0.051s}.home-mobile-scope .mp-card-wrap.mp-on .mp-t0,.home-mobile-scope .card-face:focus-visible .mp-t0{transform:translate(0.000px,0.000px) scale(1)}
+.home-mobile-scope .mp-t1{transition-delay:0.084s}.home-mobile-scope .mp-card-wrap.mp-on .mp-t1,.home-mobile-scope .card-face:focus-visible .mp-t1{transform:translate(0.000px,0.000px) scale(0)}
+.home-mobile-scope .mp-t2{transition-delay:0.117s}.home-mobile-scope .mp-card-wrap.mp-on .mp-t2,.home-mobile-scope .card-face:focus-visible .mp-t2{transform:translate(0.000px,0.000px) scale(0)}
+.home-mobile-scope .mp-t3{transition-delay:0.051s}.home-mobile-scope .mp-card-wrap.mp-on .mp-t3,.home-mobile-scope .card-face:focus-visible .mp-t3{transform:translate(0.000px,0.000px) scale(1)}
+.home-mobile-scope .mp-t4{transition-delay:0.084s}.home-mobile-scope .mp-card-wrap.mp-on .mp-t4,.home-mobile-scope .card-face:focus-visible .mp-t4{transform:translate(-53.022px,-53.899px) scale(1)}
+.home-mobile-scope .mp-t5{transition-delay:0.118s}.home-mobile-scope .mp-card-wrap.mp-on .mp-t5,.home-mobile-scope .card-face:focus-visible .mp-t5{transform:translate(52.976px,54.101px) scale(1)}
+.home-mobile-scope .mp-t6{transition-delay:0.151s}.home-mobile-scope .mp-card-wrap.mp-on .mp-t6,.home-mobile-scope .card-face:focus-visible .mp-t6{transform:translate(0.000px,0.000px) scale(1)}
+.home-mobile-scope .mp-t7{transition-delay:0.085s}.home-mobile-scope .mp-card-wrap.mp-on .mp-t7,.home-mobile-scope .card-face:focus-visible .mp-t7{transform:translate(0.000px,0.000px) scale(1)}
+.home-mobile-scope .mp-t8{transition-delay:0.118s}.home-mobile-scope .mp-card-wrap.mp-on .mp-t8,.home-mobile-scope .card-face:focus-visible .mp-t8{transform:translate(0.000px,0.000px) scale(1)}
+.home-mobile-scope .mp-t9{transition-delay:0.118s}.home-mobile-scope .mp-card-wrap.mp-on .mp-t9,.home-mobile-scope .card-face:focus-visible .mp-t9{transform:translate(0.000px,54.302px) scale(1)}
+.home-mobile-scope .mp-t10{transition-delay:0.152s}.home-mobile-scope .mp-card-wrap.mp-on .mp-t10,.home-mobile-scope .card-face:focus-visible .mp-t10{transform:translate(52.978px,-53.698px) scale(1)}
+.home-mobile-scope .mp-t11{transition-delay:0.185s}.home-mobile-scope .mp-card-wrap.mp-on .mp-t11,.home-mobile-scope .card-face:focus-visible .mp-t11{transform:translate(0.000px,0.000px) scale(1)}
+.home-mobile-scope .mp-t12{transition-delay:0.218s}.home-mobile-scope .mp-card-wrap.mp-on .mp-t12,.home-mobile-scope .card-face:focus-visible .mp-t12{transform:translate(0.000px,0.000px) scale(1)}
+.home-mobile-scope .mp-t13{transition-delay:0.219s}.home-mobile-scope .mp-card-wrap.mp-on .mp-t13,.home-mobile-scope .card-face:focus-visible .mp-t13{transform:translate(-53.153px,0.403px) scale(1)}
+.home-mobile-scope .mp-t14{transition-delay:0.252s}.home-mobile-scope .mp-card-wrap.mp-on .mp-t14,.home-mobile-scope .card-face:focus-visible .mp-t14{transform:translate(0.000px,0.000px) scale(0)}
+.home-mobile-scope .mp-t15{transition-delay:0.150s}.home-mobile-scope .mp-card-wrap.mp-on .mp-t15,.home-mobile-scope .card-face:focus-visible .mp-t15{transform:translate(0.000px,0.000px) scale(1)}
+.home-mobile-scope .mp-t16{transition-delay:0.184s}.home-mobile-scope .mp-card-wrap.mp-on .mp-t16,.home-mobile-scope .card-face:focus-visible .mp-t16{transform:translate(0.000px,0.000px) scale(1)}
+.home-mobile-scope .mp-t17{transition-delay:0.217s}.home-mobile-scope .mp-card-wrap.mp-on .mp-t17,.home-mobile-scope .card-face:focus-visible .mp-t17{transform:translate(0.000px,0.000px) scale(1)}
+.home-mobile-scope .mp-t18{transition-delay:0.251s}.home-mobile-scope .mp-card-wrap.mp-on .mp-t18,.home-mobile-scope .card-face:focus-visible .mp-t18{transform:translate(0.000px,0.000px) scale(1)}
+.home-mobile-scope .mp-t19{transition-delay:0.285s}.home-mobile-scope .mp-card-wrap.mp-on .mp-t19,.home-mobile-scope .card-face:focus-visible .mp-t19{transform:translate(0.000px,0.000px) scale(0)}
+.home-mobile-scope .mp-w0{transition-delay:0s}.home-mobile-scope .mp-card-wrap.mp-on .mp-w0,.home-mobile-scope .card-face:focus-visible .mp-w0{transform:translateX(-320px);opacity:0}
+.home-mobile-scope .mp-w1{transition-delay:0.06s}.home-mobile-scope .mp-card-wrap.mp-on .mp-w1,.home-mobile-scope .card-face:focus-visible .mp-w1{transform:translateX(320px);opacity:0}
+.home-mobile-scope .mp-w2{transition-delay:0.12s}.home-mobile-scope .mp-card-wrap.mp-on .mp-w2,.home-mobile-scope .card-face:focus-visible .mp-w2{transform:translateX(-320px);opacity:0}
+.home-mobile-scope .mp-w3{transform:translateX(320px);opacity:0;transition-delay:0.12s}.home-mobile-scope .mp-card-wrap.mp-on .mp-w3,.home-mobile-scope .card-face:focus-visible .mp-w3{transform:none;opacity:1}
+.home-mobile-scope .mp-w4{transform:translateX(-320px);opacity:0;transition-delay:0.18s}.home-mobile-scope .mp-card-wrap.mp-on .mp-w4,.home-mobile-scope .card-face:focus-visible .mp-w4{transform:none;opacity:1}
+.home-mobile-scope .mp-w5{transform:translateX(-320px);opacity:0;transition-delay:0.24s}.home-mobile-scope .mp-card-wrap.mp-on .mp-w5,.home-mobile-scope .card-face:focus-visible .mp-w5{transform:none;opacity:1}
+.home-mobile-scope .mp-w6{transform:translateX(320px);opacity:0;transition-delay:0.3s}.home-mobile-scope .mp-card-wrap.mp-on .mp-w6,.home-mobile-scope .card-face:focus-visible .mp-w6{transform:none;opacity:1}
 
 /* ===== Phantom card art (ported from the artifact, card index 1 --
    "AI Cash Flow Predictor") =====

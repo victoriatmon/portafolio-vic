@@ -76,8 +76,9 @@
      but a little also went back into this top gap, since Victoria's real-
      device video showed the cards still reading as glued to the title even
      after fix #23). Still moving the WHOLE group together -- cards AND
-     Discover/arrows -- same as fix #20, no counter-offset needed. */
-  top: 160px;
+     Discover/arrows -- same as fix #20, no counter-offset needed) -> 168px
+     (fix #32, 2026-10-28, next conversation: Victoria asked for 8px more). */
+  top: 168px;
   height: 440px;
   user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
 }
@@ -215,11 +216,17 @@
   text-align: left;
 }
 
-/* Wraps the Discover CTA and, on the centred card only, the prev/next nav
-   row below it (Victoria asked for a tap-driven alternative to swiping --
-   see HomeMobile.js's navRef/scrollToIndex()). Lays its children out with
-   flex so a second row can sit under Discover without hardcoding a second
-   fixed offset. */
+/* Wraps the Discover CTA only, as of fix #31 -- the prev/next arrows used
+   to render here too (a second row below Discover, shown only on the
+   centred card via the `.is-current` sibling rule this comment used to
+   describe). Victoria reported that made the arrows read as disappearing
+   (every swipe/tap sets currentIndex to -1, so NO slot's copy was current
+   for the scroll's duration) and shifting (each slot's own copy only ever
+   matched that slot's own, separately-transformed position). The arrows
+   now live in `.car2-nav` below instead -- one persistent pair, outside
+   `.car2-track`, never opacity-toggled -- see HomeMobile.js's header
+   comment (fix #31) for the full reasoning. Discover deliberately kept
+   its old per-slot behaviour; see that same comment for why. */
 .home-mobile-scope .card-cta {
   /* Back to absolutely positioned (this fix) -- `.card-slot` is sized to
      the card only now (see above), so Discover/arrows sit below it via
@@ -274,35 +281,45 @@
    no border, icon only, the lowest-emphasis affordance on the card (swipe
    stays the primary way to move the carousel, Discover stays the one
    filled CTA). 44px tap target for comfortable touch access even though
-   the icon itself is small. */
-/* Fix #16 -- flicker on tap: .card-nav used to be MOUNTED/UNMOUNTED by React
-   (HomeMobile.js's `card.isCurrent ? <div className="card-nav">...` ternary)
-   instead of just hidden. Tapping an arrow calls commitTo(), which flips
-   `settled` to false in the SAME synchronous update -- and `isCurrent` is
-   derived from `settled` (see buildCards()), so the very button just
-   tapped, and its whole wrapper, was torn out of the DOM the instant it was
-   clicked, then a brand new .card-nav mounted on a different card 220ms
-   later once the settle finished. No card had a .card-nav at all for that
-   whole 220ms window -- read as the arrows (and the row they sit in)
-   blinking out and back. HomeMobile.js now always renders .card-nav for
-   every card; visibility is driven by this CSS instead, keyed off the same
-   .is-current class that already gates everything else, so the DOM node
-   itself never disappears -- it only cross-fades, and a quick tap can never
-   again unmount the element it just received. */
-.home-mobile-scope .card-nav {
+   the icon itself is small.
+   Fix #16 (superseded by fix #31, kept here for history) -- flicker on tap:
+   the arrows used to be MOUNTED/UNMOUNTED by React instead of just hidden,
+   which blinked them out and back on every tap. The fix at the time was to
+   always render them and drive visibility from CSS instead, keyed off
+   `.is-current` -- which worked for a single quick tap, but Victoria later
+   reported (fix #31) that the SAME opacity toggle still read as
+   "disappearing" on every ordinary swipe/advance, since currentIndex is -1
+   (no card current) for the whole duration any scroll is actually
+   happening, not just for one tap's settle window -- plus each per-slot
+   copy only ever matched that ONE slot's own transformed position, which
+   could read as the arrows "moving". Fix #31 removes the per-slot
+   `.card-nav` entirely -- the single persistent `.car2-nav` below has no
+   `.is-current` dependency and nothing to move it, so neither failure mode
+   is possible any more. */
+.home-mobile-scope .car2-nav {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  /* Fixed at the same on-screen spot the arrows always sat at under the
+     old per-card-slot layout, measured from the top of `.car2`/
+     `.car2-track` (both start at the same y): card (288, CARD_H) + the
+     card-to-Discover gap (26, see `.card-cta`'s `top` above) + Discover's
+     own unscaled layout box (~36px: 12px top/bottom padding + a 12px,
+     line-height:1 text line -- `.btn-discover`'s `scale(1.1765)` enlarges
+     it visually without changing this box) + the Discover-to-arrows gap
+     that used to come from `.card-cta`'s own flex `gap` (12) = 362px. Not
+     derived automatically any more (fix #31 deliberately broke that
+     coupling to get the arrows out of the per-slot, transformed strip) --
+     if Discover's own size/padding/gap ever changes, this number needs a
+     matching manual update. */
+  top: 362px;
   display: flex;
   align-items: center;
   gap: 6px;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.18s ease;
-}
-.home-mobile-scope .card-face.is-current ~ .card-cta .card-nav {
-  opacity: 1;
-  pointer-events: auto;
-}
-@media (prefers-reduced-motion: reduce) {
-  .home-mobile-scope .card-nav { transition: none; }
+  /* Above every `.card-slot`'s own z-index (HomeMobile.js's applyArc() caps
+     that at 100, for the centred card) so the arrows never sit under a
+     card. */
+  z-index: 150;
 }
 /* Fix #17 -- tone match: the arrows used to sit at 55% white opacity (a
    dimmer, lower-emphasis tertiary tone than everything else on the card).

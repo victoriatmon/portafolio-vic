@@ -91,6 +91,84 @@
 // what actually frees up the vertical room; the gaps around it were only
 // retuned, not the main lever.
 //
+// ===== Fix #29/#30/#31/#32 (2026-10-28, next conversation, from Victoria
+// re-testing #27/#28 live on her iPhone against the carousel-fixes-review
+// preview) =====
+// Four more reports from that same real-device pass: the arc still read as
+// the card "falling"/"tilting toward the bottom-right corner" on AXA/
+// victorai/Undp especially, and MORE so when using the prev/next arrows
+// than on a swipe (#29); the arrow glide itself didn't feel smooth, almost
+// "like it's loading" (#30, same root cause as part of #29 -- see below);
+// the arrows disappeared and seemed to shift position every time the
+// carousel changed card, which Victoria said they should never do (#31);
+// and 8 more px of air was asked for between the title and the carousel
+// (#32).
+//
+// #29 -- still "falls"/"tilts", worse on the arrows: RC=2600 (fix #28)
+// already cut the SWEEP a card travels through, but rotate()+translateY()
+// together still read as one continuous "lean and drop toward the bottom
+// corner" motion, no matter how small -- and that drop (translateY) is the
+// part that actually looks like weight/gravity, not the rotation (which
+// alone just reads as a tilt, closer to what fix #23 was asked to restore).
+// Victoria didn't single out AXA/victorai/Undp because of anything specific
+// to those three cards' own code (nothing in applyArc() or the per-card
+// components keys off card identity) -- they're simply the second half of
+// the six-card loop, the stretch she kept swiping through for longest in
+// this round's test pass, so the same universal transform had more chances
+// to register as "heavy" there. Fix: decoupled the drop from the rotation
+// with its own independent multiplier (DROP_SCALE below) instead of pushing
+// RC even higher (which would also flatten the rotation Victoria asked
+// fix #23 to bring back) -- same `ang`/STEP driving the rotation as before,
+// just a smaller fraction of the matching translateY riding along with it.
+// Worse on the arrows specifically because scrollToIndex()'s old
+// easeInOutCubic glide has a slow-starting first half -- during which the
+// rotation/drop is already changing but the card barely seems to move
+// horizontally yet -- which is exactly what reads as the card "sinking"
+// before it "catches up": see fix #30, the other half of this same
+// complaint.
+//
+// #30 -- arrow glide "no fluido"/"como que está cargando": a plain native
+// swipe decelerates the way the OS already knows gestures should feel;
+// scrollToIndex()'s 420ms easeInOutCubic glide, by contrast, spends its
+// first ~150-200ms barely moving (a slow ease-IN) before the motion visibly
+// picks up -- a dead zone right after the tap that reads as a stall/load,
+// not a response to the tap. Switched to a plain ease-OUT cubic (motion
+// starts at full speed the instant the glide begins, only decelerating
+// into the landing) and trimmed the duration (420ms -> 320ms) to match a
+// snappier, more immediate-feeling tap response -- closer to how the
+// native swipe's own deceleration already feels than the old symmetric
+// ease was.
+//
+// #31 -- arrows disappearing/shifting: under the pre-#31 design, the
+// prev/next buttons were two small DOM nodes duplicated once INSIDE every
+// one of the EXT_COUNT `.card-slot`s (hidden via opacity on all but the
+// currently-centred one, see this file's prior revision's `.card-nav`
+// rendering + home-mobile.css's matching `.is-current` sibling-selector
+// rule) -- which inherited that slot's own arc transform AND its own
+// `.is-current`-driven opacity fade. Every swipe/tap sets currentIndex to
+// -1 for the scroll's whole duration (no card is "current" while actually
+// moving, by design -- see currentIndex's own declaration comment above),
+// so the arrows' opacity dropped to 0 and back on every single advance --
+// exactly what read as "disappearing". And because the buttons lived
+// inside a transformed `.card-slot`, their on-screen position was only
+// ever guaranteed to match the PREVIOUS current card's slot, not
+// necessarily pixel-identical to the new one depending on timing -- read
+// as "moving". Fix: the two buttons are no longer rendered per-slot at
+// all -- a single, persistent pair now lives outside `.car2-track`
+// entirely (see the render below and home-mobile.css's new `.car2-nav`),
+// never opacity-toggled, never inside anything the arc transform touches,
+// so there's structurally nothing left to make them disappear or shift:
+// they're one DOM node pair, in one fixed CSS position, for the whole time
+// the page is open. (Discover deliberately keeps its OLD per-slot
+// behaviour -- unlike the arrows, Victoria has never asked for that to
+// change, and it's a real feature: Discover under a neighbouring,
+// partially-visible card lets you open that project directly without
+// first centring it.)
+//
+// #32 -- 8px more air, title-to-carousel: see home-mobile.css's `.car2`
+// `top` (160px -> 168px) -- same lever fix #20/#23/#26 already used for
+// this exact gap, just nudged once more per this round's explicit request.
+//
 // What's left for JS to do (updated):
 //   1. Know which REAL card is centred (0..COUNT-1, never a clone's
 //      position), to drive `.is-current` -- done by reading the track's
@@ -223,7 +301,20 @@ const PAGE_W = CARD_W + CARD_GAP;
 // as a tilt. ARC_HIDE_AT left as-is; raising RC alone already shrinks the
 // worst-case rotation/drop at every distance, no need to also hide cards
 // sooner.
+//
+// Fix #29 (2026-10-28, next conversation): RC=2600 cut the SWEEP, but
+// Victoria still read the combined rotate+translateY as the card "falling"
+// toward the bottom-right corner (worse on the arrow glide -- see fix #30
+// and this file's header comment for the full report). The translateY
+// term is what actually looks like weight/gravity pulling a card down;
+// the rotation alone just reads as a lean/tilt (the part Victoria asked
+// fix #23 to bring back). DROP_SCALE lets the drop be dialled down
+// independently of the rotation, instead of pushing RC even higher (which
+// would flatten the rotation too). Still using the same `ang`/STEP as the
+// rotation -- see applyArc() below -- just multiplying the resulting `y`
+// by this fraction before writing it.
 const RC = 2600;
+const DROP_SCALE = 0.45;
 const STEP = (Math.asin(PAGE_W / RC) * 180) / Math.PI;
 // Cards beyond this many slots from centre are hidden outright (matches
 // desktop's own cutoff, scaled -- six cards never need more than ~2 to be
@@ -238,9 +329,18 @@ const ARC_HIDE_AT = 2.3;
 // NAV_EASE_DUR_MS/CURVE numbers, since the underlying motion mechanism
 // (compositor-driven native scroll vs. a CSS transform transition) is
 // fundamentally different now.
-const NAV_EASE_MS = 420;
-function easeInOutCubic(t) {
-  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+// Fix #30 (2026-10-28, next conversation): was 420ms + easeInOutCubic.
+// Victoria reported the arrow glide specifically (not swipe) felt
+// unresponsive, "like it's loading" -- easeInOutCubic spends its first
+// ~150-200ms barely moving (a slow ease-IN) before visibly picking up,
+// which reads as a dead zone right after the tap rather than an immediate
+// response to it. Switched to a plain ease-OUT curve (full speed from the
+// first frame, decelerating only into the landing) and trimmed the
+// duration, matching how a native swipe's own deceleration already feels
+// much more closely than the old symmetric ease did.
+const NAV_EASE_MS = 320;
+function easeOutCubic(t) {
+  return 1 - Math.pow(1 - t, 3);
 }
 
 export default function HomeMobile() {
@@ -365,7 +465,10 @@ export default function HomeMobile() {
         if (!el) continue;
         const d = i - pos; // signed, continuous distance from centre, over the extended strip
         const ang = d * STEP;
-        const y = RC * (1 - Math.cos((ang * Math.PI) / 180));
+        // DROP_SCALE (fix #29): same `ang` drives the rotation as always;
+        // only the vertical-drop term is scaled down independently, so the
+        // "lean" stays but the "falls toward the corner" sensation doesn't.
+        const y = RC * (1 - Math.cos((ang * Math.PI) / 180)) * DROP_SCALE;
         el.style.transform = `rotate(${ang.toFixed(3)}deg) translateY(${y.toFixed(2)}px)`;
         el.style.visibility = Math.abs(d) > ARC_HIDE_AT ? 'hidden' : 'visible';
         el.style.zIndex = String(Math.round(100 - Math.abs(d) * 10));
@@ -537,7 +640,7 @@ export default function HomeMobile() {
       let rafId2;
       function step(now) {
         const frac = Math.min(1, (now - startTime) / NAV_EASE_MS);
-        track.scrollLeft = start + change * easeInOutCubic(frac);
+        track.scrollLeft = start + change * easeOutCubic(frac);
         if (frac < 1) {
           rafId2 = requestAnimationFrame(step);
           autoScrollCancel = () => cancelAnimationFrame(rafId2);
@@ -661,6 +764,19 @@ export default function HomeMobile() {
                         </>
                       )}
                     </Link>
+                    {/* Discover only, as of fix #31 -- the prev/next arrows
+                        used to render here too (hidden on every slot but
+                        the current one via a CSS opacity rule keyed to
+                        `.is-current`), which is what made them read as
+                        disappearing/shifting on every advance: see this
+                        file's header comment and `.car2-nav` below, which
+                        replaces them with one persistent pair outside the
+                        scrolling/transformed strip entirely. Discover
+                        itself deliberately keeps rendering per-slot,
+                        unchanged -- letting a tap reach a neighbouring,
+                        partially-visible card's own project directly is a
+                        real feature, not something Victoria has asked to
+                        change. */}
                     <div className="card-cta">
                       <Link
                         className="btn-primary btn-discover"
@@ -670,38 +786,42 @@ export default function HomeMobile() {
                       >
                         Discover
                       </Link>
-                      {/* Always rendered for every card, not just the current
-                          one -- visibility is driven purely by the
-                          `.card-face.is-current ~ .card-cta .card-nav` CSS
-                          rule in home-mobile.css, so the DOM node never
-                          disappears mid-tap (see that file's fix #16 comment
-                          for the flicker this avoids). */}
-                      <div className="card-nav">
-                        <button
-                          type="button"
-                          className="btn-tertiary btn-nav-arrow"
-                          aria-label="Previous project"
-                          tabIndex={isCurrent ? 0 : -1}
-                          onClick={() => navRef.current.prev()}
-                        >
-                          {/* Same arrow-glyph-in-Manrope treatment as the "See
-                              next case" button at the bottom of each project. */}
-                          <span aria-hidden="true">&larr;</span>
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-tertiary btn-nav-arrow"
-                          aria-label="Next project"
-                          tabIndex={isCurrent ? 0 : -1}
-                          onClick={() => navRef.current.next()}
-                        >
-                          <span aria-hidden="true">&rarr;</span>
-                        </button>
-                      </div>
                     </div>
                   </div>
                 );
               })}
+            </div>
+            {/* Fix #31: a single, persistent prev/next pair, outside
+                `.car2-track` entirely -- never inside anything the arc
+                transform (applyArc(), above) touches, and never opacity-
+                toggled by `.is-current`. Previously these were duplicated
+                once per `.card-slot` and hidden/shown by CSS, which is what
+                made them read as disappearing (every swipe/tap sets
+                currentIndex to -1 for the scroll's whole duration, so no
+                slot's copy was "current" meanwhile) and shifting (each
+                copy's on-screen spot only matched up to whatever that
+                slot's own live transform happened to be). One fixed DOM
+                node pair in one fixed CSS position (see home-mobile.css's
+                `.car2-nav`) has nothing left in it that could do either. */}
+            <div className="car2-nav">
+              <button
+                type="button"
+                className="btn-tertiary btn-nav-arrow"
+                aria-label="Previous project"
+                onClick={() => navRef.current.prev()}
+              >
+                {/* Same arrow-glyph-in-Manrope treatment as the "See next
+                    case" button at the bottom of each project. */}
+                <span aria-hidden="true">&larr;</span>
+              </button>
+              <button
+                type="button"
+                className="btn-tertiary btn-nav-arrow"
+                aria-label="Next project"
+                onClick={() => navRef.current.next()}
+              >
+                <span aria-hidden="true">&rarr;</span>
+              </button>
             </div>
           </div>
         </section>

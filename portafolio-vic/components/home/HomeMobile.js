@@ -20,8 +20,10 @@
 //
 // Preserved: the same flat-arc carousel geometry and physics (sized for a
 // 390px-wide screen), its touch affordances -- a finger resting briefly on
-// a card counts as hover (`.is-held`, feeding the same CSS lift as
-// desktop's :hover), a drag never opens a card, a quick tap does -- wheel
+// a card counts as hover (`.is-held`; its lift/grow CSS was removed per
+// Victoria's request -- see home-mobile.css -- but the class/timer
+// machinery below is kept, since it's also load-bearing for tap-vs-hold-
+// vs-drag disambiguation), a drag never opens a card, a quick tap does -- wheel
 // support for a touch-capable trackpad, keyboard-focus recentring, and a
 // simplified load-time reveal standing in for the dropped transition's
 // entrance choreography.
@@ -34,8 +36,9 @@
 // (home-mobile.css's trigger selectors) and as an `active` prop on <Art/>
 // (for AXA/UNDP's JS-driven art). This replaced an earlier version where a
 // ~240ms press (`.is-held`, via holdOn/holdOff below) triggered the art
-// instead -- `.is-held` still exists and still drives the plain card-lift
-// feedback on press, it just no longer feeds any card's art. A first pass
+// instead -- `.is-held` still exists (see above), it just no longer feeds
+// any card's art, and no longer has a visible lift/grow effect of its own
+// either. A first pass
 // at the centred-trigger gated on proximity to centre alone (a small
 // epsilon on `d`) rather than on the carousel being fully at rest, which
 // could mark a card current ~100ms before the settle ease actually
@@ -197,6 +200,12 @@ export default function HomeMobile() {
   const [easing, setEasing] = useState(false);
   const [entered, setEntered] = useState(false);
   const carRef = useRef(null);
+  // Imperative next()/prev(), wired up once inside the big pointer/wheel
+  // effect below (same ref-exposing-a-closure pattern as AXACard.js's
+  // apiRef) so the prev/next buttons rendered on the centred card (see
+  // render below) can trigger exactly the same commitTo()-driven settle as
+  // a swipe, instead of duplicating any of that logic here.
+  const navRef = useRef({ next() {}, prev() {} });
 
   useEffect(() => {
     const reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -522,6 +531,17 @@ export default function HomeMobile() {
       commitTo(Math.round((currentVisualPos() - idx) / COUNT) * COUNT + idx);
     }
 
+    // Prev/next buttons (rendered on the centred card only -- see render
+    // below): advance/retreat exactly one card from wherever the carousel
+    // visually is right now, via the same commitTo() settle a swipe uses.
+    // Safe to call mid-settle too -- commitTo() already starts its `from`
+    // at currentVisualPos(), the same interrupt-cleanly path a second quick
+    // swipe or a focus move relies on.
+    navRef.current = {
+      next: () => commitTo(currentVisualPos() + 1),
+      prev: () => commitTo(currentVisualPos() - 1),
+    };
+
     const carEl = carRef.current;
     if (carEl) {
       carEl.addEventListener('pointerdown', onDragStart);
@@ -626,14 +646,36 @@ export default function HomeMobile() {
                       </>
                     )}
                   </Link>
-                  <Link
-                    className="btn-primary btn-discover"
-                    href={card.href}
-                    draggable="false"
-                    onClick={(e) => handleCardOpen(e, card)}
-                  >
-                    Discover
-                  </Link>
+                  <div className="card-cta">
+                    <Link
+                      className="btn-primary btn-discover"
+                      href={card.href}
+                      draggable="false"
+                      onClick={(e) => handleCardOpen(e, card)}
+                    >
+                      Discover
+                    </Link>
+                    {card.isCurrent ? (
+                      <div className="card-nav">
+                        <button
+                          type="button"
+                          className="btn-tertiary btn-nav-arrow"
+                          aria-label="Previous project"
+                          onClick={() => navRef.current.prev()}
+                        >
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 6 9 12 15 18" /></svg>
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-tertiary btn-nav-arrow"
+                          aria-label="Next project"
+                          onClick={() => navRef.current.next()}
+                        >
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 6 15 12 9 18" /></svg>
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
                 );
               })}

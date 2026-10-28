@@ -65,16 +65,15 @@
   touch-action: pan-y !important;
   -webkit-touch-callout: none;
 }
-.home-mobile-scope .card-face.is-held {
-  transform: translateY(-10px) scale(1.03);
-  filter: brightness(1.08);
-  box-shadow: 0 50px 90px -15px rgba(0,0,0,0.72), 0 20px 34px rgba(0,0,0,0.5);
-}
-.home-mobile-scope .card-face.is-held:active {
-  transform: translateY(-10px) scale(1.03);
-  filter: brightness(1.08);
-  box-shadow: 0 50px 90px -15px rgba(0,0,0,0.72), 0 20px 34px rgba(0,0,0,0.5);
-}
+/* .is-held's lift/scale/brightness grow-on-long-press effect was removed
+   per Victoria's request (it's still added/removed by HomeMobile.js's
+   holdOn()/holdOff() -- see that file's header comment -- but now has no
+   CSS to act on, so it's a harmless no-op class toggle; left in place
+   rather than ripping out holdOn/holdOff/heldFace, since that state machine
+   is also load-bearing for the separate tap-vs-hold-vs-drag disambiguation
+   logic in onWinMove/onWinUp, which Victoria did not ask to change). The
+   quick tap-down feedback below (.card-face:active) is unrelated and was
+   kept. */
 .home-mobile-scope .card-face:active {
   transform: translateY(-2px) scale(0.97);
   filter: brightness(0.82);
@@ -101,6 +100,23 @@
   text-align: left;
 }
 
+/* Wraps the Discover CTA and, on the centred card only, the prev/next nav
+   row below it (Victoria asked for a tap-driven alternative to swiping --
+   see HomeMobile.js's navRef/commitTo()). This takes over the absolute
+   placement that `.btn-discover` used to carry on its own (same slot:
+   `left:50%; top:calc(100% + 18px);`) and lays its children out with flex
+   instead, so a second row can sit under Discover without hardcoding its
+   height into a second fixed `top` offset. */
+.home-mobile-scope .card-cta {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 18px);
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
 .home-mobile-scope .btn-primary {
   all: unset;
   cursor: pointer;
@@ -117,10 +133,9 @@
 }
 .home-mobile-scope .btn-primary:active { background: #0A1130; color: #0066FF; }
 .home-mobile-scope .btn-discover {
-  position: absolute;
-  left: 50%;
-  top: calc(100% + 18px);
-  transform: translateX(-50%) scale(1.1765);
+  /* Centering/placement now comes from the `.card-cta` parent above --
+     this only keeps its own visual scale-up. */
+  transform: scale(1.1765);
   background: #2A2A2A;
   font-size: 12px;
   line-height: 1;
@@ -130,6 +145,35 @@
   -webkit-tap-highlight-color: transparent;
 }
 .home-mobile-scope .btn-discover:active { background: #2A2A2A; }
+
+/* Prev/next arrows: tertiary hierarchy, per Victoria's request -- no fill,
+   no border, icon only, the lowest-emphasis affordance on the card (swipe
+   stays the primary way to move the carousel, Discover stays the one
+   filled CTA). 44px tap target for comfortable touch access even though
+   the icon itself is small. */
+.home-mobile-scope .card-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.home-mobile-scope .btn-tertiary.btn-nav-arrow {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  color: rgba(245,245,245,0.55);
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.home-mobile-scope .btn-tertiary.btn-nav-arrow svg { display: block; }
+.home-mobile-scope .btn-tertiary.btn-nav-arrow:active {
+  color: #F5F5F5;
+  background: rgba(255,255,255,0.08);
+}
 
 /* Load-driven reveal -- simplified stand-in for the original's cross-page
    XT choreography, see home.css (desktop). */

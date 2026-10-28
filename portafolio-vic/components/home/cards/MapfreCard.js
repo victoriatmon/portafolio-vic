@@ -17,7 +17,7 @@
 // (post base64-extraction), so correctness here rests on the extraction
 // step, not on manual attribute-by-attribute conversion.
 
-import { memo } from 'react';
+import { memo, useEffect, useRef } from 'react';
 
 const MAPFRE_SVG =`<svg class="mp-card" aria-hidden="true" width="300" height="400" viewBox="0 0 300 400" fill="none" xmlns="http://www.w3.org/2000/svg">
 <g clip-path="url(#clip0_80_51)">
@@ -64,16 +64,62 @@ const MAPFRE_SVG =`<svg class="mp-card" aria-hidden="true" width="300" height="4
 </defs>
 </svg>`;
 
-function MapfreCard() {
-  return <div className="mp-card-wrap" dangerouslySetInnerHTML={{ __html: MAPFRE_SVG }} />;
+// `active`: controlled-mode signal from HomeMobile.js (card centred in the
+// mobile carousel -- the same `active` prop every card in CARD_ART gets
+// passed, see AXACard.js/UndpCard.js for the pattern). HomeDesktop.js never
+// passes it, so `active === undefined` there leaves this card exactly as it
+// always was: pure CSS, :hover-driven, no JS involvement at all.
+//
+// Fix #15 (Safari mask-repaint bug, following fix #14): `will-change` on
+// `.mp-tile`/`.mp-word` (fix #14) did NOT resolve Victoria's report that
+// Mapfre never animates on her iPhone -- confirmed by her after that fix
+// shipped. Re-reading the actual SVG below (not just grepping class names)
+// found the real mechanism: the 20 `.mp-tile` rects are never painted
+// directly -- they're shape data inside a single `<mask id="m">`, which one
+// `<g mask="url(#m)">` uses to carve a window into the big pattern-image
+// rect underneath it (that's how the tile-mosaic look is actually built --
+// which part of the image shows depends on where the mask shapes are).
+// Safari has a long-documented class of bugs where it fails to regenerate
+// an SVG mask's rendered bitmap when the mask's content changes only via a
+// CSS *transition* (a continuously-ticking `animation` sidesteps this,
+// which is exactly why Phantom/Pulso/victorai -- all `animation`-based --
+// were never reported broken). `will-change` on the tiles didn't help
+// because the tiles themselves are never painted on screen on their own --
+// only the mask's *derived* bitmap is, and that's a separate pipeline stage
+// `will-change` doesn't reach.
+// The fix: when `active` flips (either direction), force Safari to drop
+// and recompute the mask by toggling the `mask` attribute off and back on
+// the `<g mask="url(#m)">` element itself, with a layout read forced in
+// between so the removal actually commits before the mask is reapplied.
+// This is the standard workaround for this class of bug (reset the
+// resource reference to bust whatever stale cache the engine is holding).
+// Still not verified on an actual iPhone -- no device access here, and
+// this bug is invisible in this environment's Chromium-based test browser
+// by construction. If this doesn't resolve it either, the next step is to
+// stop relying on Safari repainting the mask at all: drive the mask
+// window's geometry from React state/JS instead of a CSS `transition`.
+function MapfreCard({ active } = {}) {
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    if (active === undefined) return; // desktop: untouched, CSS/:hover only
+    const g = wrapRef.current && wrapRef.current.querySelector('g[mask]');
+    if (!g) return;
+    g.setAttribute('mask', 'none');
+    g.getBoundingClientRect(); // force layout so the removal above actually commits first
+    g.setAttribute('mask', 'url(#m)');
+  }, [active]);
+
+  return <div ref={wrapRef} className="mp-card-wrap" dangerouslySetInnerHTML={{ __html: MAPFRE_SVG }} />;
 }
 
-// Memoized: this component takes no props, and its output never changes, but
-// it's re-mounted inside the mobile/desktop drag carousel, whose parent
-// re-renders on every `setPos()` during a drag/momentum tick (see
-// HomeMobile.js/HomeDesktop.js). Without memo, React re-runs and re-diffs
-// this ~100KB inline SVG tree on every one of those renders -- six times
-// over (one per card) -- which is the main cause of the janky/slow drag
-// feel reported on mobile. memo() skips all of that since the (empty)
-// props never change.
+// Memoized: this component's output never changes beyond the mask-reset
+// side effect above, but it's re-mounted inside the mobile/desktop drag
+// carousel, whose parent re-renders on every `setPos()` during a drag/
+// momentum tick (see HomeMobile.js/HomeDesktop.js). Without memo, React
+// would re-run and re-diff this ~100KB inline SVG tree on every one of
+// those renders -- six times over (one per card) -- which is the main
+// cause of the janky/slow drag feel reported on mobile. memo() skips all
+// of that: it only re-renders (and so only re-runs the effect above) when
+// `active` itself actually changes value, same as AXACard.js/UndpCard.js.
 export default memo(MapfreCard);

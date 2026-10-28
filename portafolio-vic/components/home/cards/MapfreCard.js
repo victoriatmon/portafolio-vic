@@ -17,7 +17,7 @@
 // (post base64-extraction), so correctness here rests on the extraction
 // step, not on manual attribute-by-attribute conversion.
 
-import { memo, useEffect, useRef } from 'react';
+import { memo, useRef } from 'react';
 
 const MAPFRE_SVG =`<svg class="mp-card" aria-hidden="true" width="300" height="400" viewBox="0 0 300 400" fill="none" xmlns="http://www.w3.org/2000/svg">
 <g clip-path="url(#clip0_80_51)">
@@ -64,62 +64,65 @@ const MAPFRE_SVG =`<svg class="mp-card" aria-hidden="true" width="300" height="4
 </defs>
 </svg>`;
 
-// `active`: controlled-mode signal from HomeMobile.js (card centred in the
-// mobile carousel -- the same `active` prop every card in CARD_ART gets
-// passed, see AXACard.js/UndpCard.js for the pattern). HomeDesktop.js never
-// passes it, so `active === undefined` there leaves this card exactly as it
-// always was: pure CSS, :hover-driven, no JS involvement at all.
+// This card previously took an `active` prop (controlled-mode signal from
+// HomeMobile.js: card centred in the mobile carousel -- the same prop
+// AXACard.js/UndpCard.js still take) solely to drive fix #15's mask-reset
+// effect below, now reverted by fix #17. Mapfre no longer does anything
+// with `active` -- it relies purely on the `.is-current`/`:hover` CSS
+// transition in home-mobile.css/home.css, exactly like it always has on
+// desktop and like the other 5 cards already do on both viewports.
 //
-// Fix #15 (Safari mask-repaint bug, following fix #14): `will-change` on
-// `.mp-tile`/`.mp-word` (fix #14) did NOT resolve Victoria's report that
-// Mapfre never animates on her iPhone -- confirmed by her after that fix
-// shipped. Re-reading the actual SVG below (not just grepping class names)
-// found the real mechanism: the 20 `.mp-tile` rects are never painted
-// directly -- they're shape data inside a single `<mask id="m">`, which one
-// `<g mask="url(#m)">` uses to carve a window into the big pattern-image
-// rect underneath it (that's how the tile-mosaic look is actually built --
-// which part of the image shows depends on where the mask shapes are).
-// Safari has a long-documented class of bugs where it fails to regenerate
-// an SVG mask's rendered bitmap when the mask's content changes only via a
-// CSS *transition* (a continuously-ticking `animation` sidesteps this,
-// which is exactly why Phantom/Pulso/victorai -- all `animation`-based --
-// were never reported broken). `will-change` on the tiles didn't help
-// because the tiles themselves are never painted on screen on their own --
-// only the mask's *derived* bitmap is, and that's a separate pipeline stage
-// `will-change` doesn't reach.
-// The fix: when `active` flips (either direction), force Safari to drop
-// and recompute the mask by toggling the `mask` attribute off and back on
-// the `<g mask="url(#m)">` element itself, with a layout read forced in
-// between so the removal actually commits before the mask is reapplied.
-// This is the standard workaround for this class of bug (reset the
-// resource reference to bust whatever stale cache the engine is holding).
-// Still not verified on an actual iPhone -- no device access here, and
-// this bug is invisible in this environment's Chromium-based test browser
-// by construction. If this doesn't resolve it either, the next step is to
-// stop relying on Safari repainting the mask at all: drive the mask
-// window's geometry from React state/JS instead of a CSS `transition`.
-function MapfreCard({ active } = {}) {
+// Fix #15 (reverted by fix #17, kept here for the record): Safari has a
+// long-documented class of bugs where it fails to regenerate an SVG mask's
+// rendered bitmap when the mask's content changes only via a CSS
+// *transition* (a continuously-ticking `animation` sidesteps this, which
+// is why Phantom/Pulso/victorai -- all `animation`-based -- were never
+// reported broken). The 20 `.mp-tile` rects here are shape data inside a
+// single `<mask id="m">`, which one `<g mask="url(#m)">` uses to carve a
+// window into the pattern-image rect underneath it, so this card looked
+// like a plausible match for that bug class. Fix #14's `will-change` on the
+// tiles didn't help (the tiles themselves are never painted directly, only
+// the mask's *derived* bitmap is, a separate pipeline stage `will-change`
+// doesn't reach), so fix #15 instead forced Safari to drop and recompute
+// the mask by toggling the `mask` attribute off and back on the `<g
+// mask="url(#m)">` element itself, with a layout read forced in between.
+// Fix #17 reverts fix #15's mask-attribute-toggle hack (below, kept only in
+// this comment for the record): on `active` flipping, it removed and
+// re-added the `mask="url(#m)"` attribute on the SVG's masking <g>, meant
+// to force Safari to recompute a mask bitmap it was suspected of failing to
+// repaint on its own. Never confirmed fixed on a real iPhone, and Victoria
+// has now reported something worse and specific on mobile: the card
+// flickers once when centred, then the tile mosaic never animates at all --
+// consistent with the attribute removal/re-add (and the forced layout read
+// between them) stepping on the mp-tile/mp-word elements' own in-flight CSS
+// `transition` (triggered by `.is-current`, same render) rather than fixing
+// anything, since that toggle runs on a DIFFERENT element (the masking <g>)
+// than the ones actually transitioning. Desktop never ran this hack at all
+// -- it only triggers when `active !== undefined`, and HomeDesktop.js never
+// passes that prop -- which is exactly why Victoria sees it animate
+// correctly there: desktop's Mapfre card has always relied on nothing more
+// than the plain `.is-current`/`:hover` CSS transition the other five cards
+// already use successfully. Removing the hack here makes mobile rely on
+// that same already-proven mechanism instead of the unconfirmed JS
+// workaround that was likely the actual cause of the new flicker-then-
+// static symptom. If a Safari-specific non-repaint bug turns out to still
+// be real and resurfaces, the next step (per fix #15's own note) is to stop
+// depending on the browser repainting an SVG <mask> at all and drive the
+// tile geometry from React state/JS instead -- not another attribute-
+// toggle variant of this same hack.
+function MapfreCard() {
   const wrapRef = useRef(null);
-
-  useEffect(() => {
-    if (active === undefined) return; // desktop: untouched, CSS/:hover only
-    const g = wrapRef.current && wrapRef.current.querySelector('g[mask]');
-    if (!g) return;
-    g.setAttribute('mask', 'none');
-    g.getBoundingClientRect(); // force layout so the removal above actually commits first
-    g.setAttribute('mask', 'url(#m)');
-  }, [active]);
 
   return <div ref={wrapRef} className="mp-card-wrap" dangerouslySetInnerHTML={{ __html: MAPFRE_SVG }} />;
 }
 
-// Memoized: this component's output never changes beyond the mask-reset
-// side effect above, but it's re-mounted inside the mobile/desktop drag
-// carousel, whose parent re-renders on every `setPos()` during a drag/
-// momentum tick (see HomeMobile.js/HomeDesktop.js). Without memo, React
-// would re-run and re-diff this ~100KB inline SVG tree on every one of
-// those renders -- six times over (one per card) -- which is the main
-// cause of the janky/slow drag feel reported on mobile. memo() skips all
-// of that: it only re-renders (and so only re-runs the effect above) when
-// `active` itself actually changes value, same as AXACard.js/UndpCard.js.
+// Memoized: this component takes no props and never changes its own
+// output, but it's re-mounted inside the mobile/desktop drag carousel,
+// whose parent re-renders on every `setPos()` during a drag/momentum tick
+// (see HomeMobile.js/HomeDesktop.js). Without memo, React would re-run and
+// re-diff this ~100KB inline SVG tree on every one of those renders -- six
+// times over (one per card) -- which is the main cause of the janky/slow
+// drag feel reported on mobile. memo() skips all of that entirely here,
+// same reasoning as AXACard.js/UndpCard.js (which still take `active` and
+// so still re-render when it changes).
 export default memo(MapfreCard);

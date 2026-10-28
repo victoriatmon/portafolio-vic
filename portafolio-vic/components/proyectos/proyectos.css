@@ -3014,44 +3014,54 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
   line-height: 1.2;
   color: #F5F5F5;
 }
-/* A long value (AXA's "Team with" roster, its "Skills" list) used to force
-   its column to grow to the text's full one-line width instead of wrapping,
-   which pushed later columns past the card edge. The old fix capped every
-   non-last column at a flat 310px and let only the last column flex to
-   fill leftover room (matching Figma for AXA's specific copy) -- but that
-   310px cap was a fixed number tuned for the narrower card the design had
-   back then, so once the card grew (see proyectos.css history on
-   .project-card-lg.is-current), a long non-last value like Pulso's "Team
-   with" roster kept wrapping onto 2 lines even with plenty of real estate
-   free on the card. A later attempt (CSS Grid auto-fit + minmax, sizing
-   every column to its own `max-content`) was meant to fix that at the
-   source, but didn't: when the combined max-content width of ALL columns
-   overflows the row, Grid's track-sizing algorithm distributes the deficit
-   across every flexible (non-last-row) track by its own formula, not just
-   the column(s) that are actually too wide -- confirmed live on AXA, where
-   "Team with" and "Skills" (two columns with very different natural
-   widths) both got squeezed down to the exact same compressed width and
-   both wrapped to 3 lines, and on ONU/PNUD, where "Skills" alone wrapped
-   to 2 lines despite Role/Timeline/Team with having room to spare. Victoria
-   flagged this as the 48px gap no longer reading as even/consistent across
-   Pulso, AXA, VictorAI and ONU/PNUD the way it does on Mapfre and AI Cash
-   Flow Predictor (whose short "Team with"/no-"Team with" values never
-   trigger it). Flexbox fixes it properly: each item keeps its own natural
-   one-line width (shrinking only down to the 160px floor) and, if a whole
-   row of items doesn't fit, the items that don't fit wrap AS WHOLE ITEMS
-   onto the next line -- never squeezed to share a compressed width with an
-   unrelated neighbor. The same 48px/32px gap stays exactly even both
-   between items on a line and between wrapped lines, for any project's
-   meta data, however long, without per-project tuning. */
+/* History of this rule, 3 attempts: (1) a flat 310px cap on every
+   non-last column, tuned for the narrower card the design had back then
+   -- broke once the card grew, long non-last values like Pulso's "Team
+   with" kept wrapping even with room free. (2) CSS Grid auto-fit +
+   minmax(160px, max-content) -- meant to size each column to its own
+   content, but didn't fix AXA/ONU-PNUD: when combined max-content
+   overflowed the row, Grid's track-sizing algorithm distributed the
+   deficit unevenly, confirmed live squeezing AXA's very-different-length
+   "Team with"/"Skills" to the exact same compressed width, both wrapping
+   to 3 lines. (3) flexbox + flex-wrap, each item at its own natural
+   width, wrapping AS A WHOLE ITEM to a new line if its row didn't fit --
+   fixed the uneven-compression bug, but Victoria clarified after seeing
+   it live that a whole extra ROW of columns (Skills alone on its own
+   line under AXA/ONU-PNUD) is NOT acceptable even though each column was
+   evenly spaced and single-line; she also flagged that the 160px floor
+   made Pulso's short "2025" (Timeline) and VictorAI's short "Owner"
+   (Role) read as having too much empty space before the next column's
+   48px gap even started. Her actual spec: always exactly ONE row of
+   columns; a column's OWN text may wrap onto several lines if its
+   column doesn't have room for the whole thing on one line, but the
+   columns themselves never reflow to a second row; and a short value
+   should hug its own width instead of being padded out to a shared
+   floor. Grid gets this right with NO auto-fit and NO fixed floor: the
+   JSX sets `gridTemplateColumns: repeat(<item count>, minmax(0,
+   max-content))` inline (ProyectosDesktop.js, both `.mapfre-meta-grid`
+   renders) using the project's own `meta.length` (3 or 4), so there are
+   always EXACTLY as many tracks as there are items -- nothing can ever
+   wrap to a second grid row, by construction. Each track's floor is 0
+   (not 160px), so short values hug their own content with no padding.
+   When every value's max-content fits the row (Mapfre, AI Cash Flow,
+   Pulso, VictorAI), each column renders at its own natural one-line
+   width with the normal 48px gap next to it, same as before. When the
+   combined max-content overflows (AXA, ONU-PNUD), Grid's intrinsic track
+   sizing shrinks the flexible tracks down from their max-content target
+   instead of reflowing anything -- the value's own `<p>` (no
+   white-space:nowrap anywhere in this chain, and min-width:0 below so
+   the track is actually allowed to shrink under its content's
+   one-line width) wraps onto as many lines as it needs within that
+   narrower column, while the columns next to it keep their own width
+   and the 48px gap between them stays put. */
 .mapfre-meta-grid {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
   align-items: flex-start;
   gap: 32px 48px;
   margin: 0 0 40px;
   scroll-margin-top: 20px;
 }
-.mapfre-meta-grid > div { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; flex: 0 0 auto; min-width: 160px; max-width: 100%; }
+.mapfre-meta-grid > div { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; }
 .mapfre-meta-label {
   margin: 0;
   font-family: 'Pavanam', 'Manrope', sans-serif;

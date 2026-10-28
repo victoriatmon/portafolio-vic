@@ -1599,7 +1599,7 @@ function ProyectosDesktopInner() {
                             </div>
                             <h1 className="mapfre-title">{current.title}</h1>
 
-                            <div className="mapfre-meta-grid" id="meta" data-toc-id="meta">
+                            <div className="mapfre-meta-grid" id="meta" data-toc-id="meta" style={{ gridTemplateColumns: `repeat(${current.meta.length}, minmax(0, max-content))` }}>
                               {current.meta.map((m, i) => (
                                 <div key={i}>
                                   <p className="mapfre-meta-label">{m.label}</p>
@@ -1769,7 +1769,7 @@ function ProyectosDesktopInner() {
                             </div>
                             <h1 className="mapfre-title">{current.title}</h1>
 
-                            <div className="mapfre-meta-grid" id="meta" data-toc-id="meta">
+                            <div className="mapfre-meta-grid" id="meta" data-toc-id="meta" style={{ gridTemplateColumns: `repeat(${current.meta.length}, minmax(0, max-content))` }}>
                               {current.meta.map((m, i) => (
                                 <div key={i}>
                                   <p className="mapfre-meta-label">{m.label}</p>

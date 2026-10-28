@@ -67,7 +67,7 @@
   border-radius: 22px;
   cursor: pointer;
   box-shadow: 0 40px 80px -20px rgba(0,0,0,0.65), 0 16px 30px rgba(0,0,0,0.45);
-  transition: transform 0.18s ease, filter 0.18s ease, box-shadow 0.18s ease;
+  transition: transform 0.18s ease, opacity 0.18s ease;
   overflow: hidden;
   position: relative;
   -webkit-user-drag: none;
@@ -85,9 +85,25 @@
    logic in onWinMove/onWinUp, which Victoria did not ask to change). The
    quick tap-down feedback below (.card-face:active) is unrelated and was
    kept. */
+/* Fix #16 -- tap feedback made compositor-only: `.card-face`'s transition
+   above used to also animate `filter` (brightness) and `box-shadow`
+   alongside `transform`. Unlike transform/opacity, filter and box-shadow are
+   NOT properties the browser can animate on the GPU compositor thread --
+   each one forces a real repaint of the card every frame of the 0.18s
+   transition, on EVERY tap, on top of whatever the card's own bespoke SVG
+   art (masks/gradients/the mosaic clip-path, etc.) is already costing to
+   paint. That extra per-tap repaint cost, stacked on a phone with less
+   headroom than this repo's dev/test environment, is a plausible
+   contributor to the carousel generally feeling "mechanical"/not smooth on
+   mobile -- same class of problem as fix #13's dropped-frame "3 pasos" bug,
+   just triggered by a tap instead of a settle. The pressed-down feedback
+   itself (darken + lift) is kept, just re-expressed with only
+   `transform`/`opacity` (both compositor-only), via the `:active` rule
+   below -- `.card-face`'s `box-shadow` above keeps its STATIC resting
+   value, it's just no longer part of what's being transitioned. */
 .home-mobile-scope .card-face:active {
   transform: translateY(-2px) scale(0.97);
-  filter: brightness(0.82);
+  opacity: 0.86;
 }
 
 /* Simplified card art -- see home.css (desktop) header comment for why the
@@ -226,21 +242,47 @@
 }
 
 /* Load-driven reveal -- simplified stand-in for the original's cross-page
-   XT choreography, see home.css (desktop). */
-.home-mobile-scope .intro2, .home-mobile-scope .car2 {
+   XT choreography, see home.css (desktop).
+   Fix #16: `.car2` used to share `.intro2`'s `filter: blur(8px)` entrance.
+   `filter` can't be handed off to the GPU compositor the way `opacity`/
+   `transform` can -- animating it forces the browser to re-rasterize
+   whatever's under it every frame for the whole 0.7s. For `.intro2` (one
+   line of text) that's cheap; `.car2` is the heaviest part of this page --
+   six absolutely-positioned cards, each with its own bespoke SVG art
+   (gradients, the Mapfre mask, etc.) -- so blurring/unblurring all of that
+   simultaneously, right as the page is still hydrating, is a strong
+   candidate for the "roughness"/dropped frames Victoria described on first
+   load: the same class of problem fix #13 already fixed for the carousel's
+   settle (a JS-driven animation competing with React for main-thread time),
+   just on the entrance instead, and caused by `filter` instead of a
+   per-frame JS tween. `.car2`'s entrance is now transform(translateY)+
+   opacity only (both compositor-only, same reasoning as fix #13) -- still
+   reads as the carousel settling/rising into place, just without the
+   expensive blur. `.intro2` keeps its blur-in (small, cheap, and part of
+   the title's own look) unchanged. */
+.home-mobile-scope .intro2 {
   opacity: 0;
   filter: blur(8px);
   transition: opacity 0.7s ease, filter 0.7s ease;
+}
+.home-mobile-scope .car2 {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+  will-change: opacity, transform;
 }
 .home-mobile-scope .card-slot {
   opacity: 0;
   transition: opacity 0.5s ease;
   transition-delay: calc(var(--d, 0) * 50ms);
 }
-.home-mobile-scope .stage2.is-entered .intro2,
-.home-mobile-scope .stage2.is-entered .car2 {
+.home-mobile-scope .stage2.is-entered .intro2 {
   opacity: 1;
   filter: blur(0);
+}
+.home-mobile-scope .stage2.is-entered .car2 {
+  opacity: 1;
+  transform: translateY(0);
 }
 .home-mobile-scope .stage2.is-entered .card-slot {
   opacity: 1;
@@ -250,6 +292,7 @@
     transition: none !important;
     opacity: 1 !important;
     filter: none !important;
+    transform: none !important;
   }
 }
 

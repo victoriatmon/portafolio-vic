@@ -74,6 +74,31 @@ const ACCEL_TAU = 0.45; // seconds, how quickly the slide speeds up when hover s
 // Not verified on an actual iPhone (no device access here); this is
 // the best-evidenced of this round's fixes since Victoria's video
 // directly shows this glitch, unlike Mapfre's fix #39 which had none.
+//
+// Fix #51 (2026-10-29): fix #47's ancestor-filter removal didn't fix it --
+// Victoria still sees the photo glitch, still specifically when the card
+// centres. Re-examined what's actually special about this photo `<path>`
+// (the `fill="url(#pattern0_100_1498)")` line a few lines below): unlike
+// every other static shape in this SVG, it also carries
+// `style="mix-blend-mode:hard-light"`. `mix-blend-mode` forces its own
+// isolated compositing group, and WebKit has a long history of glitching
+// blended content the instant a NEARBY element starts animating/
+// compositing -- here, the four marquee lanes kicking into their rAF loop
+// via `apiRef.current.activate()` right as the card centres. Same
+// "WebKit mis-handles a repaint/recomposite at the moment something
+// nearby starts animating" bug family as fix #39/#40/#45 (there it was a
+// CSS transition on an ancestor; here it's a blend-isolated raster
+// pattern fill with no transition of its own at all, which is exactly why
+// removing the filter ancestor in fix #47 didn't touch it -- that fix
+// targeted the wrong mechanism, a stale `<g filter>`, not this one).
+// Added a repaint nudge directly in `activate()` below: toggles the whole
+// wrapper's opacity by a sub-perceptible amount and reads `offsetHeight`
+// in between, forcing WebKit to recomposite the subtree (including the
+// blended photo) right as the lanes start, instead of leaving it to
+// recomposite on its own mid-glitch. Same technique, same rationale, as
+// the one just added to PhantomCard.js's photo tiles (fix #51) -- see
+// that file's comment for the fuller write-up of the mechanism and the
+// escalation path if this doesn't hold up on a real device.
 const AXA_SVG = `<svg class="ax-card" aria-hidden="true" width="300" height="400" viewBox="1 1 300 400" fill="none" xmlns="http://www.w3.org/2000/svg">
 <g clip-path="url(#clip1_100_1498)">
 <rect x="1" y="1" width="300" height="400" rx="15" fill="#252825"></rect>
@@ -229,6 +254,12 @@ function AXACard({ active } = {}) {
     apiRef.current = {
       activate: () => {
         if (reduce) return;
+        // Fix #51: force a repaint of the mix-blend-mode photo (see the
+        // long comment above this SVG's markup) right as the lanes start,
+        // before the visible state change that triggers the glitch.
+        wrap.style.opacity = '0.9999';
+        void wrap.offsetHeight; // eslint-disable-line no-unused-expressions
+        wrap.style.opacity = '';
         st.mode = 'run';
         st.lastCheck = performance.now();
         lanes.forEach((L) => {

@@ -190,7 +190,16 @@ function MapfreCard({ uid = '', active } = {}) {
     }
     // Longest tile/word transition + delay below is ~0.8s + 0.3s stagger
     // spread; REST_MS gives that room to finish before revealing again.
-    const REVEAL_MS = 1800; // how long to sit fully revealed before cycling
+    // Fix #50: Victoria watched this on mobile after fix #45 and reported
+    // the revealed state (the word copy, e.g. "$21k") swaps away again
+    // before it's readable. 1800ms was tuned purely for "does the mosaic
+    // finish settling", not for "can a person actually read the word" --
+    // bumped to 3200ms so the fully-revealed pose holds noticeably longer.
+    // REST_MS (the hidden/rest phase) is untouched -- only the readable
+    // phase needed more time. Mobile-only: this effect bails out entirely
+    // when `active === undefined` (desktop), so home.css/HomeDesktop.js's
+    // :hover-driven copy is unaffected.
+    const REVEAL_MS = 3200; // how long to sit fully revealed before cycling
     const REST_MS = 900; // how long to sit at rest before revealing again
     let timer;
     const setOn = (on) => {

@@ -586,8 +586,37 @@ export default function HomeMobile() {
         // enforce, so the instant jump just lands exactly where written.
         track.style.scrollSnapType = 'none';
         track.scrollLeft = (extIdx === 0 ? COUNT : 1) * PAGE_W;
+        // Fix #53 (2026-10-29): fix #49 (overscroll-behavior-x: none) killed
+        // the iOS rubber-band bounce that was re-arming settle()'s 120ms
+        // timer, but Victoria's new video shows the same symptom (Phantom
+        // not appearing beside Mapfre for "unos segundos" right after this
+        // exact wraparound jump) still happening. The 120ms debounce path
+        // is probably moot on her phone anyway -- modern Safari fires a
+        // real 'scrollend' (hasScrollEnd above), so onScrollEnd() calls
+        // settle()/finishAt() on the very next tick, not after any
+        // artificial wait. That points away from a JS-timing delay and
+        // toward a WebKit *paint* delay instead -- same bug family as fix
+        // #39/#40/#45/#51 (an ancestor/sibling change WebKit doesn't
+        // promptly repaint), but here the "descendant that doesn't get
+        // repainted" is Phantom's whole `.card-slot` (position 2), which
+        // sat scrolled far out of view for the entire time the user was on
+        // positions 3-7 and has had no reason to be composited/painted
+        // since. An instant, non-gesture `scrollLeft` write like this one
+        // doesn't give WebKit the usual "about to scroll into view" signal
+        // a real drag/flick gesture would, so the now-adjacent slot can sit
+        // unpainted until something else forces it. Force that repaint
+        // explicitly instead of waiting for WebKit to get to it on its own:
+        // a synchronous reflow read right after the jump, then the same
+        // sub-perceptible opacity nudge used for Phantom/AXA's photo glitch
+        // (fix #51) on the track itself once scroll-snap is restored next
+        // frame, which recomposites the whole visible strip -- Phantom's
+        // slot included.
+        void track.getBoundingClientRect();
         requestAnimationFrame(() => {
           track.style.scrollSnapType = '';
+          track.style.opacity = '0.9999';
+          void track.getBoundingClientRect();
+          track.style.opacity = '';
         });
       }
       markSuppressed();

@@ -4,6 +4,39 @@
 // scale, both paused until the card is hovered/focused (see the
 // .ph-star rule in home.css) -- pure CSS, no JS needed.
 //
+// Fix #51 (2026-10-29): fix #46 removed the stale-paint-prone ancestor
+// filter but Victoria still saw the photo tiles glitch on mobile,
+// specifically at the moment the card becomes centred -- not a continuous
+// glitch. The three photo tiles (lines below with
+// `fill="url(#patternN_80_156)"`) are themselves completely static -- no
+// class, no transition, nothing that changes when the card centres. What
+// DOES change at that exact moment is their sibling `.ph-star`, whose CSS
+// animation starts via the `.is-current`/`:focus-visible` ancestor rule in
+// home.css. The working theory: WebKit promotes/recomposites the whole SVG
+// subtree when a sibling's `animation` kicks in, and the raster
+// pattern-fill tiles (rect -> pattern -> use -> image, the same indirect
+// fill mechanism AXACard.js's photo uses) are what shows the stale/garbled
+// first frame of that recomposite -- same family of WebKit stale-paint bug
+// as fix #39/#40/#45/#47, just hitting a pattern fill instead of a CSS
+// transition. Added a minimal JS nudge: PhantomCard now reads the `active`
+// prop (already passed by HomeMobile.js's `<Art active={isCurrent} .../>`
+// to every card, previously just ignored here since this card had no JS at
+// all) and, right as it flips true, forces a repaint of the whole
+// `.ph-card-wrap` by toggling its opacity by a sub-perceptible amount and
+// reading `offsetHeight` in between -- a standard way to force WebKit to
+// recomposite/repaint a subtree without any visible flash, cheaper than
+// wiring up a dedicated class+CSS rule for something that doesn't have one
+// otherwise. Desktop (`HomeDesktop.js` renders `<Art />` with no props, so
+// `active` is `undefined`) takes the early-return path and is untouched.
+// **Not verified on an actual iPhone** -- no device access here, and this
+// is a plausible-but-unconfirmed mechanism, not a traced root cause like
+// fix #45's was; if the photo still glitches after this, the next escalation
+// is forcing the SAME nudge on `.ph-star` specifically (its own animation
+// start is the trigger, so nudging it directly instead of the wrapper might
+// be more reliable), or inlining the pattern fill as a plain raster
+// `<image>` instead of `rect+pattern+use`, removing the indirection
+// entirely.
+//
 // Fix #46 (2026-10-28, next conversation): removed a `<g filter="url(#...)">`
 // that wrapped essentially this entire SVG (background rect through every
 // photo and text layer, right up to `<defs>`) -- a 0.5px-stdDeviation
@@ -29,7 +62,8 @@
 // this size. Correctness here rests on the extraction step, not on
 // attribute-by-attribute conversion.
 
-import { memo } from 'react';
+import { memo, useEffect, useRef } from 'react';
+import { prefersReducedMotion } from '@/lib/cardTransition';
 
 const PHANTOM_SVG =`<svg class="ph-card" aria-hidden="true" width="300" height="400" viewBox="1 1 300 400" fill="none" xmlns="http://www.w3.org/2000/svg">
 <g clip-path="url(#clip1_80_156)">
@@ -71,10 +105,28 @@ const PHANTOM_SVG =`<svg class="ph-card" aria-hidden="true" width="300" height="
 </defs>
 </svg>`;
 
-function PhantomCard() {
-  return <div className="ph-card-wrap" dangerouslySetInnerHTML={{ __html: PHANTOM_SVG }} />;
+function PhantomCard({ active } = {}) {
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    // Fix #51: see the long comment at the top of this file. `active` is
+    // `undefined` on desktop (HomeDesktop.js renders `<Art />` with no
+    // props) and `false` right after this slot stops being centred --
+    // the nudge only needs to run once, right as the card becomes current.
+    if (!active || prefersReducedMotion()) return;
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    wrap.style.opacity = '0.9999';
+    void wrap.offsetHeight; // eslint-disable-line no-unused-expressions
+    wrap.style.opacity = '';
+  }, [active]);
+
+  return <div ref={wrapRef} className="ph-card-wrap" dangerouslySetInnerHTML={{ __html: PHANTOM_SVG }} />;
 }
 
-// Memoized -- see MapfreCard.js's comment: no props, static output, but
-// re-rendered 6x per drag-carousel tick without this.
+// Memoized -- `active` (fix #51) and `uid` (never actually passed by
+// HomeMobile.js for this card, kept absent on purpose: Phantom never
+// clones/collides ids the way Mapfre/Undp's first/last-slot cloning does)
+// are the only inputs; see MapfreCard.js's comment for why memo matters
+// here -- re-rendered 6x (now 8x) per drag-carousel tick without it.
 export default memo(PhantomCard);

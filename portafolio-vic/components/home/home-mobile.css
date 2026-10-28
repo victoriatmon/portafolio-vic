@@ -18,9 +18,20 @@
 /* ===== Landing v2 (mobile): flat arc carousel ===== */
 .home-mobile-scope .stage2 { position: relative; z-index: 1; isolation: isolate; height: 690px; flex: none; overflow: hidden; }
 .home-mobile-scope .intro2 { position: absolute; top: 40px; left: 0; right: 0; padding: 0 28px; text-align: center; z-index: 5; }
-.home-mobile-scope .intro2-title { margin: 0 auto; max-width: 334px; text-wrap: balance; font-family: 'Pavanam', 'Manrope', sans-serif; font-weight: 400; font-size: 30px; line-height: 1.16; color: #E8E8E8; }
-.home-mobile-scope .intro2-title .accent-italic { font-family: 'Spectral', 'Pavanam', serif; font-style: italic; font-size: 33px; line-height: 1; }
-.home-mobile-scope .car2 { position: absolute; left: 0; right: 0; top: 170px; height: 520px; touch-action: pan-y; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+/* Title size (fix #16): Pavanam dropped 30->28px per Victoria's request --
+   Spectral (.accent-italic) doesn't read at the same visual size as Pavanam
+   at equal px (different x-height/weight), so it's scaled down from its own
+   old 33px by the same ~0.93 ratio (33 -> 31) rather than also by a flat
+   2px, to keep the two typefaces looking size-matched the way they did
+   before. Same ratio applied to the About hero title below, which reuses
+   this exact pair. */
+.home-mobile-scope .intro2-title { margin: 0 auto; max-width: 334px; text-wrap: balance; font-family: 'Pavanam', 'Manrope', sans-serif; font-weight: 400; font-size: 28px; line-height: 1.16; color: #E8E8E8; }
+.home-mobile-scope .intro2-title .accent-italic { font-family: 'Spectral', 'Pavanam', serif; font-style: italic; font-size: 31px; line-height: 1; }
+/* Carousel + arrow row nudged down 8px (fix #16) -- .car2-ring/.car2-ticks
+   and every .card-slot (cards, Discover, prev/next) are all positioned
+   relative to THIS element, so moving .car2's own `top` moves the whole
+   group together in one place instead of touching each child's offset. */
+.home-mobile-scope .car2 { position: absolute; left: 0; right: 0; top: 178px; height: 520px; touch-action: pan-y; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .home-mobile-scope .car2-ring { position: absolute; left: 50%; top: 210px; width: 0; height: 0; }
 .home-mobile-scope .car2-ticks { position: absolute; left: calc(50% - 910px); top: 200px; width: 1820px; height: 1820px; border-radius: 50%; pointer-events: none;
   background: repeating-conic-gradient(from -0.06deg at 50% 50%, rgba(255,255,255,0.30) 0deg 0.12deg, transparent 0.12deg 1.1deg);

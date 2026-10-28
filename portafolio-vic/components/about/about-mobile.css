@@ -651,8 +651,14 @@ html::-webkit-scrollbar-thumb { background: #2A2A2A; border-radius: 999px; }
 .about-mobile-scope .about-hero { flex-direction: column; align-items: center; justify-content: flex-start; padding: 36px 20px 4px; }
 .about-mobile-scope .about-hero-left, .about-mobile-scope .about-hero-right { display: contents; }
 .about-mobile-scope .portrait { order: 0; width: 168px !important; height: 168px !important; margin: 0 0 28px; }
-.about-mobile-scope .about-hero h1, .about-mobile-scope .about-hero h1.is-pro { order: 1; width: auto; max-width: 340px; white-space: normal; font-size: 30px; line-height: 1.16; text-align: center; margin: 0; }
-.about-mobile-scope .about-hero h1 .accent-italic { font-size: 33px; }
+/* Title size (fix #16, matching home-mobile.css's .intro2-title): Pavanam
+   dropped 30->28px, Spectral (.accent-italic) scaled down from its own old
+   33px by the same ~0.93 ratio (33 -> 31) rather than also by a flat 2px,
+   since Spectral doesn't read at the same visual size as Pavanam at equal
+   px -- keeps the two typefaces looking size-matched, same reasoning as the
+   Home hero title which uses this exact font pairing. */
+.about-mobile-scope .about-hero h1, .about-mobile-scope .about-hero h1.is-pro { order: 1; width: auto; max-width: 340px; white-space: normal; font-size: 28px; line-height: 1.16; text-align: center; margin: 0; }
+.about-mobile-scope .about-hero h1 .accent-italic { font-size: 31px; }
 .about-mobile-scope .about-hero-sub { order: 2; margin: 14px 0 0; font-size: 15px; line-height: 22px; text-align: center; max-width: 280px; }
 .about-mobile-scope .mode-tabs { order: 3; margin-top: 28px; padding: 6px; gap: 6px; border-radius: 12px; }
 .about-mobile-scope .mode-indicator { width: 52px; height: 44px; border-radius: 8px; }

@@ -18,53 +18,43 @@
 // desktop only in the original too) -- the page flows normally and scrolls
 // if its content needs more height than the viewport.
 //
-// Preserved: the same flat-arc carousel geometry and physics (sized for a
-// 390px-wide screen), its touch affordances -- a finger resting briefly on
-// a card counts as hover (`.is-held`; its lift/grow CSS was removed per
-// Victoria's request -- see home-mobile.css -- but the class/timer
-// machinery below is kept, since it's also load-bearing for tap-vs-hold-
-// vs-drag disambiguation), a drag never opens a card, a quick tap does -- wheel
-// support for a touch-capable trackpad, keyboard-focus recentring, and a
-// simplified load-time reveal standing in for the dropped transition's
-// entrance choreography.
+// ===== Carousel, rebuilt 2026-10-28 =====
+// The project carousel below was rewritten from scratch, replacing a
+// trigonometric flat-ARC layout (each card placed via sin/cos around a
+// 900px-radius circle, advanced by a hand-rolled pointer-drag + CSS-
+// transition "settle" -- see contexto-portafolio-vercel.md for that
+// system's full history) with a native horizontal CSS scroll-snap strip.
+// Victoria reported the old system could never reliably land the next card
+// centred on a swipe or an arrow tap, through many rounds of tuning its
+// easing/duration -- the actual horizontal motion now belongs to the
+// browser's own scroll-snap instead (well-supported in both Chrome and
+// Safari/iOS, the same mechanism basically every other horizontally-paged
+// mobile UI on the web already relies on), so "advance -> next card lands
+// centred, smoothly" is no longer something this file reconstructs by
+// hand. What's left for JS to do:
+//   1. Know which card is centred, to drive the same `.is-current` trigger
+//      the six bespoke card-art animations in home-mobile.css already key
+//      off (unchanged -- see CARD_ART below) -- done by reading the
+//      track's scrollLeft once scrolling goes idle (see the big effect
+//      below), the same "wait for rest, not just proximity to centre"
+//      principle the old system's `settled` gate existed for, just driven
+//      by the browser's own scroll state instead of a hand-tracked one.
+//   2. Drive a prev/next BUTTON tap's glide to the next card (scrollToIndex
+//      below) -- native swipe/wheel scrolling never touches this at all,
+//      the browser handles that motion entirely on its own.
+// Card width (CARD_W/CARD_GAP below) is now direct pixel sizing, no extra
+// scale transform -- see home-mobile.css's matching .card-slot/.car2-track
+// rules, which MUST stay numerically in sync with these. Card HEIGHT lives
+// only in CSS (340px, same `.card-face` rule as before) -- the horizontal
+// scroll-snap math below never needs it.
 //
 // Each card's bespoke art animation (the tile mosaic, the spinning star,
 // the glitch swap, etc. -- see CARD_ART below) plays on its own, in a loop,
 // for as long as that card sits centred in the carousel AND the carousel
-// itself has fully stopped moving (the `settled` state + `currentIndex`,
-// just below): the render applies that as `.is-current` on `.card-face`
-// (home-mobile.css's trigger selectors) and as an `active` prop on <Art/>
-// (for AXA/UNDP's JS-driven art). This replaced an earlier version where a
-// ~240ms press (`.is-held`, via holdOn/holdOff below) triggered the art
-// instead -- `.is-held` still exists (see above), it just no longer feeds
-// any card's art, and no longer has a visible lift/grow effect of its own
-// either. A first pass
-// at the centred-trigger gated on proximity to centre alone (a small
-// epsilon on `d`) rather than on the carousel being fully at rest, which
-// could mark a card current ~100ms before the settle ease actually
-// finished -- on a real phone, starting a heavy CSS transition (Mapfre's
-// tile mosaic, say) while the carousel's own per-frame re-render was still
-// running read as a stutter right as the card arrived at centre. Gating on
-// `settled` instead removes that overlap by construction.
-//
-// The settle-to-target animation itself (after a swipe/wheel-idle/focus
-// commits to a new card -- see commitTo() below) is driven by a CSS
-// `transition` on each card's own `transform`, toggled via the `easing`
-// state/wrapperStyle, NOT by a per-frame JS tween calling setPos() every
-// rAF frame like it used to. Victoria reported the card doing "3 pasos"
-// (visibly discrete jumps) on her phone specifically during this settle,
-// never during the drag itself -- i.e. dropped frames, not a speed/shape
-// problem (fix #10's duration/curve were already right). A JS-driven tween
-// pays a full React re-render + commit + paint for every single animation
-// frame; on a weaker phone that cost alone can be enough to miss frames,
-// which is exactly what reads as discrete steps instead of one continuous
-// slide. A CSS transition instead needs ONE React commit (snapping `pos`
-// straight to the final target) and lets the browser's compositor
-// interpolate the visual motion on its own thread, independent of
-// React/JS's per-frame cost. See commitTo()/stopEasing()/currentVisualPos()
-// below for how dragging or a new commit can still cleanly interrupt an
-// in-flight settle without a visible pop, which is the one thing the old
-// per-frame tween got "for free" that this design has to do on purpose.
+// itself has fully stopped moving: the render applies that as `.is-current`
+// on `.card-face` (home-mobile.css's trigger selectors) and as an `active`
+// prop on <Art/> (for AXA/UNDP's JS-driven art) -- same convention as
+// before the rebuild, just now driven by `currentIndex` below.
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -84,13 +74,13 @@ import './home-mobile.css';
 // Same six bespoke card illustrations as HomeDesktop.js (see that file's
 // CARD_ART for the full background on each one), now ported here too.
 // Mobile has no :hover, so each card's CSS trigger in home-mobile.css
-// swaps :hover for .is-current -- applied below to whichever card's slot
-// is centred in the carousel (see buildCards()'s `isCurrent`). The two
-// JS-driven cards (AXA/UNDP) take a matching `active` prop instead of
-// relying on their own pointerover/pointerout listeners on mobile: those
-// components now skip wiring up real pointer events whenever an `active`
-// prop is passed at all (mobile always passes one; HomeDesktop.js never
-// does, so desktop's hover behaviour is untouched).
+// swaps :hover for .is-current -- applied below to whichever card is
+// centred in the carousel. The two JS-driven cards (AXA/UNDP) take a
+// matching `active` prop instead of relying on their own pointerover/
+// pointerout listeners on mobile: those components now skip wiring up real
+// pointer events whenever an `active` prop is passed at all (mobile always
+// passes one; HomeDesktop.js never does, so desktop's hover behaviour is
+// untouched).
 const CARD_ART = [MapfreCard, PhantomCard, PulsoCard, AXACard, VictorCard, UndpCard];
 
 const LABELS = [
@@ -110,143 +100,55 @@ const GRADIENTS = [
   'linear-gradient(135deg,#4ac4c4,#123b59)',
 ];
 const COUNT = LABELS.length;
-const CARD_W = 300;
-const CARD_H = 400;
-const RC = 900; // radius of the arc the cards sit on (screen px)
-const CARD_SCALE = 0.85; // card scale on mobile
-const STEP = (Math.asin(275 / RC) * 180) / Math.PI; // degrees between cards: 275px apart along the arc
-const SPACING = RC * Math.sin((STEP * Math.PI) / 180);
-// Fixed settle duration (fix #10) -- now also the CSS transition's own
-// duration (fix #13), so it has to live at module scope: buildCards() below
-// needs it for each card's wrapperStyle.transition, and the component's
-// effect needs the same number for commitTo()/currentVisualPos(). The curve
-// is a cubic-bezier hand-picked to match the original `1-(1-frac)²`
-// quadratic ease-out this replaced (easings.net's "easeOutQuad") -- not
-// mathematically identical to a CSS cubic-bezier, but visually
-// indistinguishable, which is all that's needed here.
-// Fix #18: Victoria reported the card-move settle was STILL abrupt after
-// fix #13 landed this duration/curve -- bumped from 220ms/easeOutQuad to
-// 300ms/easeOutCubic (slower deceleration, holds the "soft landing" tail
-// longer) so a swipe/wheel/focus settle reads as a deliberate glide
-// rather than a quick snap, same intent as fix #17's NAV_EASE change
-// below but for the settle Victoria hadn't singled out by name.
-const EASE_DUR_MS = 300;
-const EASE_CURVE = 'cubic-bezier(0.22, 0.61, 0.36, 1)';
-// Fix #17: a tap on the prev/next buttons settles with its own, gentler
-// timing instead of reusing the swipe/wheel/focus settle's 220ms snap
-// above. A swipe already supplies its own physical "speed" via the
-// gesture that preceded it, so a quick 220ms snap at the end reads as
-// responsive; a button tap has no such drag to earn that -- Victoria
-// described it as feeling abrupt/forceful rather than subtle. Longer
-// duration + a true ease-in-out (slow in, fast through the middle, slow
-// out) instead of fix #10's ease-OUT-only quad reads as a deliberate,
-// considered glide rather than a snap, without touching the swipe/wheel/
-// focus settle Victoria never complained about. See commitTo() below for
-// how this is selected per call, and buildCards()/ticksStyle for how it
-// reaches the CSS transition via the `--ease-dur`/`--ease-curve` custom
-// properties added in home-mobile.css.
-// Fix #18: Victoria confirmed the prev/next-button settle was STILL
-// abrupt even after fix #17's 360ms/ease-in-out change -- lengthened
-// further to 480ms with a gentler, more symmetrical ease-in-out curve so
-// both the wind-up and the landing are unmistakably soft.
-const NAV_EASE_DUR_MS = 480;
-const NAV_EASE_CURVE = 'cubic-bezier(0.65, 0, 0.35, 1)';
 
-function buildCards(pos, currentIndex, easing, easeTiming) {
-  return LABELS.map((label, i) => {
-    const d = ((((i - pos + COUNT / 2) % COUNT) + COUNT) % COUNT) - COUNT / 2; // signed distance from centre
-    const ang = d * STEP;
-    const th = (ang * Math.PI) / 180;
-    const x = RC * Math.sin(th);
-    const y = RC * (1 - Math.cos(th));
-    const hidden = Math.abs(d) > 2.3;
-    return {
-      index: i,
-      label,
-      gradient: GRADIENTS[i],
-      href: `/proyectos#${i}`,
-      // Drives each card's bespoke art animation (home-mobile.css's
-      // .is-current selectors + the `active` prop passed to <Art/> below),
-      // in place of the old press-and-hold trigger. `currentIndex` is -1
-      // (so no card ever matches) while the carousel is still actually
-      // moving -- see the `settled` state in the component below. An
-      // earlier version of this instead compared `d` against a small
-      // epsilon, which could flip a card's art on ~100ms before tick()'s
-      // settle ease actually finished: that overlap meant a heavy CSS
-      // transition (Mapfre's ~27-selector tile mosaic, say) kicked off
-      // while the carousel's own per-frame re-render was still running,
-      // and on a real phone (weaker GPU than this repo's dev/test
-      // environment) that contention is what read as "se traba" / stutter
-      // right as the card arrived at centre. Gating on `settled` instead
-      // guarantees zero overlap by construction: nothing is ever marked
-      // current until the carousel has fully stopped producing new
-      // frames, however long that happens to take.
-      isCurrent: i === currentIndex,
-      // Only enabled during a committed settle, never during an active drag
-      // -- a drag needs instant 1:1 tracking, this would otherwise add a
-      // laggy multi-hundred-ms delay to every finger movement. Applied as a CLASS
-      // (`.card-slot.is-easing` in home-mobile.css), not an inline
-      // `transition` style: `.card-slot` already declares its own
-      // `transition: opacity ...` for the load-time reveal (see that CSS),
-      // and an inline `transition` would replace that whole shorthand,
-      // silently breaking the entrance fade. The CSS class re-states the
-      // opacity transition alongside the transform one instead.
-      isEasing: easing,
-      wrapperStyle: {
-        position: 'absolute',
-        left: -CARD_W / 2,
-        top: -CARD_H / 2,
-        width: CARD_W,
-        height: CARD_H,
-        transform: `translate3d(${x.toFixed(2)}px,${y.toFixed(2)}px,0) rotate(${ang.toFixed(3)}deg) scale(${CARD_SCALE})`,
-        zIndex: Math.round(100 - Math.abs(d) * 10),
-        visibility: hidden ? 'hidden' : 'visible',
-        '--d': Math.abs(d).toFixed(2),
-        // Fix #17: always present (harmless when `easing` is false/no
-        // transition is running) -- see home-mobile.css's
-        // `.card-slot.is-easing` for how these drive the settle's actual
-        // timing, and commitTo() below for how easeTiming is chosen.
-        '--ease-dur': `${easeTiming.dur}ms`,
-        '--ease-curve': easeTiming.curve,
-      },
-    };
-  });
+// On-screen card size, px -- no extra scale transform any more (the old
+// arc system rendered a 300x400 box through a 0.85 CSS scale; this sizes
+// directly at the same effective on-screen size instead). MUST stay in
+// sync with home-mobile.css's `.card-slot`/`.car2-track` rules, which
+// hardcode these same numbers (cross-referenced in a comment there too).
+const CARD_W = 255;
+const CARD_GAP = 20;
+// Centre-to-centre scroll distance between adjacent cards. Since every
+// card is the same width with a fixed gap, and the track's side padding is
+// exactly (viewport - CARD_W)/2 (see home-mobile.css), each card's
+// scroll-snap position lands at exactly `index * PAGE_W` -- no drift, no
+// per-viewport-width special-casing needed to find "which card is this
+// scrollLeft pointing at".
+const PAGE_W = CARD_W + CARD_GAP;
+
+// Duration/easing for the prev/next BUTTON glide only -- native swipe/wheel
+// scrolling bypasses this entirely and is driven purely by the browser's
+// own scroll-snap physics (no JS in the loop, so no per-frame React cost
+// to worry about, unlike the old arc system's settle tween). Chosen to
+// read as a deliberate, soft glide; not tuned against the old system's
+// NAV_EASE_DUR_MS/CURVE numbers, since the underlying motion mechanism
+// (compositor-driven native scroll vs. a CSS transform transition) is
+// fundamentally different now.
+const NAV_EASE_MS = 420;
+function easeInOutCubic(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
 export default function HomeMobile() {
-  const [pos, setPos] = useState(0);
-  // Whether the carousel is fully at rest (not dragging, no settle commit in
-  // flight) -- see onWinMove/commitTo()/stopEasing() below, the only places
-  // this flips. Gates which card (if any) counts as "current" for the
-  // bespoke-art trigger (see buildCards()'s isCurrent): a card is only ever
-  // marked current once this is true, never while the carousel is still
-  // dragging or mid-settle.
-  const [settled, setSettled] = useState(true);
-  // Whether a committed (non-drag) settle is currently animating via CSS
-  // transition -- see commitTo()/EASE_CURVE below (fix #13), and the
-  // `.card-slot.is-easing` class it drives in home-mobile.css. Narrower
-  // than `settled`: `settled` is also false during an active drag, but
-  // `easing` must NEVER be true then (a drag needs instant 1:1 tracking,
-  // not an EASE_DUR_MS/NAV_EASE_DUR_MS-lagged one).
-  const [easing, setEasing] = useState(false);
-  // Fix #17: which timing the CURRENTLY (or most recently) committed settle
-  // should use -- defaults to the original swipe/wheel/focus timing;
-  // commitTo() below overrides this per call when a prev/next button
-  // triggered it. Read by buildCards()/ticksStyle via the `--ease-dur`/
-  // `--ease-curve` custom properties (see home-mobile.css).
-  const [easeTiming, setEaseTiming] = useState({ dur: EASE_DUR_MS, curve: EASE_CURVE });
+  // -1 while the track is mid-scroll (dragging, flicking, or an in-flight
+  // button glide) so no card is ever marked `.is-current` while the
+  // carousel hasn't actually come to rest -- same "wait for rest" principle
+  // the old system's `settled` state existed for (see this file's header
+  // comment), just read off the track's own scroll state instead of a
+  // hand-tracked tween. Starts at 0 (not -1): nothing has scrolled yet on
+  // first paint, card 0 is simply already centred.
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [entered, setEntered] = useState(false);
-  const carRef = useRef(null);
-  // Imperative next()/prev(), wired up once inside the big pointer/wheel
-  // effect below (same ref-exposing-a-closure pattern as AXACard.js's
-  // apiRef) so the prev/next buttons rendered on the centred card (see
-  // render below) can trigger exactly the same commitTo()-driven settle as
-  // a swipe, instead of duplicating any of that logic here.
-  const navRef = useRef({ next() {}, prev() {} });
+  const trackRef = useRef(null);
+  // Imperative prev()/next(), wired up inside the scroll-tracking effect
+  // below (same ref-exposing-a-closure pattern as AXACard.js's apiRef) so
+  // the prev/next buttons rendered on the centred card (see render below)
+  // can reach the scrollToIndex() closure defined inside that effect
+  // without re-creating it on every render.
+  const navRef = useRef({ prev() {}, next() {} });
 
   useEffect(() => {
-    const reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-    if (reduce) {
+    if (prefersReducedMotion()) {
       setEntered(true);
       return;
     }
@@ -255,395 +157,137 @@ export default function HomeMobile() {
   }, []);
 
   useEffect(() => {
-    const reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-    let posVal = 0;
-    let targetVal = 0;
-    let dragging = false;
-    let samples = [];
-    let startX = 0;
-    let startPos = 0;
-    let downX = 0;
-    let downY = 0;
-    let moved = false;
-    let heldFace = null;
-    let holdTimer = null; // named timer, cleared below on unmount
-    let wheelIdle = null; // named timer, cleared below on unmount
-    let easeDoneTimer = null; // named timer, cleared below on unmount
-    let rafId = null;
-    // Settle-to-target animation reference points (see commitTo()/
-    // currentVisualPos() below). easeFrom/easeTarget/easeStart describe the
-    // CSS transition currently in flight (if any) -- not used to drive the
-    // motion itself (the browser's compositor does that), only to work out
-    // where the card visually IS right now if something needs to interrupt
-    // it cleanly (a new drag, a new commit, a live wheel nudge).
-    let easeFrom = 0;
-    let easeTarget = 0;
-    let easeStart = performance.now();
-    // Fix #17: the duration of whichever settle is currently in flight (or
-    // most recently was) -- mirrors the `easeTiming` state's `.dur`, read
-    // synchronously here for currentVisualPos()'s reconstruction math and
-    // easeDoneTimer's delay, same reason the other ease*/pos mirrors above
-    // exist (avoids a stale read of React state from inside a plain event
-    // handler). The quadratic reconstruction formula below is kept as the
-    // same approximation used for the original swipe/wheel/focus timing
-    // (see currentVisualPos()'s own comment) even when a nav-triggered
-    // ease-in-out settle is interrupted mid-flight -- a rare edge case
-    // (tapping an arrow then immediately swiping before it finishes) where
-    // the visual handoff is close enough, not pixel-exact.
-    let easeDurMsNow = EASE_DUR_MS;
-    // Mirrors the `easing` state above, readable/writable synchronously
-    // (same pattern as posVal/settledNow -- avoids a stale read of React
-    // state from inside a plain event handler).
-    let easingNow = false;
-    // Set (not applied) by onWinMove below; consumed here, at most once per
-    // rendered frame. Touch `pointermove` can dispatch more than once per
-    // vsync on some mobile browsers, and calling `setPos()` straight from
-    // that handler commits a React re-render per event rather than per
-    // frame -- wasted work (several renders that never even get painted)
-    // that was the main cause of the sluggish/non-smooth drag feel on
-    // mobile. Routing every update through this already-running rAF loop
-    // instead caps it at one commit per frame.
-    let dragDirty = false;
-    // Mirrors the `settled` state above, readable/writable synchronously
-    // (same pattern as posVal/dragDirty/etc. above). Flips false the
-    // instant real drag motion starts or a settle commits to a new target,
-    // true again once that settle has visually finished -- see
-    // onWinMove/commitTo() below.
-    let settledNow = true;
+    const track = trackRef.current;
+    if (!track) return;
 
-    // While a CSS-driven settle (commitTo() below) is still animating,
-    // `posVal` already holds the FINAL target -- it's snapped there
-    // immediately at commit time, see commitTo() -- not whatever the
-    // browser is currently painting on screen mid-transition. This
-    // reconstructs that on-screen position at this instant, using the same
-    // quadratic ease-out EASE_CURVE approximates. Only needed for the rare
-    // case where something interrupts an in-flight settle (a new drag, a
-    // new commit, a live wheel nudge) and has to pick up from where the
-    // card visually is, not from a target it hasn't reached yet.
-    function currentVisualPos() {
-      if (!easingNow) return posVal;
-      const frac = Math.min(1, (performance.now() - easeStart) / easeDurMsNow);
-      const eased = 1 - (1 - frac) * (1 - frac);
-      return easeFrom + (easeTarget - easeFrom) * eased;
+    let scrollTimer = null; // idle-detection fallback, cleared below on unmount
+    let autoScrollCancel = null; // cancels an in-flight prev/next glide, see scrollToIndex()
+    let autoScrolling = false; // true only while scrollToIndex()'s own rAF loop is writing scrollLeft
+    // Newer engines fire a real 'scrollend' event the instant native
+    // scrolling (including momentum/snap) comes to rest -- far more
+    // precise than guessing from an idle timer. Where it's missing
+    // (older Safari), fall back to the same idle-timeout principle the old
+    // wheel handler used (140ms of no new scroll events).
+    const hasScrollEnd = typeof window !== 'undefined' && 'onscrollend' in window;
+
+    // Reads the track's current rest position and converts it to a card
+    // index. Exact (not just "close enough"), because every card is the
+    // same width+gap and the track's side padding was built to make each
+    // snap point land at exactly `index * PAGE_W` -- see PAGE_W's comment
+    // above.
+    function settle() {
+      const idx = Math.max(0, Math.min(COUNT - 1, Math.round(track.scrollLeft / PAGE_W)));
+      setCurrentIndex(idx);
     }
 
-    // Cleanly interrupts an in-flight CSS settle (see commitTo() below),
-    // snapping pos/targetVal to wherever the card visually was and turning
-    // the transition off in the SAME commit -- so nothing pops. Called
-    // whenever something is about to take over the motion by other means
-    // (a new drag starting, a live wheel nudge).
-    function stopEasing() {
-      if (!easingNow) return;
-      clearTimeout(easeDoneTimer);
-      posVal = currentVisualPos();
-      targetVal = posVal;
-      easingNow = false;
-      settledNow = true;
-      setSettled(true);
-      setEasing(false);
-      setPos(posVal);
+    function onScroll() {
+      if (autoScrolling) return; // scrollToIndex() drives its own currentIndex updates, see below
+      setCurrentIndex((prev) => (prev === -1 ? prev : -1));
+      if (!hasScrollEnd) {
+        clearTimeout(scrollTimer);
+        scrollTimer = setTimeout(settle, 120);
+      }
+    }
+    function onScrollEnd() {
+      if (autoScrolling) return;
+      clearTimeout(scrollTimer);
+      settle();
+    }
+    // A real touch/mouse drag starting on the track takes over scrollLeft
+    // natively -- cancel any JS-driven prev/next glide still in flight so
+    // the two never fight over the same property in the same frame (same
+    // "an interrupt always wins cleanly" principle as the old system's
+    // stopEasing(), just far simpler here since there's no visual position
+    // to reconstruct -- the browser already knows exactly where the
+    // content is mid-drag).
+    function onPointerDown() {
+      if (autoScrollCancel) {
+        autoScrollCancel();
+        autoScrollCancel = null;
+      }
+      autoScrolling = false;
     }
 
-    // Commits to a new integer position with the fixed-duration ease-out
-    // settle (fix #10's 220ms curve), driven by a CSS transition on each
-    // card's own `transform` (the `easing` state/wrapperStyle) rather than
-    // a per-frame JS tween -- see the file header and fix #13 for why.
-    // `posVal`/`pos` snap to the FINAL value immediately, in one React
-    // commit; the CSS transition is what makes that jump look smooth on
-    // screen, entirely on the compositor, with no further JS involvement
-    // once this returns (until the setTimeout below marks it settled).
-    function commitTo(target, viaNav) {
-      clearTimeout(easeDoneTimer);
-      const fromPos = currentVisualPos();
-      targetVal = target;
-      posVal = target;
-      // Fix #17: a prev/next button tap gets its own, gentler timing (see
-      // NAV_EASE_DUR_MS/NAV_EASE_CURVE above) instead of reusing the swipe/
-      // wheel/focus settle's 220ms snap.
-      const durMs = viaNav ? NAV_EASE_DUR_MS : EASE_DUR_MS;
-      const curve = viaNav ? NAV_EASE_CURVE : EASE_CURVE;
-      easeDurMsNow = durMs;
-      if (reduce) {
-        easingNow = false;
-        setEasing(false);
-        settledNow = true;
-        setSettled(true);
-        setPos(posVal);
+    // Animates track.scrollLeft to the target index's snap position over
+    // NAV_EASE_MS with easeInOutCubic. Used by the prev/next buttons only --
+    // see this file's header comment for why native swipe/wheel never run
+    // this. Safe to call again mid-glide (a quick double-tap on an arrow):
+    // it starts its `from` at the track's actual current scrollLeft, same
+    // "pick up from wherever it visually is" principle as the old
+    // commitTo()/currentVisualPos(), simpler here because scrollLeft IS the
+    // visual position already, nothing to reconstruct.
+    function scrollToIndex(idx) {
+      const clamped = Math.max(0, Math.min(COUNT - 1, idx));
+      const target = clamped * PAGE_W;
+      if (autoScrollCancel) {
+        autoScrollCancel();
+        autoScrollCancel = null;
+      }
+      const start = track.scrollLeft;
+      const change = target - start;
+      if (Math.abs(change) < 1 || prefersReducedMotion()) {
+        track.scrollLeft = target;
+        autoScrolling = false;
+        setCurrentIndex(clamped);
         return;
       }
-      easeFrom = fromPos;
-      easeTarget = target;
-      easeStart = performance.now();
-      easingNow = true;
-      settledNow = false;
-      setSettled(false);
-      setEasing(true);
-      setEaseTiming({ dur: durMs, curve });
-      setPos(posVal);
-      easeDoneTimer = setTimeout(() => {
-        easingNow = false;
-        setEasing(false);
-        settledNow = true;
-        setSettled(true);
-      }, durMs);
-    }
-
-    function tick() {
-      // The only per-frame job left: flushing the live drag position (see
-      // onWinMove below) at most once per rendered frame. Settling to a
-      // target is a one-shot CSS-transition commit now (commitTo() above),
-      // not something this loop needs to drive frame by frame -- see the
-      // file header and fix #13.
-      if (dragging && dragDirty) {
-        dragDirty = false;
-        setPos(posVal);
-      }
-      rafId = requestAnimationFrame(tick);
-    }
-    rafId = requestAnimationFrame(tick);
-
-    // Touch: a finger resting on a card for a moment plays the generic
-    // press-lift feedback only (not any card's bespoke art animation
-    // anymore -- that's driven by isCurrent/`.is-current` above instead).
-    // Moving the finger turns it into a drag. A quick tap opens the
-    // project; a hold or a drag never does.
-    function holdOn(face) {
-      if (heldFace) return;
-      heldFace = face;
-      face.classList.add('is-held');
-    }
-    function holdOff() {
-      if (!heldFace) return;
-      heldFace.classList.remove('is-held');
-      heldFace = null;
-    }
-
-    function onDragStart(e) {
-      if (e.button !== undefined && e.button !== 0) return;
-      // A touch starting right at the screen edge is left alone so it
-      // doesn't fight the OS's own edge swipe-back gesture. Mouse/trackpad
-      // pointers are exempt (no such gesture).
-      if (e.pointerType !== 'mouse') {
-        const EDGE = 28;
-        if (e.clientX < EDGE || e.clientX > window.innerWidth - EDGE) return;
-      }
-      // If a CSS settle was still animating, pick up from exactly where the
-      // card visually is (not from a target it hasn't reached yet) and
-      // turn the transition off in the same commit -- see stopEasing()
-      // above. A no-op if nothing was easing.
-      stopEasing();
-      dragging = true;
-      startX = e.clientX;
-      startPos = posVal;
-      targetVal = posVal;
-      downX = e.clientX;
-      downY = e.clientY;
-      moved = false;
-      samples = [{ t: performance.now(), x: e.clientX }];
-      clearTimeout(holdTimer);
-      if (e.pointerType !== 'mouse') {
-        const face = e.target && e.target.closest ? e.target.closest('.card-face') : null;
-        if (face) holdTimer = setTimeout(() => holdOn(face), 240);
-      }
-      window.addEventListener('pointermove', onWinMove);
-      window.addEventListener('pointerup', onWinUp);
-      window.addEventListener('pointercancel', onWinUp);
-    }
-
-    function onWinMove(e) {
-      if (!dragging) return;
-      if (!moved && Math.hypot(e.clientX - downX, e.clientY - downY) > 10) {
-        moved = true;
-        clearTimeout(holdTimer);
-        // Only an actual drag (crossing this threshold) unsettles -- a
-        // finger merely resting on a card (pointerdown without movement,
-        // e.g. a tap or a brief hold) never moves posVal, so there's
-        // nothing for a bespoke art animation to visually clash with yet.
-        // (stopEasing() in onDragStart above already unsettled this if a
-        // CSS settle was still in flight when the drag started.)
-        if (settledNow) {
-          settledNow = false;
-          setSettled(false);
-        }
-        if (heldFace) {
-          holdOff();
-          startX = e.clientX;
-          startPos = posVal;
+      autoScrolling = true;
+      setCurrentIndex(-1);
+      const startTime = performance.now();
+      let rafId;
+      function step(now) {
+        const frac = Math.min(1, (now - startTime) / NAV_EASE_MS);
+        track.scrollLeft = start + change * easeInOutCubic(frac);
+        if (frac < 1) {
+          rafId = requestAnimationFrame(step);
+          autoScrollCancel = () => cancelAnimationFrame(rafId);
+        } else {
+          autoScrolling = false;
+          autoScrollCancel = null;
+          setCurrentIndex(clamped);
         }
       }
-      if (heldFace || !moved) return;
-      const dx = e.clientX - startX;
-      // Guided swipe, part 1/2 (see onWinUp for the release/commit side):
-      // the live drag still tracks the finger 1:1 for tactile feel, but is
-      // clamped to +-1 card (a touch of overshoot for a rubber-band feel)
-      // off the card the gesture started on. Before this clamp, dragging
-      // further just kept scrolling the ring continuously past however
-      // many cards the raw px distance implied -- which is also why a
-      // *short* swipe used to barely move anything (this is a proportional
-      // mapping: ~SPACING px of travel, nearly a full mobile screen width,
-      // for one card). A swipe now always reads as "pick the next/prev
-      // card", not "scroll the whole ring", so it shouldn't visually run
-      // past that either.
-      const rawDelta = -dx / SPACING;
-      const clampedDelta = Math.max(-1.15, Math.min(1.15, rawDelta));
-      posVal = startPos + clampedDelta;
-      targetVal = posVal;
-      const now = performance.now();
-      samples.push({ t: now, x: e.clientX });
-      while (samples.length > 2 && now - samples[0].t > 120) samples.shift();
-      dragDirty = true;
-    }
-
-    function onWinUp() {
-      if (!dragging) return;
-      dragging = false;
-      clearTimeout(holdTimer);
-      window.removeEventListener('pointermove', onWinMove);
-      window.removeEventListener('pointerup', onWinUp);
-      window.removeEventListener('pointercancel', onWinUp);
-      if (heldFace) holdOff();
-      if (!moved) return;
-      let v = 0;
-      if (samples.length > 1) {
-        const a = samples[0];
-        const b = samples[samples.length - 1];
-        v = (b.x - a.x) / Math.max(1, b.t - a.t);
-      }
-      // Guided swipe, part 2/2: commit to exactly one card over -- never
-      // more than one, however far or fast the gesture was -- or snap back
-      // to the current one. Old behaviour rounded the raw accumulated drag
-      // distance (+ a velocity-based "flick" nudge) to the nearest integer,
-      // which is why a quick, short, deliberate swipe (small distance, not
-      // quite enough velocity to flick past the 0.5-card rounding line)
-      // could fail to advance at all and spring back -- reading as "slow"/
-      // unresponsive even though a real swipe gesture had just happened.
-      // Two independent triggers, either one is enough: a clear flick
-      // (fast enough, almost regardless of distance -- someone flicking
-      // the ring expects it to move) or a deliberate drag past a small
-      // fraction of a card's spacing (~16%, well under the old ~100%
-      // needed) -- in whichever direction the gesture went. Below both, it
-      // springs back to the card it started on (commitTo() below already
-      // animates that return).
-      const dragCards = posVal - startPos; // net cards moved this gesture (already +-1.15 clamped above)
-      const FLICK_V = 0.3; // px/ms (~300px/s) -- a normal quick flick, whatever the distance
-      const DRAG_THRESHOLD = 0.16; // ~16% of a card's spacing (~44px) of deliberate drag
-      let dir = 0;
-      if (Math.abs(v) > FLICK_V) {
-        dir = v < 0 ? 1 : -1; // dragging/flicking left (negative v) advances to the next card
-      } else if (Math.abs(dragCards) > DRAG_THRESHOLD) {
-        dir = dragCards > 0 ? 1 : -1;
-      }
-      const tr = Math.round(startPos) + dir;
-      const shift = Math.floor(tr / COUNT) * COUNT;
-      posVal -= shift; // wrap-normalize the drag-end position first, same as before
-      commitTo(tr - shift);
-    }
-
-    // Suppresses the click a drag/hold release leaves behind.
-    function onCarClick(e) {
-      if (moved) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    }
-
-    // Trackpad/mouse wheel on a touch-capable device drives the carousel
-    // too, alongside drag -- the two never conflict since both write
-    // posVal directly for live feedback (1:1, same as a drag) and only the
-    // idle-settle below commits to a final card via commitTo().
-    function onWheel(e) {
-      const horizontal = Math.abs(e.deltaX) > Math.abs(e.deltaY);
-      const delta = horizontal ? e.deltaX : e.deltaY;
-      if (!delta) return;
-      e.preventDefault();
-      stopEasing(); // a live scroll interrupts any in-flight settle, same as starting a drag would
-      // A live scroll moves posVal off-target same as a drag does, so it
-      // has to unsettle too -- otherwise `settled` could still read `true`
-      // (nothing marked it false) while `pos` is mid-scroll and not
-      // actually resting on any card, which would wrongly let buildCards()
-      // match a card as current. See the matching check in onWinMove.
-      if (settledNow) {
-        settledNow = false;
-        setSettled(false);
-      }
-      posVal -= delta / 340;
-      targetVal = posVal;
-      setPos(posVal);
-      clearTimeout(wheelIdle);
-      wheelIdle = setTimeout(() => {
-        const tr = Math.round(targetVal);
-        const shift = Math.floor(tr / COUNT) * COUNT;
-        posVal -= shift;
-        commitTo(tr - shift);
-      }, 140);
-    }
-
-    function onCardFocus(e) {
-      const a = e.target && e.target.closest ? e.target.closest('.card-face') : null;
-      if (!a) return;
-      const all = Array.prototype.slice.call(document.querySelectorAll('.card-face'));
-      const idx = all.indexOf(a);
-      if (idx < 0) return;
-      commitTo(Math.round((currentVisualPos() - idx) / COUNT) * COUNT + idx);
+      rafId = requestAnimationFrame(step);
+      autoScrollCancel = () => cancelAnimationFrame(rafId);
     }
 
     // Prev/next buttons (rendered on the centred card only -- see render
     // below): advance/retreat exactly one card from wherever the carousel
-    // visually is right now, via the same commitTo() settle a swipe uses.
-    // Safe to call mid-settle too -- commitTo() already starts its `from`
-    // at currentVisualPos(), the same interrupt-cleanly path a second quick
-    // swipe or a focus move relies on.
+    // actually is right now (read live off scrollLeft, not off React state
+    // -- avoids a stale read from inside this plain DOM-event closure).
+    // Bounded, not infinite-loop: tapping next on the last card, or prev on
+    // the first, is a no-op (scrollToIndex clamps and the `< 1px change`
+    // check above skips the animation entirely) -- a deliberate
+    // simplification from the old arc system's wraparound, which isn't
+    // something native CSS scroll-snap does cleanly or reliably across
+    // engines without cloning DOM nodes at both ends; six project cards
+    // don't need an infinite ring to browse comfortably.
     navRef.current = {
-      next: () => commitTo(currentVisualPos() + 1, true),
-      prev: () => commitTo(currentVisualPos() - 1, true),
+      prev: () => scrollToIndex(Math.round(track.scrollLeft / PAGE_W) - 1),
+      next: () => scrollToIndex(Math.round(track.scrollLeft / PAGE_W) + 1),
     };
 
-    const carEl = carRef.current;
-    if (carEl) {
-      carEl.addEventListener('pointerdown', onDragStart);
-      carEl.addEventListener('click', onCarClick, true);
-    }
-    window.addEventListener('wheel', onWheel, { passive: false });
-    document.addEventListener('focusin', onCardFocus);
+    track.addEventListener('scroll', onScroll, { passive: true });
+    if (hasScrollEnd) track.addEventListener('scrollend', onScrollEnd);
+    track.addEventListener('pointerdown', onPointerDown);
 
     return () => {
-      if (rafId) cancelAnimationFrame(rafId);
-      clearTimeout(holdTimer);
-      clearTimeout(wheelIdle);
-      clearTimeout(easeDoneTimer);
-      window.removeEventListener('wheel', onWheel);
-      window.removeEventListener('pointermove', onWinMove);
-      window.removeEventListener('pointerup', onWinUp);
-      window.removeEventListener('pointercancel', onWinUp);
-      document.removeEventListener('focusin', onCardFocus);
-      if (carEl) {
-        carEl.removeEventListener('pointerdown', onDragStart);
-        carEl.removeEventListener('click', onCarClick, true);
-      }
+      clearTimeout(scrollTimer);
+      if (autoScrollCancel) autoScrollCancel();
+      track.removeEventListener('scroll', onScroll);
+      if (hasScrollEnd) track.removeEventListener('scrollend', onScrollEnd);
+      track.removeEventListener('pointerdown', onPointerDown);
     };
   }, []);
 
-  // -1 while not settled so buildCards() never matches any card -- see
-  // `settled` above. Once settled, `pos` is guaranteed to already be an
-  // exact integer (every targetVal setter below rounds/wraps to one before
-  // the carousel is allowed to call this settled), so this is just an
-  // index lookup, not a rounding decision.
-  const currentIndex = settled ? (((Math.round(pos) % COUNT) + COUNT) % COUNT) : -1;
-  const cards = buildCards(pos, currentIndex, easing, easeTiming);
-  const ticksStyle = {
-    transform: `rotate(${(-pos * STEP).toFixed(3)}deg)`,
-    // Same CSS-transition settle as each card's wrapperStyle -- see
-    // commitTo()/EASE_CURVE above (fix #13), now reading whichever timing
-    // easeTiming currently holds (fix #17) -- so the decorative tick marks
-    // glide in sync with the cards instead of snapping instantly, whether
-    // this settle came from a swipe or a prev/next tap.
-    transition: easing ? `transform ${easeTiming.dur}ms ${easeTiming.curve}` : 'none',
-  };
-
   // Ported from MainMobile.dc.html's _xOpen/_xGoTo -- see HomeDesktop.js's
-  // matching handleCardOpen and lib/cardTransition.js. The existing tap-
-  // vs-drag/hold guard (onCarClick, registered with capture above) already
-  // stops this from firing after a drag or a long-press release.
+  // matching handleCardOpen and lib/cardTransition.js. A drag/flick never
+  // reaches this: the browser itself suppresses the click a touch-scroll
+  // leaves behind on whatever element the finger lifted over (standard
+  // behaviour for any native horizontally-scrollable element, the same
+  // heuristic every other scrollable UI on the web already relies on) --
+  // no custom moved-tracking/onCarClick guard needed any more, unlike the
+  // old pointer-driven drag this replaced.
   function handleCardOpen(e, card) {
     if (prefersReducedMotion()) return; // plain Link navigation, no overlay, no arrive flag
     e.preventDefault();
@@ -674,83 +318,74 @@ export default function HomeMobile() {
             </h1>
           </div>
 
-          <div className="car2" ref={carRef}>
-            <div className="car2-ticks" style={ticksStyle} />
-            <div className="car2-ring">
-              {cards.map((card) => {
-                const Art = CARD_ART[card.index];
+          <div className="car2">
+            <div className="car2-track" ref={trackRef} role="group" aria-roledescription="carousel" aria-label="Projects">
+              {LABELS.map((label, i) => {
+                const Art = CARD_ART[i];
+                const href = `/proyectos#${i}`;
+                const gradient = GRADIENTS[i];
+                const isCurrent = i === currentIndex;
+                const card = { href, gradient };
                 return (
-                <div
-                  className={`card-slot${card.isEasing ? ' is-easing' : ''}`}
-                  style={card.wrapperStyle}
-                  key={card.index}
-                >
-                  <Link
-                    className={`card-face${card.isCurrent ? ' is-current' : ''}`}
-                    href={card.href}
-                    draggable="false"
-                    aria-label={`Open project: ${card.label}`}
-                    onClick={(e) => handleCardOpen(e, card)}
-                  >
-                    {Art ? (
-                      // `active` only matters to AXA/UNDP (the two JS-driven
-                      // cards); the other four read `.is-current` from CSS
-                      // instead and silently ignore this prop.
-                      <Art active={card.isCurrent} />
-                    ) : (
-                      <>
-                        <div className="card-art" style={{ background: card.gradient }} aria-hidden="true" />
-                        <span className="card-tag">{card.label}</span>
-                      </>
-                    )}
-                  </Link>
-                  <div className="card-cta">
+                  <div className="card-slot" style={{ '--i': i }} key={i}>
                     <Link
-                      className="btn-primary btn-discover"
-                      href={card.href}
+                      className={`card-face${isCurrent ? ' is-current' : ''}`}
+                      href={href}
                       draggable="false"
+                      aria-label={`Open project: ${label}`}
                       onClick={(e) => handleCardOpen(e, card)}
                     >
-                      Discover
+                      {Art ? (
+                        // `active` only matters to AXA/UNDP (the two JS-driven
+                        // cards); the other four read `.is-current` from CSS
+                        // instead and silently ignore this prop.
+                        <Art active={isCurrent} />
+                      ) : (
+                        <>
+                          <div className="card-art" style={{ background: gradient }} aria-hidden="true" />
+                          <span className="card-tag">{label}</span>
+                        </>
+                      )}
                     </Link>
-                    {/* Fix #16: always rendered now, for every card -- not just
-                        the current one -- and hidden/shown via the
-                        `.card-face.is-current ~ .card-cta .card-nav` CSS rule
-                        in home-mobile.css instead of this JSX conditional. The
-                        old `card.isCurrent ? ... : null` mounted/unmounted this
-                        whole block, and isCurrent flips false the instant
-                        commitTo() runs (same tick as the tap that calls
-                        navRef.current.next()/prev()) -- so the very button just
-                        tapped was torn out of the DOM immediately, and nothing
-                        had a .card-nav again until the settle finished (NAV_EASE_DUR_MS
-                        later). See home-mobile.css for the fade that replaces it. */}
-                    <div className="card-nav">
-                      <button
-                        type="button"
-                        className="btn-tertiary btn-nav-arrow"
-                        aria-label="Previous project"
-                        tabIndex={card.isCurrent ? 0 : -1}
-                        onClick={() => navRef.current.prev()}
+                    <div className="card-cta">
+                      <Link
+                        className="btn-primary btn-discover"
+                        href={href}
+                        draggable="false"
+                        onClick={(e) => handleCardOpen(e, card)}
                       >
-                        {/* Icon style (fix #16): same arrow-glyph-in-Manrope
-                            treatment as the "See next case" button at the
-                            bottom of each project (see proj-next-case /
-                            mapfre-next-case in Proyectos), not a separate SVG
-                            icon -- see home-mobile.css for the sizing. */}
-                        <span aria-hidden="true">&larr;</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-tertiary btn-nav-arrow"
-                        aria-label="Next project"
-                        tabIndex={card.isCurrent ? 0 : -1}
-                        onClick={() => navRef.current.next()}
-                      >
-                        <span aria-hidden="true">&rarr;</span>
-                      </button>
+                        Discover
+                      </Link>
+                      {/* Always rendered for every card, not just the current
+                          one -- visibility is driven purely by the
+                          `.card-face.is-current ~ .card-cta .card-nav` CSS
+                          rule in home-mobile.css, so the DOM node never
+                          disappears mid-tap (see that file's fix #16 comment
+                          for the flicker this avoids). */}
+                      <div className="card-nav">
+                        <button
+                          type="button"
+                          className="btn-tertiary btn-nav-arrow"
+                          aria-label="Previous project"
+                          tabIndex={isCurrent ? 0 : -1}
+                          onClick={() => navRef.current.prev()}
+                        >
+                          {/* Same arrow-glyph-in-Manrope treatment as the "See
+                              next case" button at the bottom of each project. */}
+                          <span aria-hidden="true">&larr;</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-tertiary btn-nav-arrow"
+                          aria-label="Next project"
+                          tabIndex={isCurrent ? 0 : -1}
+                          onClick={() => navRef.current.next()}
+                        >
+                          <span aria-hidden="true">&rarr;</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
                 );
               })}
             </div>

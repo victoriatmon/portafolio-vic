@@ -15,7 +15,7 @@
   overflow-x: hidden;
 }
 
-/* ===== Landing v2 (mobile): flat arc carousel ===== */
+/* ===== Landing v2 (mobile): hero + project carousel ===== */
 .home-mobile-scope .stage2 { position: relative; z-index: 1; isolation: isolate; height: 690px; flex: none; overflow: hidden; }
 .home-mobile-scope .intro2 { position: absolute; top: 40px; left: 0; right: 0; padding: 0 28px; text-align: center; z-index: 5; }
 /* Title size (fix #16): Pavanam dropped 30->28px per Victoria's request --
@@ -27,62 +27,75 @@
    this exact pair. */
 .home-mobile-scope .intro2-title { margin: 0 auto; max-width: 334px; text-wrap: balance; font-family: 'Pavanam', 'Manrope', sans-serif; font-weight: 400; font-size: 28px; line-height: 1.16; color: #E8E8E8; }
 .home-mobile-scope .intro2-title .accent-italic { font-family: 'Spectral', 'Pavanam', serif; font-style: italic; font-size: 31px; line-height: 1; }
-/* Carousel + arrow row nudged UP 8px (fix #16, corrected -- first pass
-   moved it down, Victoria wanted up): 170px -> 162px. .car2-ring/.car2-ticks
-   and every .card-slot (cards, Discover, prev/next) are all positioned
-   relative to THIS element, so moving .car2's own `top` moves the whole
-   group together in one place instead of touching each child's offset.
-   Fix #17a: Victoria then asked for the CARD ART ONLY to move another 8px
-   up, while Discover + the prev/next arrows stay exactly where fix #16 put
-   them. .car2's `top` is the one offset shared by every descendant, so
-   moving it alone shifts everything -- cards AND Discover/arrows --
-   together. To cancel that for just the CTA row, .card-cta's own `top`
-   below gained a matching +8px each time: since .card-cta is positioned
-   relative to .card-slot (not directly to .car2), that local offset
-   exactly cancels whatever `.car2`'s own `top` just moved, so Discover +
-   the arrows land back at their fix #16 screen position while the card
-   face is the only thing that actually moves. Fix #18 repeated this same
-   pattern for another 8px (154px -> 146px, with .card-cta's compensating
-   offset growing to match -- see that rule below). */
-.home-mobile-scope .car2 { position: absolute; left: 0; right: 0; top: 146px; height: 520px; touch-action: pan-y; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
-.home-mobile-scope .car2-ring { position: absolute; left: 50%; top: 210px; width: 0; height: 0; }
-.home-mobile-scope .car2-ticks { position: absolute; left: calc(50% - 910px); top: 200px; width: 1820px; height: 1820px; border-radius: 50%; pointer-events: none;
-  background: repeating-conic-gradient(from -0.06deg at 50% 50%, rgba(255,255,255,0.30) 0deg 0.12deg, transparent 0.12deg 1.1deg);
-  -webkit-mask-image: radial-gradient(circle closest-side, transparent 889px, #000 890px, #000 910px, transparent 911px);
-  mask-image: radial-gradient(circle closest-side, transparent 889px, #000 890px, #000 910px, transparent 911px);
-  transform: translateZ(0); will-change: transform; backface-visibility: hidden; }
+/* ===== Rebuilt 2026-10-28: flat horizontal scroll-snap carousel =====
+   Replaces the old trigonometric flat-ARC layout (each card placed via
+   sin/cos around a 900px-radius circle, advanced by a hand-rolled
+   pointer-drag + CSS-transition "settle" -- see git history / the old
+   revision of this file for that system) entirely. Victoria reported that
+   system could never reliably land the next card centred on swipe or
+   arrow-advance, across many rounds of tuning its easing/duration -- so
+   rather than chase that further, the carousel now hands the actual
+   horizontal motion to the browser's own CSS scroll-snap, the same
+   mechanism every other horizontally-paged mobile UI on the web relies on
+   and which Chrome/Safari both implement well. JS now only ever (a) reads
+   the scroll position to know which card is centred -- still driving the
+   same `.is-current` trigger the six bespoke card-art animations below
+   expect, unchanged -- and (b) drives a plain `scrollLeft` glide for the
+   prev/next BUTTONS only; native swipe/wheel scrolling never touches JS at
+   all. See HomeMobile.js's header comment and its CARD_W/CARD_GAP/PAGE_W
+   constants -- the 255px/20px numbers below MUST stay in sync with those.
+   Desktop (HomeDesktop.js/home.css, `.home-desktop-scope`) is untouched --
+   confirmed no selectors are shared between the two scopes. */
+.home-mobile-scope .car2 {
+  position: absolute;
+  left: 0; right: 0;
+  /* 8px higher than before (146px -> 138px), and this time moving the
+     WHOLE group together -- cards AND Discover/arrows -- per Victoria's
+     request, unlike fix #17a/#18a's art-only moves (which needed a
+     counter-offset on .card-cta to keep Discover/arrows still; no
+     counter-offset here, since this time both should move). */
+  top: 138px;
+  height: 520px;
+  user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+}
+.home-mobile-scope .car2-track {
+  position: absolute;
+  left: 0; right: 0; top: 0;
+  display: flex;
+  align-items: flex-start;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  /* Stops a horizontal swipe from also triggering the browser's
+     edge-swipe back/forward navigation gesture -- replaces the old
+     custom 28px-edge pointerdown exclusion hack, which isn't needed once
+     the browser is doing the scrolling natively. */
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  /* (100vw - CARD_W) / 2 -- lets the first/last card still reach dead
+     centre instead of stopping at the track's own edge. */
+  padding: 0 calc(50vw - 127.5px);
+  gap: 20px; /* CARD_GAP -- with the 255px card width below, gives the same 275px centre-to-centre spacing (PAGE_W) HomeMobile.js's scroll math assumes */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  /* No explicit touch-action override (the old arc system needed
+     `pan-y` to stop the browser's own gesture handling from fighting its
+     custom JS drag) -- default `auto` is exactly right for a native
+     horizontally-scrollable element: Chrome/Safari already route a mostly-
+     horizontal drag here to scroll the carousel and a mostly-vertical one
+     through to scroll the page, no JS needed either way. */
+}
+.home-mobile-scope .car2-track::-webkit-scrollbar { display: none; }
 
 .home-mobile-scope .card-slot {
-  position: absolute;
-  will-change: transform, opacity;
-}
-/* Settle-to-target animation (fix #13): HomeMobile.js's commitTo() snaps
-   `pos` straight to a new card's final position in one React commit, and
-   this class (toggled via the `easing` state) is what turns that instant
-   jump into a smooth, compositor-driven 220ms glide -- never present
-   during an active drag, which needs instant 1:1 tracking instead. Applied
-   as a class rather than inline so it can re-declare the opacity
-   transition below alongside the new transform one, instead of an inline
-   `transition` silently wiping that shorthand out (and the entrance fade
-   with it). Duration/curve here MUST stay in sync with HomeMobile.js's
-   EASE_DUR_MS/EASE_CURVE constants -- they're not read from here, they're
-   just independently kept equal. */
-/* Fix #17 -- `--ease-dur`/`--ease-curve` custom properties (set inline by
-   HomeMobile.js's buildCards(), always present, harmless when nothing is
-   easing) let the SAME settle mechanism run at two different timings:
-   fix #10/#13's original 220ms snap for a swipe/wheel/focus commit (where
-   the user's own gesture already supplies the "speed", so a quick settle
-   reads as responsive), and a slower, gentler glide for a prev/next
-   BUTTON tap (fix #17 -- Victoria reported that tapping an arrow felt
-   abrupt/forceful rather than subtle, likely because a tap has no physical
-   drag correlate to make a fast snap feel earned). The var()s fall back to
-   the original 220ms curve so nothing changes if the vars are ever absent.
-   Kept as a CSS class (not inline `transition`) for the same reason as
-   fix #13: `.card-slot` already owns its own `opacity` transition for the
-   load-time reveal, and this re-states it alongside the new transform one
-   instead of silently replacing that shorthand. */
-.home-mobile-scope .card-slot.is-easing {
-  transition: transform var(--ease-dur, 220ms) var(--ease-curve, cubic-bezier(0.25, 0.46, 0.45, 0.94)), opacity 0.5s ease;
+  position: relative;
+  flex: 0 0 255px; /* CARD_W -- keep in sync with HomeMobile.js's CARD_W */
+  width: 255px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  scroll-snap-align: center;
+  scroll-snap-stop: always; /* a fast flick still only ever advances one card, never skips past */
 }
 .home-mobile-scope .card-face {
   all: unset;
@@ -100,17 +113,18 @@
   -webkit-user-drag: none;
   user-select: none;
   -webkit-user-select: none;
-  touch-action: pan-y !important;
   -webkit-touch-callout: none;
 }
-/* .is-held's lift/scale/brightness grow-on-long-press effect was removed
-   per Victoria's request (it's still added/removed by HomeMobile.js's
-   holdOn()/holdOff() -- see that file's header comment -- but now has no
-   CSS to act on, so it's a harmless no-op class toggle; left in place
-   rather than ripping out holdOn/holdOff/heldFace, since that state machine
-   is also load-bearing for the separate tap-vs-hold-vs-drag disambiguation
-   logic in onWinMove/onWinUp, which Victoria did not ask to change). The
-   quick tap-down feedback below (.card-face:active) is unrelated and was
+/* `.is-held`'s old lift/scale/brightness grow-on-long-press effect had
+   already been removed per Victoria's request before the 2026-10-28
+   carousel rebuild, and the rebuild went further and dropped the
+   holdOn()/holdOff()/heldFace press-tracking machinery from HomeMobile.js
+   entirely -- native horizontal scrolling handles tap-vs-drag
+   disambiguation on its own (the browser suppresses the click a touch-
+   scroll leaves behind), so there's no custom state machine left to need
+   it. `.is-held` is no longer added/removed by anything; if it's ever
+   reused for a new affordance, it needs its own CSS from scratch. The
+   quick tap-down feedback below (`.card-face:active`) is unrelated and was
    kept. */
 /* Fix #16 -- tap feedback made compositor-only: `.card-face`'s transition
    above used to also animate `filter` (brightness) and `box-shadow`
@@ -156,21 +170,15 @@
 
 /* Wraps the Discover CTA and, on the centred card only, the prev/next nav
    row below it (Victoria asked for a tap-driven alternative to swiping --
-   see HomeMobile.js's navRef/commitTo()). This takes over the absolute
-   placement that `.btn-discover` used to carry on its own (same slot:
-   `left:50%; top:calc(100% + 18px);`) and lays its children out with flex
-   instead, so a second row can sit under Discover without hardcoding its
-   height into a second fixed `top` offset. */
+   see HomeMobile.js's navRef/scrollToIndex()). Lays its children out with
+   flex so a second row can sit under Discover without hardcoding a second
+   fixed offset. */
 .home-mobile-scope .card-cta {
-  position: absolute;
-  left: 50%;
-  /* +34px (fix #18, was +26px after fix #17a, +18px originally): counteracts
-     .car2's own `top` moving up, so this row (Discover + the prev/next
-     arrows) keeps its fix #16 screen position while the card face above it
-     moves up on its own -- see the comment on .car2's `top` for the full
-     reasoning. */
-  top: calc(100% + 34px);
-  transform: translateX(-50%);
+  /* Static now, not absolutely positioned -- .card-slot is a flex column
+     (card-face, then card-cta) as of the 2026-10-28 rebuild, so centring
+     and spacing come from flexbox instead of a left:50%/translateX(-50%)
+     + compounding top-offset hack. */
+  margin-top: 28px; /* on-screen gap between card and Discover -- same visual spacing the old arc system reached via a compounded offset+counter-offset+0.85 scale; reached directly here since there's no scale transform to compound through any more. */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -315,7 +323,10 @@
 .home-mobile-scope .card-slot {
   opacity: 0;
   transition: opacity 0.5s ease;
-  transition-delay: calc(var(--d, 0) * 50ms);
+  /* Left-to-right stagger by card index (--i, set inline per card in
+     HomeMobile.js) -- replaces the old distance-from-arc-centre stagger
+     (--d), since there's no arc/centre concept at load time any more. */
+  transition-delay: calc(var(--i, 0) * 60ms);
 }
 .home-mobile-scope .stage2.is-entered .intro2 {
   opacity: 1;
@@ -355,15 +366,16 @@
 
 /* The six card-art blocks below mirror home.css's "Mapfre card art" through
    "UNDP card art" sections verbatim, rescoped under .home-mobile-scope, with
-   :hover swapped for .is-current -- added to .card-face by HomeMobile.js's
-   buildCards() on whichever card is currently centred in the carousel (see
-   that file's `isCurrent`/`d` comment), so each bespoke animation plays on
-   its own, in a loop, for as long as its card sits in the middle, rather
-   than needing a press. (An earlier version of this file triggered off
-   .is-held, a ~240ms press-hold; that class still exists and still drives
-   the plain card-lift feedback in the block above this one, but no longer
-   feeds any of these six art animations -- centering replaced holding as
-   the trigger here, per Victoria's request.) :focus-visible is kept as-is
+   :hover swapped for .is-current -- added to .card-face by HomeMobile.js
+   on whichever card is currently centred in the carousel (`currentIndex`,
+   read off the scroll-snap track's rest position -- see that file's header
+   comment), so each bespoke animation plays on its own, in a loop, for as
+   long as its card sits in the middle, rather than needing a press. (An
+   earlier version of this file triggered off `.is-held`, a ~240ms
+   press-hold; that class and the JS machinery behind it were removed
+   entirely in the 2026-10-28 carousel rebuild -- centering replaced
+   holding as the trigger here, per Victoria's original request, and
+   nothing adds/removes `.is-held` any more.) :focus-visible is kept as-is
    so keyboard/switch-control users on a touch device still get the same
    effect. @keyframes are NOT redeclared here -- home.css's are already in
    this route's bundle regardless of which variant renders (see page.js),

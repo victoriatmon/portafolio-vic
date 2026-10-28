@@ -18,20 +18,39 @@
 // desktop only in the original too) -- the page flows normally and scrolls
 // if its content needs more height than the viewport.
 //
-// ===== Carousel, rebuilt 2026-10-28 =====
+// ===== Carousel, rebuilt 2026-10-28, arc visual restored same day =====
 // The project carousel below was rewritten from scratch, replacing a
-// trigonometric flat-ARC layout (each card placed via sin/cos around a
-// 900px-radius circle, advanced by a hand-rolled pointer-drag + CSS-
-// transition "settle" -- see contexto-portafolio-vercel.md for that
-// system's full history) with a native horizontal CSS scroll-snap strip.
-// Victoria reported the old system could never reliably land the next card
-// centred on a swipe or an arrow tap, through many rounds of tuning its
-// easing/duration -- the actual horizontal motion now belongs to the
-// browser's own scroll-snap instead (well-supported in both Chrome and
-// Safari/iOS, the same mechanism basically every other horizontally-paged
-// mobile UI on the web already relies on), so "advance -> next card lands
-// centred, smoothly" is no longer something this file reconstructs by
-// hand. What's left for JS to do:
+// trigonometric ARC layout (each card placed via sin/cos around a 900px-
+// radius circle, advanced by a hand-rolled pointer-drag + CSS-transition
+// "settle" -- see contexto-portafolio-vercel.md for that system's full
+// history) with a native horizontal CSS scroll-snap strip for the actual
+// HORIZONTAL motion. Victoria reported the old system could never reliably
+// land the next card centred on a swipe or an arrow tap, through many
+// rounds of tuning its easing/duration -- scroll-snap fixed that (well-
+// supported in both Chrome and Safari/iOS, the same mechanism basically
+// every other horizontally-paged mobile UI on the web already relies on),
+// so "advance -> next card lands centred, smoothly" is no longer something
+// this file reconstructs by hand.
+//
+// The first version of that rebuild, however, left the cards sitting flat
+// in a straight strip -- Victoria then asked for mobile to look curved
+// like desktop again: the centre card prominent, the previous/next cards
+// visibly arcing away at the sides. So, same day: the native scroll-snap
+// strip stays (still the thing that fixed reliability), but each
+// `.card-slot` now ALSO gets a `rotate()`/`translateY()` transform layered
+// on top -- the same arc math HomeDesktop.js uses (RC/STEP below), just
+// re-tuned for this narrower viewport -- recomputed continuously from the
+// track's live scrollLeft and written straight to the DOM via refs (see
+// applyArc() in the effect below), never through React state/re-render
+// per scroll frame (same reasoning as fix #13's dropped-frame lesson,
+// documented in contexto-portafolio-vercel.md). Since a CSS transform is
+// purely visual (doesn't affect layout or the scroll-snap calculation,
+// which is based on the untransformed layout box), this composes cleanly
+// with the native scroll: the browser still decides exactly where a card
+// sits left-to-right, in perfect sync with the user's finger; the arc only
+// adds the curve on top.
+//
+// What's left for JS to do:
 //   1. Know which card is centred, to drive the same `.is-current` trigger
 //      the six bespoke card-art animations in home-mobile.css already key
 //      off (unchanged -- see CARD_ART below) -- done by reading the
@@ -41,12 +60,16 @@
 //      by the browser's own scroll state instead of a hand-tracked one.
 //   2. Drive a prev/next BUTTON tap's glide to the next card (scrollToIndex
 //      below) -- native swipe/wheel scrolling never touches this at all,
-//      the browser handles that motion entirely on its own.
-// Card width (CARD_W/CARD_GAP below) is now direct pixel sizing, no extra
-// scale transform -- see home-mobile.css's matching .card-slot/.car2-track
-// rules, which MUST stay numerically in sync with these. Card HEIGHT lives
-// only in CSS (340px, same `.card-face` rule as before) -- the horizontal
-// scroll-snap math below never needs it.
+//      the browser handles that motion entirely on its own. (Both this and
+//      native scrolling fire the same 'scroll' events, so both drive the
+//      arc update the same way -- see applyArc()/scheduleArc().)
+//   3. Continuously recompute and write each card's arc transform (this
+//      fix) -- see applyArc()/scheduleArc() in the effect below.
+// Card width (CARD_W/CARD_GAP below) is direct pixel sizing, no extra scale
+// transform -- see home-mobile.css's matching .card-slot/.car2-track rules,
+// which MUST stay numerically in sync with these. Card HEIGHT lives only in
+// CSS (340px, both `.card-slot` and `.card-face` as of this fix -- see
+// that file) -- the math below never needs it directly.
 //
 // Each card's bespoke art animation (the tile mosaic, the spinning star,
 // the glitch swap, etc. -- see CARD_ART below) plays on its own, in a loop,
@@ -116,6 +139,25 @@ const CARD_GAP = 20;
 // scrollLeft pointing at".
 const PAGE_W = CARD_W + CARD_GAP;
 
+// Arc visual (this fix): rotate()/translateY() layered on top of the
+// native scroll position, same shape of math as HomeDesktop.js's own
+// RC/STEP (see that file) -- `ang = d*STEP`, `translateY = RC*(1-cos(ang))`
+// -- but re-tuned for mobile's narrower viewport rather than copying
+// desktop's RC=1400/STEP=17deg verbatim. These numbers reuse the pre-
+// fix-#20 mobile arc's own RC=900, with STEP derived the same way that
+// system derived it: the angle at which the arc's chord length equals
+// PAGE_W, so adjacent cards keep landing visually close to PAGE_W apart
+// even though the arc's true horizontal placement is non-linear (this
+// value is only used for the rotation/vertical-drop added on top here;
+// actual left-right placement still comes from native scroll, see the
+// effect below and this file's header comment).
+const RC = 900;
+const STEP = (Math.asin(PAGE_W / RC) * 180) / Math.PI;
+// Cards beyond this many slots from centre are hidden outright (matches
+// desktop's own cutoff, scaled -- six cards never need more than ~2 to be
+// visible either side in a strip this narrow anyway).
+const ARC_HIDE_AT = 2.3;
+
 // Duration/easing for the prev/next BUTTON glide only -- native swipe/wheel
 // scrolling bypasses this entirely and is driven purely by the browser's
 // own scroll-snap physics (no JS in the loop, so no per-frame React cost
@@ -146,6 +188,12 @@ export default function HomeMobile() {
   // can reach the scrollToIndex() closure defined inside that effect
   // without re-creating it on every render.
   const navRef = useRef({ prev() {}, next() {} });
+  // One DOM node per card (`.card-slot`), set via the inline ref callback
+  // in the render below -- applyArc() (in the effect below) writes the
+  // rotate()/translateY() arc transform straight to these on every scroll
+  // frame, bypassing React state/re-render entirely (see this file's
+  // header comment, point 3).
+  const cardSlotRefs = useRef([]);
 
   useEffect(() => {
     if (prefersReducedMotion()) {
@@ -170,6 +218,43 @@ export default function HomeMobile() {
     // wheel handler used (140ms of no new scroll events).
     const hasScrollEnd = typeof window !== 'undefined' && 'onscrollend' in window;
 
+    // Writes the arc transform (rotate + vertical drop, see RC/STEP above)
+    // to every `.card-slot` for a given continuous centre position `pos`
+    // (a float -- the fractional index the track is currently scrolled
+    // to, NOT just the settled integer index). Direct DOM writes, no
+    // setState -- this runs on every scroll frame, so going through React
+    // here would reintroduce exactly the per-frame-re-render cost fix #13
+    // moved away from (see contexto-portafolio-vercel.md).
+    function applyArc(pos) {
+      const cards = cardSlotRefs.current;
+      for (let i = 0; i < COUNT; i++) {
+        const el = cards[i];
+        if (!el) continue;
+        const d = i - pos; // signed, continuous distance from centre -- no wraparound, this carousel is bounded (see scrollToIndex's clamp below)
+        const ang = d * STEP;
+        const y = RC * (1 - Math.cos((ang * Math.PI) / 180));
+        el.style.transform = `rotate(${ang.toFixed(3)}deg) translateY(${y.toFixed(2)}px)`;
+        el.style.visibility = Math.abs(d) > ARC_HIDE_AT ? 'hidden' : 'visible';
+        el.style.zIndex = String(Math.round(100 - Math.abs(d) * 10));
+      }
+    }
+    let arcScheduled = false;
+    // Scroll fires far more often than once per frame during native
+    // momentum on some engines -- this collapses any number of scroll
+    // events landing in the same frame into a single DOM write, always
+    // reading scrollLeft fresh at the moment the frame actually runs
+    // (not whatever stale value the event that scheduled it happened to
+    // carry).
+    function scheduleArc() {
+      if (arcScheduled) return;
+      arcScheduled = true;
+      requestAnimationFrame(() => {
+        arcScheduled = false;
+        applyArc(track.scrollLeft / PAGE_W);
+      });
+    }
+    applyArc(track.scrollLeft / PAGE_W); // correct from first paint, before any 'scroll' event has fired
+
     // Reads the track's current rest position and converts it to a card
     // index. Exact (not just "close enough"), because every card is the
     // same width+gap and the track's side padding was built to make each
@@ -181,6 +266,10 @@ export default function HomeMobile() {
     }
 
     function onScroll() {
+      // Runs every scroll frame regardless of source -- native swipe/
+      // wheel AND the programmatic prev/next glide below both change
+      // scrollLeft, which fires this same event either way.
+      scheduleArc();
       if (autoScrolling) return; // scrollToIndex() drives its own currentIndex updates, see below
       setCurrentIndex((prev) => (prev === -1 ? prev : -1));
       if (!hasScrollEnd) {
@@ -327,7 +416,14 @@ export default function HomeMobile() {
                 const isCurrent = i === currentIndex;
                 const card = { href, gradient };
                 return (
-                  <div className="card-slot" style={{ '--i': i }} key={i}>
+                  <div
+                    className="card-slot"
+                    style={{ '--i': i }}
+                    ref={(el) => {
+                      cardSlotRefs.current[i] = el;
+                    }}
+                    key={i}
+                  >
                     <Link
                       className={`card-face${isCurrent ? ' is-current' : ''}`}
                       href={href}

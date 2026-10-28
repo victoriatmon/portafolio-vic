@@ -65,8 +65,22 @@
    with it). Duration/curve here MUST stay in sync with HomeMobile.js's
    EASE_DUR_MS/EASE_CURVE constants -- they're not read from here, they're
    just independently kept equal. */
+/* Fix #17 -- `--ease-dur`/`--ease-curve` custom properties (set inline by
+   HomeMobile.js's buildCards(), always present, harmless when nothing is
+   easing) let the SAME settle mechanism run at two different timings:
+   fix #10/#13's original 220ms snap for a swipe/wheel/focus commit (where
+   the user's own gesture already supplies the "speed", so a quick settle
+   reads as responsive), and a slower, gentler glide for a prev/next
+   BUTTON tap (fix #17 -- Victoria reported that tapping an arrow felt
+   abrupt/forceful rather than subtle, likely because a tap has no physical
+   drag correlate to make a fast snap feel earned). The var()s fall back to
+   the original 220ms curve so nothing changes if the vars are ever absent.
+   Kept as a CSS class (not inline `transition`) for the same reason as
+   fix #13: `.card-slot` already owns its own `opacity` transition for the
+   load-time reveal, and this re-states it alongside the new transform one
+   instead of silently replacing that shorthand. */
 .home-mobile-scope .card-slot.is-easing {
-  transition: transform 220ms cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.5s ease;
+  transition: transform var(--ease-dur, 220ms) var(--ease-curve, cubic-bezier(0.25, 0.46, 0.45, 0.94)), opacity 0.5s ease;
 }
 .home-mobile-scope .card-face {
   all: unset;

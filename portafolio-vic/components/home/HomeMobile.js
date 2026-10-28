@@ -126,8 +126,23 @@ const SPACING = RC * Math.sin((STEP * Math.PI) / 180);
 // indistinguishable, which is all that's needed here.
 const EASE_DUR_MS = 220;
 const EASE_CURVE = 'cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+// Fix #17: a tap on the prev/next buttons settles with its own, gentler
+// timing instead of reusing the swipe/wheel/focus settle's 220ms snap
+// above. A swipe already supplies its own physical "speed" via the
+// gesture that preceded it, so a quick 220ms snap at the end reads as
+// responsive; a button tap has no such drag to earn that -- Victoria
+// described it as feeling abrupt/forceful rather than subtle. Longer
+// duration + a true ease-in-out (slow in, fast through the middle, slow
+// out) instead of fix #10's ease-OUT-only quad reads as a deliberate,
+// considered glide rather than a snap, without touching the swipe/wheel/
+// focus settle Victoria never complained about. See commitTo() below for
+// how this is selected per call, and buildCards()/ticksStyle for how it
+// reaches the CSS transition via the `--ease-dur`/`--ease-curve` custom
+// properties added in home-mobile.css.
+const NAV_EASE_DUR_MS = 360;
+const NAV_EASE_CURVE = 'cubic-bezier(0.45, 0, 0.15, 1)';
 
-function buildCards(pos, currentIndex, easing) {
+function buildCards(pos, currentIndex, easing, easeTiming) {
   return LABELS.map((label, i) => {
     const d = ((((i - pos + COUNT / 2) % COUNT) + COUNT) % COUNT) - COUNT / 2; // signed distance from centre
     const ang = d * STEP;
@@ -177,6 +192,12 @@ function buildCards(pos, currentIndex, easing) {
         zIndex: Math.round(100 - Math.abs(d) * 10),
         visibility: hidden ? 'hidden' : 'visible',
         '--d': Math.abs(d).toFixed(2),
+        // Fix #17: always present (harmless when `easing` is false/no
+        // transition is running) -- see home-mobile.css's
+        // `.card-slot.is-easing` for how these drive the settle's actual
+        // timing, and commitTo() below for how easeTiming is chosen.
+        '--ease-dur': `${easeTiming.dur}ms`,
+        '--ease-curve': easeTiming.curve,
       },
     };
   });
@@ -198,6 +219,12 @@ export default function HomeMobile() {
   // `easing` must NEVER be true then (a drag needs instant 1:1 tracking,
   // not a 220ms-lagged one).
   const [easing, setEasing] = useState(false);
+  // Fix #17: which timing the CURRENTLY (or most recently) committed settle
+  // should use -- defaults to the original swipe/wheel/focus timing;
+  // commitTo() below overrides this per call when a prev/next button
+  // triggered it. Read by buildCards()/ticksStyle via the `--ease-dur`/
+  // `--ease-curve` custom properties (see home-mobile.css).
+  const [easeTiming, setEaseTiming] = useState({ dur: EASE_DUR_MS, curve: EASE_CURVE });
   const [entered, setEntered] = useState(false);
   const carRef = useRef(null);
   // Imperative next()/prev(), wired up once inside the big pointer/wheel
@@ -242,6 +269,18 @@ export default function HomeMobile() {
     let easeFrom = 0;
     let easeTarget = 0;
     let easeStart = performance.now();
+    // Fix #17: the duration of whichever settle is currently in flight (or
+    // most recently was) -- mirrors the `easeTiming` state's `.dur`, read
+    // synchronously here for currentVisualPos()'s reconstruction math and
+    // easeDoneTimer's delay, same reason the other ease*/pos mirrors above
+    // exist (avoids a stale read of React state from inside a plain event
+    // handler). The quadratic reconstruction formula below is kept as the
+    // same approximation used for the original swipe/wheel/focus timing
+    // (see currentVisualPos()'s own comment) even when a nav-triggered
+    // ease-in-out settle is interrupted mid-flight -- a rare edge case
+    // (tapping an arrow then immediately swiping before it finishes) where
+    // the visual handoff is close enough, not pixel-exact.
+    let easeDurMsNow = EASE_DUR_MS;
     // Mirrors the `easing` state above, readable/writable synchronously
     // (same pattern as posVal/settledNow -- avoids a stale read of React
     // state from inside a plain event handler).
@@ -273,7 +312,7 @@ export default function HomeMobile() {
     // card visually is, not from a target it hasn't reached yet.
     function currentVisualPos() {
       if (!easingNow) return posVal;
-      const frac = Math.min(1, (performance.now() - easeStart) / EASE_DUR_MS);
+      const frac = Math.min(1, (performance.now() - easeStart) / easeDurMsNow);
       const eased = 1 - (1 - frac) * (1 - frac);
       return easeFrom + (easeTarget - easeFrom) * eased;
     }
@@ -303,11 +342,17 @@ export default function HomeMobile() {
     // commit; the CSS transition is what makes that jump look smooth on
     // screen, entirely on the compositor, with no further JS involvement
     // once this returns (until the setTimeout below marks it settled).
-    function commitTo(target) {
+    function commitTo(target, viaNav) {
       clearTimeout(easeDoneTimer);
       const fromPos = currentVisualPos();
       targetVal = target;
       posVal = target;
+      // Fix #17: a prev/next button tap gets its own, gentler timing (see
+      // NAV_EASE_DUR_MS/NAV_EASE_CURVE above) instead of reusing the swipe/
+      // wheel/focus settle's 220ms snap.
+      const durMs = viaNav ? NAV_EASE_DUR_MS : EASE_DUR_MS;
+      const curve = viaNav ? NAV_EASE_CURVE : EASE_CURVE;
+      easeDurMsNow = durMs;
       if (reduce) {
         easingNow = false;
         setEasing(false);
@@ -323,13 +368,14 @@ export default function HomeMobile() {
       settledNow = false;
       setSettled(false);
       setEasing(true);
+      setEaseTiming({ dur: durMs, curve });
       setPos(posVal);
       easeDoneTimer = setTimeout(() => {
         easingNow = false;
         setEasing(false);
         settledNow = true;
         setSettled(true);
-      }, EASE_DUR_MS);
+      }, durMs);
     }
 
     function tick() {
@@ -538,8 +584,8 @@ export default function HomeMobile() {
     // at currentVisualPos(), the same interrupt-cleanly path a second quick
     // swipe or a focus move relies on.
     navRef.current = {
-      next: () => commitTo(currentVisualPos() + 1),
-      prev: () => commitTo(currentVisualPos() - 1),
+      next: () => commitTo(currentVisualPos() + 1, true),
+      prev: () => commitTo(currentVisualPos() - 1, true),
     };
 
     const carEl = carRef.current;
@@ -573,13 +619,15 @@ export default function HomeMobile() {
   // the carousel is allowed to call this settled), so this is just an
   // index lookup, not a rounding decision.
   const currentIndex = settled ? (((Math.round(pos) % COUNT) + COUNT) % COUNT) : -1;
-  const cards = buildCards(pos, currentIndex, easing);
+  const cards = buildCards(pos, currentIndex, easing, easeTiming);
   const ticksStyle = {
     transform: `rotate(${(-pos * STEP).toFixed(3)}deg)`,
     // Same CSS-transition settle as each card's wrapperStyle -- see
-    // commitTo()/EASE_CURVE above (fix #13) -- so the decorative tick
-    // marks glide in sync with the cards instead of snapping instantly.
-    transition: easing ? `transform ${EASE_DUR_MS}ms ${EASE_CURVE}` : 'none',
+    // commitTo()/EASE_CURVE above (fix #13), now reading whichever timing
+    // easeTiming currently holds (fix #17) -- so the decorative tick marks
+    // glide in sync with the cards instead of snapping instantly, whether
+    // this settle came from a swipe or a prev/next tap.
+    transition: easing ? `transform ${easeTiming.dur}ms ${easeTiming.curve}` : 'none',
   };
 
   // Ported from MainMobile.dc.html's _xOpen/_xGoTo -- see HomeDesktop.js's

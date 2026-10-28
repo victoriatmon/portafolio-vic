@@ -971,24 +971,46 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
 
 /* Mini carousel icon — static 3-card fan that links back to Home. No
    rotation; just a colour change on hover/active, same palette the old
-   spinning ring used. */
+   spinning ring used. Now the first item of .projects-top-row (next to the
+   pills) instead of its own row below the card -- sized to match the
+   pills' fixed 37px height (see ".project-pill { height: 37px }" further
+   down) so it reads as part of the same row instead of a bigger, separate
+   control; the glyph itself is scaled down to about half its old 61x26 in
+   the markup (width/height on the <svg>, same viewBox/paths) so it doesn't
+   visually dominate next to 14px pill labels. */
 .mini-carousel-btn {
   all: unset;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 61px;
-  height: 26px;
-  border-radius: 6px;
+  width: 37px;
+  height: 37px;
+  border-radius: 10px;
   color: #F5F5F5;
-  transition: color 0.15s ease;
+  transition: color 0.15s ease, background 0.15s ease;
 }
+.mini-carousel-btn:hover { background: rgba(255,255,255,0.06); }
 .mini-carousel-btn:hover { color: #9E9E9E; }
 .mini-carousel-btn:active { color: #0066FF; }
 .mini-carousel-btn:focus-visible { outline: 2px solid #F5F5F5; outline-offset: 4px; }
 .mini-fan-icon { display: block; pointer-events: none; }
 
+/* Wraps the mini-carousel icon + the project pills in one shared row, so
+   the icon reads as the first item of that row instead of its own row
+   below the open card. Moving it here (from below the card, where it used
+   to sit alone) frees up the vertical space its own row used to take --
+   .projects-stage is a flex:1 1 auto child of .projects-view inside the
+   fixed-height .x-stage, so removing a whole row from that column lets the
+   stage (and therefore .project-card-lg.is-current / .deck-ghost, both
+   sized in % of the stage) grow into that freed space automatically,
+   without touching their own height values. */
+.projects-top-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 0 0 48px;
+}
 .project-pills {
   display: flex;
   flex-wrap: nowrap;
@@ -996,7 +1018,7 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
   justify-content: center;
   gap: 10px;
   padding: 0;
-  margin: 0 0 48px;
+  margin: 0;
   list-style: none;
 }
 .project-pill {

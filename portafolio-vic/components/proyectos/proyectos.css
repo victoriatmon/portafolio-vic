@@ -972,25 +972,31 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
 /* Mini carousel icon — static 3-card fan that links back to Home. No
    rotation; just a colour change on hover/active, same palette the old
    spinning ring used. Now the first item of .projects-top-row (next to the
-   pills) instead of its own row below the card -- the 37px *button* matches
-   the pills' fixed 37px height (see ".project-pill { height: 37px }"
-   further down) so it reads as part of the same row instead of a bigger,
-   separate control. The glyph itself (the <svg>'s own width/height, same
-   viewBox/paths as the old 61x26) is a second, independent size inside
-   that button -- Victoria asked for it at 16px tall specifically (not just
-   "shrink the button"), so it's set to 38x16 (same aspect ratio as the
-   61x26 original: 16 * 61/26 ≈ 37.5, rounded to 38) and centered by the
-   button's flex alignment. Don't conflate the two sizes if asked to adjust
-   either one again -- the button's 37px is about matching the pills' row
-   height, the svg's 16px is about how big the glyph itself reads. */
+   pills) instead of its own row below the card. Two independent sizes
+   live here, don't conflate them if asked to adjust either again:
+   (1) the glyph itself (the <svg>'s own width/height, same viewBox/paths
+   as the old 61x26) -- Victoria asked for it at 20px tall, so it's set to
+   47x20 (same aspect ratio as the 61x26 original: 20 * 61/26 ≈ 46.9,
+   rounded to 47);
+   (2) the button around it (`.mini-carousel-btn`) -- its `height: 37px`
+   still matches the pills' fixed 37px row height (see
+   ".project-pill { height: 37px }" further down) so it reads as part of
+   the same row, but it no longer has a fixed `width` -- Victoria felt the
+   icon read as too close to the first pill, so instead of relying only on
+   `.projects-top-row`'s 16px `gap`, the button also got its own
+   `padding: 0 16px` (left AND right, even though the visual complaint was
+   about the right side only, for a button that still looks symmetric/
+   intentional rather than off-center) and the width is now `auto` (content
+   + padding) instead of a fixed square, since a fixed 37px width would
+   have clipped the wider 47px glyph. */
 .mini-carousel-btn {
   all: unset;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 37px;
   height: 37px;
+  padding: 0 16px;
   border-radius: 10px;
   color: #F5F5F5;
   transition: color 0.15s ease, background 0.15s ease;

@@ -1548,7 +1548,7 @@ function ProyectosDesktopInner() {
             <section className="projects-view" id="projects">
               <div className="projects-top-row">
                 <Link className="mini-carousel-btn" href="/" aria-label="Back to home carousel" data-cursor-label="Click to go to home page">
-                  <svg className="mini-fan-icon" width="38" height="16" viewBox="0 0 61 26" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <svg className="mini-fan-icon" width="47" height="20" viewBox="0 0 61 26" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                     <rect x="23" width="14" height="20" rx="2" fill="currentColor" />
                     <rect x="47.741" y="1.64795" width="14" height="20" rx="2" transform="rotate(22 47.741 1.64795)" fill="currentColor" />
                     <rect width="14" height="20" rx="2" transform="matrix(-0.927184 0.374607 0.374607 0.927184 12.9806 1.64795)" fill="currentColor" />

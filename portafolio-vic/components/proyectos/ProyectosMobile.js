@@ -421,6 +421,8 @@ function ProyectosMobileInner() {
 
   const phantomCalcTimerRef = useRef(null);
   const phantomTypeTimerRef = useRef(null);
+  const phantomPhoneRef = useRef(null);
+  const phantomKeyboardOpenRef = useRef(false);
   const funnelIntroTimerRef = useRef(null);
   const funnelJustSwitchedTRef = useRef(null);
   const funnelSwitchTimerRef = useRef(null);
@@ -875,6 +877,58 @@ function ProyectosMobileInner() {
     setPhantomMathOpen(true);
   }
 
+  // Victoria's report (video, 2026-10-29): tap a day -> the sheet opens and
+  // focusing .phantom-demo-amount-value makes iOS Safari scroll the REAL
+  // page so the fixed-size (280x600, drawn entirely in CSS -- see
+  // .phantom-demo-phone) mini "phone" mockup sits above the keyboard. That
+  // part already works -- it's the browser's own native "scroll focused
+  // input into view" behavior, nothing this component does. The bug is
+  // after: tapping "Calculate Impact" (or anywhere else) blurs the input
+  // and closes the keyboard, but Safari does NOT scroll the document back
+  // -- scrollY stays exactly where it was while the keyboard was open, and
+  // the now-taller visual viewport can reveal content well past the little
+  // phone mockup, or crop it against the top of the screen, depending on
+  // where that scrollY happened to land. .phantom-demo-phone's own size
+  // never changes (fixed 600px, overflow:hidden -- the sheet growing
+  // taller inside it is purely internal, see .phantom-demo-sheet's height
+  // transition in proyectos.css), so there's nothing to resize here, only
+  // the document's scroll position to correct. Same mechanism as the
+  // VictorAI chat's fix #61 (visualViewport as the live signal for a
+  // keyboard-driven viewport change), applied here to scroll the mockup
+  // back into view instead of to a position/height sync.
+  useEffect(() => {
+    if (phantomDay == null) return undefined;
+    const vv = typeof window !== 'undefined' ? window.visualViewport : null;
+    if (!vv) return undefined;
+
+    function onViewportResize() {
+      // A visual-viewport height more than ~150px shorter than the layout
+      // viewport means the on-screen keyboard is covering that much of the
+      // screen. 150px comfortably clears the shrink from Safari's toolbar
+      // collapsing/expanding on its own (a few tens of px), so that alone
+      // never triggers this.
+      const keyboardOpen = (window.innerHeight - vv.height) > 150;
+      if (phantomKeyboardOpenRef.current && !keyboardOpen) {
+        const el = phantomPhoneRef.current;
+        if (el) {
+          // Let the keyboard's own dismiss animation finish before
+          // measuring/scrolling, same margin used elsewhere in this repo
+          // for a just-closed keyboard's layout to settle.
+          setTimeout(() => {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 80);
+        }
+      }
+      phantomKeyboardOpenRef.current = keyboardOpen;
+    }
+
+    vv.addEventListener('resize', onViewportResize);
+    return () => {
+      vv.removeEventListener('resize', onViewportResize);
+      phantomKeyboardOpenRef.current = false;
+    };
+  }, [phantomDay]);
+
   function setFunnelMode(mode) {
     const switchingToAfter = mode === 'after' && funnelMode !== 'after';
     clearTimeout(funnelSwitchTimerRef.current);
@@ -1093,6 +1147,7 @@ function ProyectosMobileInner() {
           onPhantomAmountChange={phantomAmountChange}
           onPhantomCalculate={phantomCalculate}
           onPhantomOpenMath={phantomOpenMath}
+          phoneRef={phantomPhoneRef}
         />
       );
     }

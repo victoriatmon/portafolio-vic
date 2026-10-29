@@ -1904,11 +1904,17 @@ function ProyectosDesktopInner() {
 // Decorative demo widgets (self-playing CSS-driven mock UIs, ported verbatim)
 // ============================================================================
 
-export function ExpenseEntryDemo({ phantom, onPhantomPickDay, onPhantomCloseSheet, onPhantomAmountChange, onPhantomCalculate, onPhantomOpenMath }) {
+export function ExpenseEntryDemo({ phantom, onPhantomPickDay, onPhantomCloseSheet, onPhantomAmountChange, onPhantomCalculate, onPhantomOpenMath, phoneRef }) {
   return (
     <div className="phantom-demo-wrap">
       <p className="phantom-demo-try">Try it &mdash; tap a day on the calendar</p>
-      <div className="phantom-demo-phone">
+      {/* phoneRef (mobile only -- see ProyectosMobile.js's phantomPhoneRef
+          effect): lets JS scroll this fixed-size mockup back into view
+          after the on-screen keyboard closes, since iOS Safari scrolls the
+          real page to the focused input on focus but never scrolls back on
+          blur. Desktop has no on-screen keyboard to correct for, so it
+          doesn't pass this prop -- ref={undefined} is a harmless no-op. */}
+      <div className="phantom-demo-phone" ref={phoneRef}>
         <div className={'phantom-demo-bg ' + phantom.phantomBgDimClass}>
           <div className="phantom-demo-search">
             <span className="phantom-demo-sparkle" aria-hidden="true">&#10022;</span>

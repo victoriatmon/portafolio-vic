@@ -109,6 +109,66 @@ export default function ChatPanel() {
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [chat.chatOpen, chat]);
 
+  // Mobile Safari viewport desync, reported by Victoria via a screen
+  // recording: open the chat on an iPhone, type something into the
+  // composer, then delete it back to empty -- the panel comes out
+  // "desencuadrado" (dead space above the header, dead space below the
+  // input, the rest of the page visible underneath), and stays that way
+  // until she pinches to zoom the whole screen, which forces Safari to
+  // redo its layout. The video shows the QuickType autocomplete strip
+  // above the keyboard (suggesting "mmmmmmmmmm\"" while she was deleting)
+  // disappear the moment the field goes empty -- the keyboard itself never
+  // closes and the field never blurs, but that strip's height is still
+  // part of what the keyboard takes up. `app/layout.js` sets
+  // `interactive-widget: resizes-content` so the LAYOUT viewport (not just
+  // the visual one) shrinks while the keyboard is up, which `.chat-panel`
+  // relies on via `height: 100dvh` (see chat.css) to stay above the
+  // keyboard. WebKit doesn't reliably rerun that layout for a
+  // `position:fixed`/`dvh` box against this particular in-between resize
+  // (the strip appearing/disappearing without a real keyboard open/close)
+  // -- same family of "doesn't repin against a non-standard viewport
+  // change" WebKit bug already documented elsewhere in this codebase for
+  // its paint/repaint form (MapfreCard.js, UndpCard.js, PhantomCard.js,
+  // AXACard.js), just showing up here as stale positioning/sizing instead
+  // of stale paint. Fix: stop trusting the engine's own `dvh` relayout for
+  // this element while the panel is open and the keyboard can be involved
+  // -- read the live `visualViewport` on every `resize`/`scroll` it fires
+  // and write its height/offset onto the panel directly as inline styles,
+  // so the panel's box is re-derived from the real viewport every time
+  // instead of depending on a CSS environment query that can go stale.
+  // Not verified on a real iPhone yet (this environment's remote browser
+  // is Chromium, which never reproduced this bug either) -- needs
+  // Victoria's confirmation on her phone before this goes to `main`.
+  useEffect(() => {
+    if (!chat.chatOpen) return undefined;
+    const panel = panelRef.current;
+    const vv = typeof window !== 'undefined' ? window.visualViewport : null;
+    if (!panel || !vv) return undefined;
+
+    function syncToViewport() {
+      panel.style.height = vv.height + 'px';
+      panel.style.setProperty('--vv-top', vv.offsetTop + 'px');
+      // Forces a synchronous reflow against the values just written,
+      // instead of leaving them queued behind the same stalled relayout
+      // pass that caused the bug in the first place -- same forced-reflow
+      // trick already used elsewhere in this codebase for WebKit
+      // paint/layout bugs (see MapfreCard.js's play(), UndpCard.js's
+      // play(), PhantomCard.js/AXACard.js's activate()).
+      // eslint-disable-next-line no-unused-expressions
+      panel.offsetHeight;
+    }
+
+    syncToViewport();
+    vv.addEventListener('resize', syncToViewport);
+    vv.addEventListener('scroll', syncToViewport);
+    return () => {
+      vv.removeEventListener('resize', syncToViewport);
+      vv.removeEventListener('scroll', syncToViewport);
+      panel.style.height = '';
+      panel.style.removeProperty('--vv-top');
+    };
+  }, [chat.chatOpen]);
+
   // Keep the conversation pinned to its latest content -- a new message
   // (either side), the typing indicator starting/stopping, or a fresh set
   // of follow-up pills all change what .chat-body's natural bottom is.

@@ -32,7 +32,12 @@
 
 .chat-panel {
   position: fixed;
-  top: 0;
+  /* `--vv-top` is written by ChatPanel.js from the live `visualViewport`
+     while the panel is open (see its useEffect) -- falls back to 0 so SSR
+     markup and browsers without the VisualViewport API still render
+     correctly. See that effect's comment for why `top: 0` alone isn't
+     enough on iOS Safari. */
+  top: var(--vv-top, 0px);
   right: 0;
   height: 100vh;
   /* `dvh` tracks the *real*, current visible viewport -- it shrinks live as
@@ -42,7 +47,11 @@
      which is pinned to the viewport's largest possible size and left the
      chat-footer/input rendered below the real visible area on mobile.
      Declared after the `vh` line so older browsers without `dvh` support
-     keep that as a fallback. */
+     keep that as a fallback. ChatPanel.js's useEffect overrides this with
+     an inline `height` computed straight from `visualViewport.height`
+     while the panel is open and the VisualViewport API exists -- this
+     `dvh` rule is what's actually used for the very first paint (before
+     that effect runs) and as the fallback everywhere else. */
   height: 100dvh;
   width: 480px;
   max-width: 92vw;
@@ -68,6 +77,32 @@
     max-width: 100vw;
     border-left: none;
   }
+
+  /* Fix #62 (2026-10-29): the VisualViewport sync added in fix #61 for
+     this same reported bug (type into the composer, delete it all, the
+     panel comes out "desencuadrado" on an iPhone, fixed only by a manual
+     pinch-zoom) didn't resolve it -- Victoria tested the #61 preview and
+     it still happened. Re-reading her own wording literally ("tengo que
+     hacer zoom OUT para volver a encuadrarlo") pointed at a different,
+     much more common mechanism than a stale `dvh`: iOS Safari
+     auto-zooms the whole page in when a focused form field's *computed*
+     font-size is under 16px, so the field is legible -- and is supposed
+     to zoom back out on blur, but that zoom-out doesn't always fire
+     cleanly (confirmed, long-standing WebKit quirk, independent of
+     `interactive-widget`/`dvh`). `.chat-input` is `font-size: 14px` --
+     under the threshold -- so focusing it on an iPhone was triggering
+     exactly this auto-zoom; clearing the field and the keyboard/focus
+     settling afterward is a plausible point for the zoom-out step to not
+     cleanly reset, leaving the whole page pinch-zoomed until the person
+     does it manually -- which reads as *everything* (not just the
+     composer) being "desencuadrado", matching Victoria's video. The
+     actual `font-size: 16px` override lives further down, right after
+     the base `.chat-input` rule (see the fix #63 comment there) --
+     DO NOT put it in this block: see that comment for why. Not
+     reverting fix #61's VisualViewport sync -- it's inert overhead at
+     worst (verified harmless in this environment's Chromium) and may
+     still help if a real `dvh` staleness is ALSO happening alongside
+     this. */
 }
 
 .chat-header {
@@ -269,6 +304,34 @@
 }
 .chat-input::placeholder { color: #8A8A8A; }
 .chat-input:focus { outline: none; border-color: #0066FF; }
+
+/* Fix #63 (2026-10-29): the fix #62 override above (`.chat-input {
+   font-size: 16px }` inside the `@media (max-width: 767px)` block near
+   the top of this file, around `.chat-panel`'s mobile rules) was dead
+   code -- confirmed live in this environment's own Chromium browser pane
+   at a 375px-wide viewport: `matchMedia('(max-width: 767px)').matches`
+   was `true`, the 16px rule WAS present in the stylesheet and DID target
+   this element, and the computed `font-size` still came back `14px`.
+   The cause has nothing to do with WebKit/iOS: both the media-query rule
+   and this plain `.chat-input` rule below have the exact same
+   specificity (a single class selector), and CSS breaks a specificity
+   tie by letter of the rule that appears LAST in source order -- not by
+   whether a @media condition matches. Because that media block sits
+   near the top of the file (grouped with `.chat-panel`'s own mobile
+   rules) and this base rule sits much further down (grouped with the
+   rest of the footer), this rule always re-applied its 14px AFTER the
+   16px one, on every viewport width, unconditionally. So fix #62 as
+   previously pushed could never have worked for Victoria, on an iPhone
+   or anywhere else -- not evidence against the auto-zoom theory itself,
+   just a cascade-ordering mistake that needed to be caught before that
+   theory could be tested at all. Placing the override here instead,
+   textually after this rule, makes the cascade order match the intended
+   behavior regardless of where `.chat-panel`'s own mobile rules live. */
+@media (max-width: 767px) {
+  .chat-input {
+    font-size: 16px;
+  }
+}
 
 .send-btn {
   flex: none;

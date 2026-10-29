@@ -92,6 +92,24 @@
   z-index: 45;
   display: flex;
   flex-direction: column;
+  /* Fix #60 (2026-10-29): Victoria sent two screenshots -- with Safari's
+     toolbar expanded (less visible height), the bottom of the menu
+     (Resume + the credit line) was clipped behind the toolbar; with it
+     collapsed (more height), everything fit but Resume and the credit
+     line sat right on top of each other with no visible gap, reading as
+     one block instead of two. Both are the same underlying problem: the
+     menu's natural content height was too close to (and on a shorter
+     viewport, taller than) 100dvh, leaving `.menu-credit`'s
+     `margin-top: auto` almost no slack to push itself down and create a
+     gap. The spacing fix below (shrinking the redundant gap between the
+     two link lists, see `.menu-links-contact`, and a smaller `.menu-link`
+     font-size) addresses that directly. This `overflow-y` is a safety net
+     on top of it: if the content is ever still taller than the visible
+     viewport on some device/accessibility text-size combination, the menu
+     becomes scrollable instead of silently clipping Resume/credit behind
+     the browser's own UI where they're both invisible and untappable. */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   background: #0A0A0A;
   transform: translateY(-100%);
   visibility: hidden;
@@ -149,7 +167,12 @@
   color: #E8E8E8;
   text-decoration: none;
   font-weight: 600;
-  font-size: 36px;
+  /* Fix #60 (2026-10-29): 36px -> 32px, part of shrinking the menu's total
+     content height (see the `.menu-sheet`/`.menu-links-contact` fix #60
+     comments) -- Victoria asked specifically about sizing down these
+     buttons (shared by both link groups) as one of the ways to make more
+     room. */
+  font-size: 32px;
   line-height: 1.1;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -163,8 +186,18 @@
 /* Contact links (LinkedIn/Email/Resume) + credit line, ported from
    MainMobile.dc.html -- see the comment in Navbar.js. Same .menu-link
    typography/colors/hover/active as the site-nav list above; the extra
-   top margin alone reads the two groups as separate, no divider line. */
-.menu-links-contact { margin-top: 64px; }
+   top margin alone reads the two groups as separate, no divider line.
+   Fix #60 (2026-10-29): this list shares the `.menu-links` class, which
+   already carries `padding: 72px 28px 0` -- meant to push the FIRST list
+   down from the header, but applying to this second list too meant the
+   real gap above "LinkedIn" was this 64px margin PLUS another 72px of
+   padding stacked on top (136px total), eating the vertical budget that
+   `.menu-credit`'s `margin-top: auto` needed to create a visible gap
+   before the credit line, and on a shorter viewport pushing the bottom of
+   the sheet past 100dvh entirely (Victoria's screenshot with Safari's
+   toolbar expanded). `padding-top` reset to 0 here and the margin itself
+   trimmed -- a single, smaller gap instead of two stacked ones. */
+.menu-links-contact { margin-top: 40px; padding-top: 0; }
 
 /* Credit line: same wording/icon as the desktop footer's .footer-credit,
    but sized down to read as a quiet caption, not another tappable row --

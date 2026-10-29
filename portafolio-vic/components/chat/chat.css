@@ -77,6 +77,37 @@
     max-width: 100vw;
     border-left: none;
   }
+
+  /* Fix #62 (2026-10-29): the VisualViewport sync added in fix #61 for
+     this same reported bug (type into the composer, delete it all, the
+     panel comes out "desencuadrado" on an iPhone, fixed only by a manual
+     pinch-zoom) didn't resolve it -- Victoria tested the #61 preview and
+     it still happened. Re-reading her own wording literally ("tengo que
+     hacer zoom OUT para volver a encuadrarlo") pointed at a different,
+     much more common mechanism than a stale `dvh`: iOS Safari
+     auto-zooms the whole page in when a focused form field's *computed*
+     font-size is under 16px, so the field is legible -- and is supposed
+     to zoom back out on blur, but that zoom-out doesn't always fire
+     cleanly (confirmed, long-standing WebKit quirk, independent of
+     `interactive-widget`/`dvh`). `.chat-input` below is `font-size: 14px`
+     -- under the threshold -- so focusing it on an iPhone was triggering
+     exactly this auto-zoom; clearing the field and the keyboard/focus
+     settling afterward is a plausible point for the zoom-out step to not
+     cleanly reset, leaving the whole page pinch-zoomed until the person
+     does it manually -- which reads as *everything* (not just the
+     composer) being "desencuadrado", matching Victoria's video. Forcing
+     this one field's effective size to the 16px floor removes the
+     trigger entirely, mobile-only, without changing the 14px look
+     anywhere else (desktop, or how the composer's placeholder/typed text
+     is styled below `.chat-input::placeholder`/`.chat-input:focus`). Not
+     reverting fix #61's VisualViewport sync -- it's inert overhead at
+     worst (verified harmless in this environment's Chromium) and may
+     still help if a real `dvh` staleness is ALSO happening alongside
+     this. Needs Victoria's confirmation on her phone -- same as #61, not
+     verified on a real iPhone from this environment. */
+  .chat-input {
+    font-size: 16px;
+  }
 }
 
 .chat-header {

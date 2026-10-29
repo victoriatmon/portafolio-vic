@@ -32,7 +32,12 @@
 
 .chat-panel {
   position: fixed;
-  top: 0;
+  /* `--vv-top` is written by ChatPanel.js from the live `visualViewport`
+     while the panel is open (see its useEffect) -- falls back to 0 so SSR
+     markup and browsers without the VisualViewport API still render
+     correctly. See that effect's comment for why `top: 0` alone isn't
+     enough on iOS Safari. */
+  top: var(--vv-top, 0px);
   right: 0;
   height: 100vh;
   /* `dvh` tracks the *real*, current visible viewport -- it shrinks live as
@@ -42,7 +47,11 @@
      which is pinned to the viewport's largest possible size and left the
      chat-footer/input rendered below the real visible area on mobile.
      Declared after the `vh` line so older browsers without `dvh` support
-     keep that as a fallback. */
+     keep that as a fallback. ChatPanel.js's useEffect overrides this with
+     an inline `height` computed straight from `visualViewport.height`
+     while the panel is open and the VisualViewport API exists -- this
+     `dvh` rule is what's actually used for the very first paint (before
+     that effect runs) and as the fallback everywhere else. */
   height: 100dvh;
   width: 480px;
   max-width: 92vw;

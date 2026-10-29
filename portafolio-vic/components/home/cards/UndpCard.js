@@ -14,7 +14,9 @@
 // Like AXA, this uses document-level pointerover/pointerout delegation
 // (they bubble, pointerenter/leave don't) scoped to this component's own
 // .card-face via a ref/closure instead of the artifact's WeakMap-keyed
-// version (this portfolio only ever renders one UNDP card). Also like
+// version (desktop only ever renders one UNDP card; mobile can briefly
+// mount a second one -- see fix #25/#27 below -- but each instance scopes
+// its own listeners to its own .card-face, so that's fine). Also like
 // AXA: the live SVG node is looked up by class name inside wrap on every
 // toggle rather than captured once at mount, since this component
 // re-renders (and can have its dangerouslySetInnerHTML subtree replaced)
@@ -22,11 +24,36 @@
 // AXA card, where a one-time captured reference went stale and animated
 // an orphaned, invisible node.
 
-import { useEffect, useRef, memo } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, memo } from 'react';
 import { prefersReducedMotion } from '@/lib/cardTransition';
+import { namespaceSvgIds } from '@/lib/svgNamespace';
 
 const GLITCH_MS = 700; // length of each glitch (matches the CSS animation)
 const HOLD_MS = 1600; // how long each version stays on screen between glitches
+// Fix #38 (2026-10-28): Victoria reported Undp "tarda mucho en empezar la
+// animación cuando está en el centro" -- the mobile-only `activate()`
+// pause below (fix #19) deliberately waited the full HOLD_MS before the
+// first glitch so centering itself never looked like a glitch-in. That
+// request and this one pulled in opposite directions (same structural
+// shape as the carousel arc's reposo-vs-movimiento tension -- see
+// HomeMobile.js's "Fix #33/#34" comment), so fix #38 split them into two
+// separate constants: FIRST_HOLD_MS (a short pause, only for the very
+// first activation) and HOLD_MS (unchanged, governs every later loop
+// iteration).
+//
+// Fix #48 (2026-10-28, next conversation): Victoria's new video shows
+// FIRST_HOLD_MS=700ms still reads as "tarda mucho en empezar" compared to
+// the other five cards, and her explicit new ask is for Undp to start "el
+// mismo tiempo que las otras cards" -- checked each of them (ph-star's
+// `animation`, pu-circles', vs-s1/s2/s3's) and every one starts the
+// instant `.is-current`/`.mp-on`-equivalent is applied, zero JS delay.
+// Fix #38's original concern (centering itself reading as a glitch-in)
+// is explicitly superseded by this newer, more specific request rather
+// than being re-litigated -- dropped FIRST_HOLD_MS to 0 so Undp matches
+// that same zero-delay baseline. HOLD_MS (the steady-state loop cadence)
+// is untouched, as is desktop's real-hover path (mobileControlled ===
+// false below).
+const FIRST_HOLD_MS = 0;
 
 const UNDP_SVG = `<svg class="ud-card" aria-hidden="true" width="300" height="400" viewBox="1 1 300 400" fill="none" xmlns="http://www.w3.org/2000/svg">
 <defs>
@@ -152,11 +179,9 @@ const UNDP_SVG = `<svg class="ud-card" aria-hidden="true" width="300" height="40
 <feBlend in="rg" in2="bo" mode="screen"></feBlend>
 </filter>
 <clipPath id="udBand0"><rect x="-20" y="1" width="340" height="29"></rect></clipPath><clipPath id="udBand1"><rect x="-20" y="30" width="340" height="22"></rect></clipPath><clipPath id="udBand2"><rect x="-20" y="52" width="340" height="40"></rect></clipPath><clipPath id="udBand3"><rect x="-20" y="92" width="340" height="36"></rect></clipPath><clipPath id="udBand4"><rect x="-20" y="128" width="340" height="44"></rect></clipPath><clipPath id="udBand5"><rect x="-20" y="172" width="340" height="29"></rect></clipPath><clipPath id="udBand6"><rect x="-20" y="201" width="340" height="37"></rect></clipPath><clipPath id="udBand7"><rect x="-20" y="238" width="340" height="46"></rect></clipPath><clipPath id="udBand8"><rect x="-20" y="284" width="340" height="38"></rect></clipPath><clipPath id="udBand9"><rect x="-20" y="322" width="340" height="38"></rect></clipPath><clipPath id="udBand10"><rect x="-20" y="360" width="340" height="41"></rect></clipPath>
-<clipPath id="udCardClip"><rect x="1" y="1" width="300" height="400" rx="15"></rect></clipPath>
 <pattern id="udScanPat" width="4" height="3" patternUnits="userSpaceOnUse"><rect width="4" height="1" fill="#000" fill-opacity=".2"></rect></pattern>
 </defs>
 <g filter="url(#filter0_f_89_931)">
-<g clip-path="url(#udCardClip)">
 <g class="ud-stage">
 <use href="#udA" class="ud-a"></use>
 <use href="#udB" class="ud-b"></use>
@@ -175,7 +200,6 @@ const UNDP_SVG = `<svg class="ud-card" aria-hidden="true" width="300" height="40
 <rect class="ud-bar" x="-10" y="1" width="320" height="12" fill="#FFF0E9" style="mix-blend-mode:difference"></rect>
 </g>
 </g>
-</g>
 </svg>`;
 
 // `active`: controlled-mode trigger used by HomeMobile.js (card centred in
@@ -184,8 +208,98 @@ const UNDP_SVG = `<svg class="ud-card" aria-hidden="true" width="300" height="40
 // what tells the effect below to fall back to the original real-pointer
 // hover/pointerout wiring -- see AXACard.js's matching comment for the same
 // pattern.
-function UndpCard({ active } = {}) {
+// Fix #27 (2026-10-28), corrected same day after live testing on the
+// carousel-fixes-review preview: same bug, same fix as MapfreCard.js's
+// matching comment -- HomeMobile.js now mounts TWO instances of this card
+// at once (fix #25's clone), and this SVG's hardcoded ids collided across
+// them, breaking the second instance's rendering (the same "renders solid
+// black" failure Victoria reported on Mapfre's clone). The first pass here
+// only namespaced the plain numeric clip/pattern/mask/filter ids, leaving
+// this card's hand-named ones (`udA`, `udCardClip`, `udBand0`, `udScanPat`)
+// shared on the assumption that two instances defining identical geometry
+// under the same id would be harmless either way -- live testing on the
+// preview proved that wrong: `url(#udCardClip)` (the outer card-shape clip
+// EVERYTHING else renders inside) resolved to nothing for the second
+// instance, clipping it to a zero-area region -- solid black, nothing
+// visible at all, not even the fallback background rect. A duplicate id's
+// `url(#id)` reference isn't guaranteed to just pick one of the two
+// candidates and move on; here it silently failed to resolve for one of
+// them instead. So: namespace every id this SVG defines-and-references
+// for its own purposes, full stop -- the ONLY ones still excluded are
+// `udRGB1`/`udRGB2`/`udRGB3`, which home.css's shared, unscoped
+// `@keyframes udStage` rule references directly (`filter:url(#udRGB1)`
+// etc) -- renaming the SVG's copy without also rewriting that external,
+// per-instance-unaware CSS would just break the lookup for BOTH instances.
+// Worst case there if their own duplicate ever fails to resolve the same
+// way `udCardClip` did: filters degrade to `filter:none` (no RGB-split
+// flash during the glitch), not an invisible card -- an acceptable, far
+// less severe gap versus rewriting shared CSS to fix it.
+//
+// Fix #44 (2026-10-28, next conversation): `udCardClip` itself is gone
+// now, def and wrapping `<g clip-path>` both -- not a reversal of fix
+// #27's lesson above, a different question entirely. Fix #27 was about
+// a *duplicate* id failing to resolve across two cloned instances; this
+// is about whether the clip was doing anything in a single instance,
+// and it wasn't. Its rect (`x=1 y=1 width=300 height=400 rx=15`)
+// matches this SVG's own `viewBox="1 1 300 400"` exactly, and `.card-
+// face` (shared by every card) already clips everything to rounded
+// corners itself via `overflow: hidden; border-radius: 22px` -- the
+// identical no-visual-effect-by-construction shape already proven on
+// Mapfre (fix #39), Phantom (fix #41) and AXA (fix #42), all four
+// being Figma-export artifacts with the same redundant ancestor clip.
+// Removing the id entirely sidesteps fix #27's collision risk rather
+// than reintroducing it -- nothing references `udCardClip` any more,
+// so there's nothing left for two instances to collide over. Motivated
+// by Victoria's report that this card's glitch animation "tarda en
+// empezar" (takes a while to start) even after fix #38's FIRST_HOLD_MS
+// split: unlike Mapfre/Phantom/AXA this isn't a visible-corruption
+// complaint, it's a timing one, so this fix rests on a weaker link --
+// the theory is that the same WebKit "ancestor clip blocks repaint on
+// a descendant's state change" bug can surface as a perceived delay
+// (the ud-in/ud-out class swap fires exactly on schedule, but WebKit
+// doesn't paint the result until some unrelated event forces a
+// repaint) rather than a frozen/corrupted frame. Not verified on an
+// actual iPhone (no device access here); if this doesn't resolve it,
+// the delay is more likely just FIRST_HOLD_MS (700ms) reading as slow
+// at a glance than an actual repaint bug, and the next lever is
+// shortening that constant rather than more SVG surgery.
+const UNDP_INTERNAL_IDS = [
+  'clip0_89_931',
+  'clip0_89_949',
+  'clip1_89_931',
+  'clip1_89_949',
+  'filter0_f_89_931',
+  'filter1_f_89_931',
+  'filter1_f_89_949',
+  'image0_89_931',
+  'mask0_89_931',
+  'mask0_89_949',
+  'pattern0_89_931',
+  'pattern0_89_949',
+  'pattern1_89_931',
+  'pattern1_89_949',
+  'udA',
+  'udB',
+  'udScanPat',
+  'udBand0',
+  'udBand1',
+  'udBand2',
+  'udBand3',
+  'udBand4',
+  'udBand5',
+  'udBand6',
+  'udBand7',
+  'udBand8',
+  'udBand9',
+  'udBand10',
+];
+
+function UndpCard({ active, uid = '' } = {}) {
   const wrapRef = useRef(null);
+  // Only actually rewrites anything when `uid` is non-empty -- HomeDesktop.js
+  // never passes one (it only ever mounts a single instance), so desktop's
+  // output is byte-identical to before this fix.
+  const svg = useMemo(() => namespaceSvgIds(UNDP_SVG, UNDP_INTERNAL_IDS, uid), [uid]);
   // Imperative activate/deactivate, shared by the controlled (`active`
   // prop) and uncontrolled (real pointerover/pointerout) paths -- see
   // AXACard.js's apiRef for the same reasoning. Replaced on every mount by
@@ -239,9 +353,12 @@ function UndpCard({ active } = {}) {
         if (mobileControlled) {
           // Show the clean poster A immediately (it's already the CSS
           // rest state, nothing to animate) and let the glitch loop start
-          // after the same HOLD_MS pause every later iteration uses --
-          // so centering never itself looks like a glitch-in.
-          state.timer = setTimeout(toggle, HOLD_MS);
+          // after a short FIRST_HOLD_MS beat (fix #38) -- long enough that
+          // centering doesn't itself read as a glitch-in, short enough
+          // that the card doesn't sit inert for a noticeable stretch.
+          // Every later iteration of the loop still uses the full HOLD_MS,
+          // via the `toggle` function's own setTimeout above.
+          state.timer = setTimeout(toggle, FIRST_HOLD_MS);
         } else if (state.target === 'A') {
           toggle();
         } else {
@@ -309,13 +426,47 @@ function UndpCard({ active } = {}) {
   // Controlled mode only (mobile): mirror `active` into the toggle loop.
   // Desktop (active === undefined) leaves this as a no-op -- real pointer
   // events drive it instead, inside the effect above.
-  useEffect(() => {
+  //
+  // Fix #56 (2026-10-29): fix #52's `animation-delay` trick didn't fix
+  // "tarda en empezar" and Victoria reported the glitch now LOOKED broken
+  // ("se ve trabado... parece más error real que glitch") -- re-diagnosed
+  // from scratch instead of tuning the delay further. Checking the actual
+  // keyframes (udA0/udStage) shows visible glitch activity starting by 4%
+  // of the 0.7s duration (~28ms) already -- there's no meaningful "quiet
+  // opening" to skip past, which means fix #52's whole premise was off,
+  // and jumping every layer's `step-end` animation to a fixed negative
+  // offset likely landed mid-step on an inconsistent combination across
+  // the ~20 separately-animated accent marks, which is exactly what would
+  // read as "trabado"/broken instead of a coherent glitch.
+  //
+  // The real gap was structural, not a timing constant: this effect ran
+  // as a plain `useEffect`, which React defers until AFTER the browser
+  // paints the commit that added `.is-current` to the card. Every OTHER
+  // card's glitch/spin/pulse is pure CSS keyed off that same `.is-current`
+  // class, so it starts painting in the SAME frame the card visibly
+  // centres -- Undp's JS-driven `activate()` call was landing a frame (or
+  // more) later, after the centred-but-not-yet-glitching poster was
+  // already visible, which is exactly "a little delay" / "looks broken"
+  // even with FIRST_HOLD_MS and GLITCH_MS/HOLD_MS all already at their
+  // instant-start values. Switched to `useLayoutEffect`, which React runs
+  // synchronously right after the DOM update, before that first paint --
+  // `apiRef.current.activate()` now adds `.ud-in` in the same synchronous
+  // phase as `.is-current` landing on the card, so the glitch's first
+  // frame (already busy by 4% per the keyframes above) is what actually
+  // gets painted first, with no separate "clean poster" frame in between.
+  // The `animation-delay: -150ms` rule fix #52 added in home-mobile.css is
+  // removed -- no longer needed, and was the likely source of the
+  // "trabado" look. Desktop (`active === undefined`) still takes the
+  // early-return path, same as before -- this only changes WHEN the
+  // mobile-controlled branch's effect runs, not what it does.
+  // **Not verified on an actual iPhone.**
+  useLayoutEffect(() => {
     if (active === undefined) return;
     if (active) apiRef.current.activate();
     else apiRef.current.deactivate();
   }, [active]);
 
-  return <div className="ud-card-wrap" ref={wrapRef} dangerouslySetInnerHTML={{ __html: UNDP_SVG }} />;
+  return <div className="ud-card-wrap" ref={wrapRef} dangerouslySetInnerHTML={{ __html: svg }} />;
 }
 
 // Memoized -- see MapfreCard.js's comment, and AXACard.js's matching note

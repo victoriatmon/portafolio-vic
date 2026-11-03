@@ -869,7 +869,8 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
 .projects-stage.deck-anim .deck-ghost {
   transition: left 0.38s cubic-bezier(0.16,1,0.3,1), top 0.38s cubic-bezier(0.16,1,0.3,1),
     width 0.38s cubic-bezier(0.16,1,0.3,1), height 0.38s cubic-bezier(0.16,1,0.3,1),
-    transform 0.38s cubic-bezier(0.16,1,0.3,1), background 0.38s ease, box-shadow 0.38s ease;
+    transform 0.38s cubic-bezier(0.16,1,0.3,1), background 0.38s ease, box-shadow 0.38s ease,
+    opacity 0.34s ease;
 }
 .projects-stage.deck-anim .deck-ghost::before { transition: opacity 0.38s ease; }
 .projects-stage.deck-anim .project-card-content {
@@ -928,9 +929,15 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
    starts parked exactly on that card's spot, then grows into the centre
    box -- see deckStageClass / ghostClass in renderVals(). A soft glow in
    that project's own colour (set as --ghost-glow, see ghostStyle in
-   renderVals()) sits under the flat colour and fades out as the ghost
-   reaches the centre, so the grow reads as "this card is becoming the
-   open one" instead of a plain dark shape with nothing behind it. */
+   renderVals()) sits under the flat colour and BUILDS as the ghost grows,
+   peaking right as it reaches full size -- the colour hit lands on the
+   "this is becoming the open project" beat instead of being spent before
+   it. It then holds through the instant data-swap (deck-ghost-at-center
+   stays applied in the 'swap' phase too -- see ProyectosDesktop.js) and
+   only cross-fades out, as a whole, once the real content starts fading
+   in (.deck-ghost-fade-out, 'in' phase), so the colour reads as the
+   backdrop the content visibly emerges from rather than a flash that's
+   already gone by the time anything else is on screen. */
 .deck-ghost {
   all: unset;
   box-sizing: border-box;
@@ -959,12 +966,19 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
   opacity: 0;
 }
 .deck-ghost.deck-ghost-show { opacity: 1; }
+/* Cross-fades the whole ghost (flat colour + glow) out once the real
+   content starts revealing -- see the 'in'-phase comment above. Written
+   after .deck-ghost-show so it wins the tie on equal specificity. */
+.deck-ghost.deck-ghost-fade-out { opacity: 0; }
 .deck-ghost.deck-ghost-at-prev { left: calc(-390px - var(--peek-extra, 0px)); width: 320px; height: calc(70% + 16px); transform: translateY(-50%) scale(0.94); background: #202020; box-shadow: 0 30px 70px -20px rgba(0,0,0,0.6); }
 .deck-ghost.deck-ghost-at-next { left: calc(1620px + var(--peek-extra, 0px)); width: 320px; height: calc(70% + 16px); transform: translateY(-50%) scale(0.94); background: #202020; box-shadow: 0 30px 70px -20px rgba(0,0,0,0.6); }
 .deck-ghost.deck-ghost-at-center { left: 50%; top: 0; width: 1550px; height: calc(96% + 16px); transform: translateX(-50%); background: #181818; box-shadow: 0 50px 100px -20px rgba(0,0,0,0.7), 0 20px 34px rgba(0,0,0,0.5); }
 .deck-ghost.deck-ghost-at-prev::before,
 .deck-ghost.deck-ghost-at-next::before { opacity: 0.5; }
-.deck-ghost.deck-ghost-at-center::before { opacity: 0; }
+/* Was 0 (colour fully gone by the time the ghost reached full size) --
+   now it peaks here instead, so the brand colour's strongest moment lines
+   up with the card reaching its open, full-size state. */
+.deck-ghost.deck-ghost-at-center::before { opacity: 0.78; }
 
 .project-card-lg-tag {
   position: relative;

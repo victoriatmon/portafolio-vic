@@ -1391,9 +1391,24 @@ function ProyectosDesktopInner() {
     deckStageClass = 'deck-anim deck-hide-content deck-anim-current ' + (deckDir === 'next' ? 'deck-dir-next' : 'deck-dir-prev');
     ghostClass = 'deck-ghost-show deck-ghost-at-center';
   } else if (deckPhase === 'swap') {
+    // Keep the ghost sitting exactly where 'out' left it (full size, centred,
+    // colour at its peak) instead of snapping it away the instant the real
+    // data swaps in -- previously ghostClass reset to '' here, so the brand
+    // colour vanished a full beat before any content appeared, leaving a
+    // flat dark box with nothing behind it. Still `deck-instant` (no new
+    // transition should fire: nothing about the ghost's box actually moves
+    // between 'out' ending and 'swap' starting, so forcing transitions off
+    // here is correct, not a workaround).
     deckStageClass = 'deck-instant deck-hide-content';
+    ghostClass = 'deck-ghost-show deck-ghost-at-center';
   } else if (deckPhase === 'in') {
+    // Cross-fade the ghost's colour OUT while the real content fades IN
+    // (deck-ghost-fade-out, same ~340ms as the content reveal below) instead
+    // of the two happening back-to-back -- the colour becomes the backdrop
+    // the new project's content visibly emerges from, rather than a flash
+    // that's already gone before anything else is on screen.
     deckStageClass = 'deck-anim';
+    ghostClass = 'deck-ghost-show deck-ghost-at-center deck-ghost-fade-out';
   }
   const prevSlotIdx = deckDir === 'prev' && deckTargetIdx != null ? deckTargetIdx : prevIdx;
   const nextSlotIdx = deckDir === 'next' && deckTargetIdx != null ? deckTargetIdx : nextIdx;

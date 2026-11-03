@@ -879,17 +879,26 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
    on purpose (so the box genuinely finishes its own transition before
    anything snaps at "swap"), not matched to the exact millisecond the
    way they used to be; see the comment there for why. */
+/* background/box-shadow now share the SAME ease-out-quint curve as
+   left/top/width/height/transform (they used to run on plain `ease`,
+   which ramps up far more slowly than ease-out-quint does -- quint
+   front-loads almost all of its motion in the opening portion of the
+   duration, so the box itself LOOKS arrived well before `ease`'s more
+   gradual color blend is actually done, reading as the grey fill
+   lagging behind / taking "too long" after the box has already settled.
+   Matching curves means the tone finishes arriving at the same visual
+   pace as the box itself, not trailing it. */
 .projects-stage.deck-anim .project-card-lg {
   transition: left 0.58s cubic-bezier(0.22,1,0.36,1), top 0.58s cubic-bezier(0.22,1,0.36,1),
     width 0.58s cubic-bezier(0.22,1,0.36,1), height 0.58s cubic-bezier(0.22,1,0.36,1),
-    transform 0.58s cubic-bezier(0.22,1,0.36,1), background 0.58s ease,
-    box-shadow 0.58s ease, opacity 0.3s ease;
+    transform 0.58s cubic-bezier(0.22,1,0.36,1), background 0.58s cubic-bezier(0.22,1,0.36,1),
+    box-shadow 0.58s cubic-bezier(0.22,1,0.36,1), opacity 0.3s ease;
 }
 .projects-stage.deck-anim .deck-ghost {
   transition: left 0.58s cubic-bezier(0.22,1,0.36,1), top 0.58s cubic-bezier(0.22,1,0.36,1),
     width 0.58s cubic-bezier(0.22,1,0.36,1), height 0.58s cubic-bezier(0.22,1,0.36,1),
-    transform 0.58s cubic-bezier(0.22,1,0.36,1), background 0.58s ease, box-shadow 0.58s ease,
-    opacity 0.46s ease;
+    transform 0.58s cubic-bezier(0.22,1,0.36,1), background 0.58s cubic-bezier(0.22,1,0.36,1),
+    box-shadow 0.58s cubic-bezier(0.22,1,0.36,1), opacity 0.46s ease;
 }
 /* Content reveal is a clip-path wipe now, not an opacity fade: is-current
    holds the real incoming project's data from the very first frame (see

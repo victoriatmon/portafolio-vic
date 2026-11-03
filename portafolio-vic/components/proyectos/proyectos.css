@@ -1059,26 +1059,23 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
 .deck-ghost.deck-ghost-at-prev { left: calc(-390px - var(--peek-extra, 0px)); width: 320px; height: calc(70% + 16px); transform: translateY(-50%) scale(0.94); background: #202020; box-shadow: 0 30px 70px -20px rgba(0,0,0,0.6); }
 .deck-ghost.deck-ghost-at-next { left: calc(1620px + var(--peek-extra, 0px)); width: 320px; height: calc(70% + 16px); transform: translateY(-50%) scale(0.94); background: #202020; box-shadow: 0 30px 70px -20px rgba(0,0,0,0.6); }
 .deck-ghost.deck-ghost-at-center { left: 50%; top: 0; width: 1550px; height: calc(96% + 16px); transform: translateX(-50%); background: #181818; box-shadow: 0 50px 100px -20px rgba(0,0,0,0.7), 0 20px 34px rgba(0,0,0,0.5); }
-/* Translucency while actually in motion -- previously whole-element
-   `opacity`, which dimmed the border/shadow along with everything else
-   and, on dark-on-dark, barely registered (Victoria's report: couldn't
-   see it). Targets `background` (an rgba fill) instead, at a much more
-   deliberate 45% so it's unmistakable -- the border and box-shadow stay
-   at full strength the whole time, so the ghost's silhouette/edges
-   never go soft or hard to track mid-move; only the fill reads as
-   see-through.
-   Only set for the pre-out INSTANT start (deck-ghost-at-center, where
-   the ghost is parked before it starts shrinking away), same reasoning
-   as is-current's matching rule above: pinning it translucent for the
-   whole of 'out' too meant it could only turn solid with a hard snap
-   the instant deck-ghost-transit dropped at swap, reading as a sudden
-   grey-tone change right as things settled. Left unset for 'out', it
-   falls through to the solid #202020 on .deck-ghost-at-prev/-at-next
-   above, which the .projects-stage.deck-anim .deck-ghost transition
-   below does cover -- so it crossfades gradually as the ghost shrinks,
-   already solid well before swap. 3 classes beats the 2-class rule
-   above on specificity, so this wins without needing !important. */
-.deck-ghost.deck-ghost-transit.deck-ghost-at-center { background: rgba(24,24,24,0.45); }
+/* No translucency on the ghost at all (removed after Victoria's report
+   that the grey-tone snap was STILL visible on the ghost even after the
+   matching is-current fix below). The earlier version pinned a
+   translucent rgba(24,24,24,0.45) fill only for the pre-out instant
+   (deck-ghost-at-center), meaning to crossfade it to solid gradually
+   over 'out' via the .deck-anim .deck-ghost background transition --
+   mathematically that crossfade IS smooth (verified frame-by-frame),
+   but the ghost is a flat, content-less box the whole time, so any
+   brightness change in its fill reads as a visible tone shift with
+   nothing else on screen to distract the eye from it -- unlike
+   is-current, where the same kind of fade happens underneath real
+   content revealing via clip-path, which masks it. Simplest fix:
+   give the ghost no alpha dip to crossfade out of in the first place.
+   It now stays flatly solid (#181818 centred, #202020 at the side,
+   both set on the .deck-ghost-at-* rules above) for its entire
+   lifecycle -- parked, shrinking, and settled -- so there is no fill
+   value left to change, smoothly or otherwise. */
 
 .project-card-lg-tag {
   position: relative;

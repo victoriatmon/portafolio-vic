@@ -1391,14 +1391,21 @@ function ProyectosDesktopInner() {
   // phases the way the colour version needed (no hold-through-swap,
   // no cross-fade-out) -- it can just show through 'out'+'swap' and fade
   // on its own schedule once real content starts appearing in 'in'.
+  // deck-ghost-transit (pre-out + out only): the ghost sits slightly
+  // translucent while it's actually in motion toward the centre, then
+  // becomes fully solid the instant it arrives (swap) -- "materialising"
+  // into the open card rather than being a flat opaque box the whole way,
+  // which is also just literally what a ghost does. Dropped once it's
+  // settled (swap/in) so the real content it's about to hand off to never
+  // reads through it.
   let deckStageClass = '';
   let ghostClass = '';
   if (deckPhase === 'pre-out') {
     deckStageClass = 'deck-instant deck-hide-content ' + (deckDir === 'next' ? 'deck-dir-next' : 'deck-dir-prev');
-    ghostClass = 'deck-ghost-show ' + (deckDir === 'next' ? 'deck-ghost-at-next' : 'deck-ghost-at-prev');
+    ghostClass = 'deck-ghost-show deck-ghost-transit ' + (deckDir === 'next' ? 'deck-ghost-at-next' : 'deck-ghost-at-prev');
   } else if (deckPhase === 'out') {
     deckStageClass = 'deck-anim deck-hide-content deck-anim-current ' + (deckDir === 'next' ? 'deck-dir-next' : 'deck-dir-prev');
-    ghostClass = 'deck-ghost-show deck-ghost-at-center';
+    ghostClass = 'deck-ghost-show deck-ghost-transit deck-ghost-at-center';
   } else if (deckPhase === 'swap') {
     deckStageClass = 'deck-instant deck-hide-content';
     ghostClass = 'deck-ghost-show deck-ghost-at-center';

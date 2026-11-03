@@ -875,7 +875,10 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
    take-off, longer unhurried settle) everywhere in this choreography so
    it reads as one deliberate, considered motion rather than a snap.
    See runDeckTransition in ProyectosDesktop.js for the matching
-   setTimeout values (they have to stay in lockstep with these). */
+   setTimeout values -- they now run a bit LONGER than these durations
+   on purpose (so the box genuinely finishes its own transition before
+   anything snaps at "swap"), not matched to the exact millisecond the
+   way they used to be; see the comment there for why. */
 .projects-stage.deck-anim .project-card-lg {
   transition: left 0.58s cubic-bezier(0.22,1,0.36,1), top 0.58s cubic-bezier(0.22,1,0.36,1),
     width 0.58s cubic-bezier(0.22,1,0.36,1), height 0.58s cubic-bezier(0.22,1,0.36,1),
@@ -901,8 +904,10 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
    after the box itself has basically arrived, rather than both landing
    in lockstep on the same frame -- that's what keeps it from reading as
    two things mechanically locked together, closer to how a considered,
-   hand-tuned motion actually feels. Safe to outlast "out" (580ms): once
-   a transition has started, changing the transition declaration at swap
+   hand-tuned motion actually feels. Safe to outlast "out" (650ms in JS,
+   padded past this 0.58s so the box fully settles before swap -- see
+   ProyectosDesktop.js): once a transition has started, changing the
+   transition declaration at swap
    doesn't abort it as long as the end value (inset(0)) doesn't change,
    so it just keeps playing into "in" on its own schedule. */
 .projects-stage.deck-anim .project-card-content {

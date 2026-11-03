@@ -1160,11 +1160,21 @@ function ProyectosDesktopInner() {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         setDeckPhase('out');
-        // 580/460ms: matches the 0.58s box grow and 0.46s ghost fade in
-        // proyectos.css exactly -- slowed from 380/340ms and switched to
-        // a gentler curve there (Victoria: the original felt too fast
-        // and "forced"). Keep these two numbers in lockstep with that
-        // CSS if either changes again.
+        // These run a bit LONGER than the CSS durations they pair with
+        // (0.58s box grow, 0.46s ghost fade) -- not matched 1:1 to them
+        // the way they used to be. Reasoning: 'out' class is only applied
+        // after the two requestAnimationFrame calls above, so the CSS
+        // transition actually starts a frame or two after this timer's
+        // clock does; cutting the swap at exactly 580ms was clipping the
+        // box's own grow short by that same sliver. is-current's content
+        // clip-path is a PERCENTAGE of is-current's own (still-growing)
+        // box, so trimming the box's motion a hair early didn't just pop
+        // the box itself -- it also snapped the clip boundary's
+        // reference frame, which read as a small glitch right as the
+        // card finished settling (Victoria caught this). Padding these
+        // past the CSS durations lets the box genuinely finish growing
+        // under its own transition before deck-instant's transition:none
+        // snaps anything, so there's nothing left to pop.
         deckT1Ref.current = setTimeout(() => {
           setDeckPhase('swap');
           setDeckDir(null);
@@ -1175,10 +1185,10 @@ function ProyectosDesktopInner() {
               deckT2Ref.current = setTimeout(() => {
                 setDeckPhase(null);
                 deckBusyRef.current = false;
-              }, 460);
+              }, 520);
             });
           });
-        }, 580);
+        }, 650);
       });
     });
   }

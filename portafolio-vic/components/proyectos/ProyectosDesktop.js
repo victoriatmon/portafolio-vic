@@ -698,6 +698,13 @@ function ProyectosDesktopInner() {
   const funnelSwitchTimerRef = useRef(null);
   const deckT1Ref = useRef(null);
   const deckT2Ref = useRef(null);
+  // Remember the project/direction a deck transition started from, since
+  // activeProject and deckDir now get cleared/advanced earlier in the
+  // sequence than before (see runDeckTransition) -- the stationary side
+  // slot's own label and the departing ghost's target position both still
+  // need the ORIGINAL values after that.
+  const deckFromIdxRef = useRef(null);
+  const deckLastDirRef = useRef(null);
   const arriveFailsafeTRef = useRef(null);
   const tocScrollLockTRef = useRef(null);
   const tocScrollLockRef = useRef(null);
@@ -1114,6 +1121,26 @@ function ProyectosDesktopInner() {
     deckBusyRef.current = true;
     clearTimeout(deckT1Ref.current);
     clearTimeout(deckT2Ref.current);
+    deckFromIdxRef.current = activeProject;
+    deckLastDirRef.current = dir;
+    // The real project data swaps in immediately, not at the old 380ms
+    // "swap" mark. Victoria wants the incoming card's actual text and
+    // visual elements visible WHILE it grows into place, not only once
+    // it's finished -- that's only possible if is-current already holds
+    // that project's real content from the very first frame. Nothing
+    // becomes visible yet from this alone: is-current starts the
+    // transition parked at the clicked side slot's position (small,
+    // flat colour) with its content clip-path'd fully shut
+    // (deck-hide-content, pre-out only -- see proyectos.css), then GROWS
+    // into its own normal centred rest position over 'out', the clip-path
+    // opening in the same motion. The ghost, in turn, now plays the
+    // opposite role it used to: it starts at the vacated centre spot and
+    // shrinks away to the side, standing in for the OLD card leaving
+    // (flat colour, no real content needed for that).
+    setActiveProject(targetIdx);
+    setActiveMapfreSection('meta');
+    const sc0 = document.querySelector('.proj-card-scroll');
+    if (sc0) sc0.scrollTop = 0;
     setDeckDir(dir);
     setDeckPhase('pre-out');
     setDeckTargetIdx(targetIdx);
@@ -1121,13 +1148,9 @@ function ProyectosDesktopInner() {
       requestAnimationFrame(() => {
         setDeckPhase('out');
         deckT1Ref.current = setTimeout(() => {
-          setActiveProject(targetIdx);
-          setActiveMapfreSection('meta');
           setDeckPhase('swap');
           setDeckDir(null);
           setDeckTargetIdx(null);
-          const sc = document.querySelector('.proj-card-scroll');
-          if (sc) sc.scrollTop = 0;
           requestAnimationFrame(() => {
             requestAnimationFrame(() => {
               setDeckPhase('in');
@@ -1327,8 +1350,15 @@ function ProyectosDesktopInner() {
   // ---- derived view-model (ported from renderVals()) ----
   const n = PROJECTS.length;
   const active = activeProject;
-  const prevIdx = (active - 1 + n) % n;
-  const nextIdx = (active + 1) % n;
+  // activeProject now advances the instant a transition starts (see
+  // runDeckTransition), so while one is in flight the stationary side
+  // slot's own neighbour has to be computed from where the transition
+  // STARTED, not from the already-updated `active` -- otherwise it'd
+  // briefly show the wrong project. deckFromIdxRef holds that starting
+  // index for exactly the pre-out/out/swap window (deckDir is non-null).
+  const baseIdx = deckDir != null && deckFromIdxRef.current != null ? deckFromIdxRef.current : active;
+  const prevIdx = (baseIdx - 1 + n) % n;
+  const nextIdx = (baseIdx + 1) % n;
   const current = PROJECTS[active];
 
   const isMapfreLayout = current.layout === 'mapfre';
@@ -1382,37 +1412,47 @@ function ProyectosDesktopInner() {
   const phantomBarSafe = pct(Math.max(0, phantomSafeBalance));
 
   // Deck-slide morph view-model. Sober-by-design, per Victoria: no brand
-  // colour or texture on the ghost at all -- it's a plain neutral box
-  // (#202020 at the side, #181818 centred, same tones .project-card-lg
-  // already rests at) whose whole job is to make the side-to-centre GROW
-  // itself unmistakable, so the horizontal "which card am I moving to"
-  // geometry reads clearly. Because the ghost's flat colour always matches
-  // what it's sitting in front of/behind, there's no seam to manage across
-  // phases the way the colour version needed (no hold-through-swap,
-  // no cross-fade-out) -- it can just show through 'out'+'swap' and fade
-  // on its own schedule once real content starts appearing in 'in'.
-  // deck-ghost-transit (pre-out + out only): the ghost's FILL (not its
-  // border/shadow -- see the rgba background rules in proyectos.css) sits
-  // visibly translucent while it's actually in motion toward the centre,
-  // then becomes fully solid the instant it arrives (swap) --
-  // "materialising" into the open card rather than being a flat opaque
-  // box the whole way, which is also just literally what a ghost does.
-  // Dropped once it's settled (swap/in) so the real content it's about to
-  // hand off to never reads through it.
+  // colour anywhere in it -- the only job of the two boxes involved is to
+  // make the side-to-centre GROW unmistakable, so the horizontal "which
+  // card am I moving to" geometry reads clearly.
+  //
+  // Roles, as of this pass: is-current now holds the REAL incoming
+  // project's data from the first frame (see the early setActiveProject
+  // in runDeckTransition), so IT is the one that grows from the clicked
+  // side slot into its own centred rest position -- carrying its real
+  // text/visual content the whole way, revealed via a clip-path wipe
+  // that opens in the exact same 0.38s motion (see proyectos.css:
+  // deck-hide-content + .project-card-content). That's what makes the
+  // content visible WHILE expanding instead of only once settled.
+  // The ghost takes over the OPPOSITE job it used to have: it starts
+  // parked over the vacated centre spot (matching is-current's own
+  // rest colour/position) and shrinks away to the side being vacated,
+  // standing in for the OLD card leaving -- a flat colour box, no real
+  // content needed for that, same as before just the other direction.
+  // Because their paths are mirror images of each other (one growing
+  // from a side slot while the other shrinks to the opposite one) they
+  // never actually overlap on screen -- confirmed against the exact
+  // -390/1620 offsets already tuned elsewhere on this page for a ~15px
+  // rest gap, which holds across the whole transition, not just at rest.
+  // deck-*-transit (pre-out + out only, on whichever box is actually in
+  // motion): the FILL (not the border/shadow) sits visibly translucent
+  // while that box is moving, then becomes fully solid the instant it
+  // arrives (swap) -- "materialising" into place rather than being a
+  // flat opaque box the whole way.
   let deckStageClass = '';
   let ghostClass = '';
   if (deckPhase === 'pre-out') {
     deckStageClass = 'deck-instant deck-hide-content ' + (deckDir === 'next' ? 'deck-dir-next' : 'deck-dir-prev');
-    ghostClass = 'deck-ghost-show deck-ghost-transit ' + (deckDir === 'next' ? 'deck-ghost-at-next' : 'deck-ghost-at-prev');
-  } else if (deckPhase === 'out') {
-    deckStageClass = 'deck-anim deck-hide-content deck-anim-current ' + (deckDir === 'next' ? 'deck-dir-next' : 'deck-dir-prev');
     ghostClass = 'deck-ghost-show deck-ghost-transit deck-ghost-at-center';
+  } else if (deckPhase === 'out') {
+    deckStageClass = 'deck-anim ' + (deckDir === 'next' ? 'deck-dir-next' : 'deck-dir-prev');
+    ghostClass = 'deck-ghost-show deck-ghost-transit ' + (deckDir === 'next' ? 'deck-ghost-at-prev' : 'deck-ghost-at-next');
   } else if (deckPhase === 'swap') {
-    deckStageClass = 'deck-instant deck-hide-content';
-    ghostClass = 'deck-ghost-show deck-ghost-at-center';
+    deckStageClass = 'deck-instant';
+    ghostClass = 'deck-ghost-show ' + (deckLastDirRef.current === 'next' ? 'deck-ghost-at-prev' : 'deck-ghost-at-next');
   } else if (deckPhase === 'in') {
     deckStageClass = 'deck-anim';
-    ghostClass = 'deck-ghost-show deck-ghost-at-center deck-ghost-fade-out';
+    ghostClass = 'deck-ghost-show deck-ghost-fade-out ' + (deckLastDirRef.current === 'next' ? 'deck-ghost-at-prev' : 'deck-ghost-at-next');
   }
   const prevSlotIdx = deckDir === 'prev' && deckTargetIdx != null ? deckTargetIdx : prevIdx;
   const nextSlotIdx = deckDir === 'next' && deckTargetIdx != null ? deckTargetIdx : nextIdx;

@@ -972,20 +972,23 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
   transform: translateY(-50%) scale(0.94);
   background: #202020; box-shadow: 0 30px 70px -20px rgba(0,0,0,0.6);
 }
-/* Translucency while is-current itself is actually in motion (pre-out's
-   instant small state, then growing through 'out') -- the real-content
-   counterpart of the ghost's own transit rgba below, same values, same
-   reasoning: only the flat fill reads as see-through, border/shadow and
-   the real text on top stay fully legible the whole time. Reverts to
-   the solid colours on the base rules the instant deck-dir-* is gone
-   (swap), i.e. the instant it arrives. */
+/* Translucency while is-current itself is actually in motion -- the
+   real-content counterpart of the ghost's own transit rgba below, same
+   values, same reasoning: only the flat fill reads as see-through,
+   border/shadow and the real text on top stay fully legible the whole
+   time. Only set for the pre-out INSTANT start, on purpose: earlier
+   this pass also pinned it translucent for the whole of 'out', which
+   meant it could only turn solid with a hard snap the instant
+   deck-dir-* dropped at swap -- visible as the card's grey suddenly
+   changing tone right as it finished settling (Victoria caught this).
+   Leaving it unset for 'out' lets it fall through to the base
+   .is-current background (#181818) instead, which IS covered by the
+   0.58s transition below -- so it crossfades from translucent to solid
+   gradually, over the same motion as the grow itself, and has already
+   finished by the time swap happens (nothing left to snap). */
 .projects-stage.deck-instant.deck-dir-next .project-card-lg.is-current,
 .projects-stage.deck-instant.deck-dir-prev .project-card-lg.is-current {
   background: rgba(32,32,32,0.45);
-}
-.projects-stage.deck-anim.deck-dir-next .project-card-lg.is-current,
-.projects-stage.deck-anim.deck-dir-prev .project-card-lg.is-current {
-  background: rgba(24,24,24,0.45);
 }
 
 /* The ghost: a plain NEUTRAL box standing in for the OLD centre card as
@@ -1059,17 +1062,22 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
 /* Translucency while actually in motion -- previously whole-element
    `opacity`, which dimmed the border/shadow along with everything else
    and, on dark-on-dark, barely registered (Victoria's report: couldn't
-   see it). Targets `background` (an rgba fill) instead, specifically
-   during deck-ghost-transit, at a much more deliberate 45% so it's
-   unmistakable -- the border and box-shadow stay at full strength the
-   whole time, so the ghost's silhouette/edges never go soft or hard to
-   track mid-move; only the fill reads as see-through. Reverts to the
-   solid #202020/#181818 above the instant deck-ghost-transit is gone
-   (swap -- see ProyectosDesktop.js), i.e. the instant it arrives. 3
-   classes beats the 2-class rules above on specificity, so this wins
-   without needing !important. */
-.deck-ghost.deck-ghost-transit.deck-ghost-at-prev,
-.deck-ghost.deck-ghost-transit.deck-ghost-at-next { background: rgba(32,32,32,0.45); }
+   see it). Targets `background` (an rgba fill) instead, at a much more
+   deliberate 45% so it's unmistakable -- the border and box-shadow stay
+   at full strength the whole time, so the ghost's silhouette/edges
+   never go soft or hard to track mid-move; only the fill reads as
+   see-through.
+   Only set for the pre-out INSTANT start (deck-ghost-at-center, where
+   the ghost is parked before it starts shrinking away), same reasoning
+   as is-current's matching rule above: pinning it translucent for the
+   whole of 'out' too meant it could only turn solid with a hard snap
+   the instant deck-ghost-transit dropped at swap, reading as a sudden
+   grey-tone change right as things settled. Left unset for 'out', it
+   falls through to the solid #202020 on .deck-ghost-at-prev/-at-next
+   above, which the .projects-stage.deck-anim .deck-ghost transition
+   below does cover -- so it crossfades gradually as the ghost shrinks,
+   already solid well before swap. 3 classes beats the 2-class rule
+   above on specificity, so this wins without needing !important. */
 .deck-ghost.deck-ghost-transit.deck-ghost-at-center { background: rgba(24,24,24,0.45); }
 
 .project-card-lg-tag {

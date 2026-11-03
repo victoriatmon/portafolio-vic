@@ -867,27 +867,46 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
    revealed by then; only the ghost still has a touch of fade-out left
    to do. See runDeckTransition for the full 4-phase choreography
    (pre-out, out, swap, in). */
+/* Pacing/feel pass: Victoria found the original 0.38s/0.34s timings with
+   a hard ease-out-expo curve (cubic-bezier(0.16,1,0.3,1), which snaps
+   fast off the start then decelerates very abruptly) too quick and
+   "forced". Slowed to 0.58s and switched to the gentler, well-known
+   ease-out-quint curve (cubic-bezier(0.22,1,0.36,1) -- smoother
+   take-off, longer unhurried settle) everywhere in this choreography so
+   it reads as one deliberate, considered motion rather than a snap.
+   See runDeckTransition in ProyectosDesktop.js for the matching
+   setTimeout values (they have to stay in lockstep with these). */
 .projects-stage.deck-anim .project-card-lg {
-  transition: left 0.38s cubic-bezier(0.16,1,0.3,1), top 0.38s cubic-bezier(0.16,1,0.3,1),
-    width 0.38s cubic-bezier(0.16,1,0.3,1), height 0.38s cubic-bezier(0.16,1,0.3,1),
-    transform 0.38s cubic-bezier(0.16,1,0.3,1), background 0.38s ease,
-    box-shadow 0.38s ease, opacity 0.22s ease;
+  transition: left 0.58s cubic-bezier(0.22,1,0.36,1), top 0.58s cubic-bezier(0.22,1,0.36,1),
+    width 0.58s cubic-bezier(0.22,1,0.36,1), height 0.58s cubic-bezier(0.22,1,0.36,1),
+    transform 0.58s cubic-bezier(0.22,1,0.36,1), background 0.58s ease,
+    box-shadow 0.58s ease, opacity 0.3s ease;
 }
 .projects-stage.deck-anim .deck-ghost {
-  transition: left 0.38s cubic-bezier(0.16,1,0.3,1), top 0.38s cubic-bezier(0.16,1,0.3,1),
-    width 0.38s cubic-bezier(0.16,1,0.3,1), height 0.38s cubic-bezier(0.16,1,0.3,1),
-    transform 0.38s cubic-bezier(0.16,1,0.3,1), background 0.38s ease, box-shadow 0.38s ease,
-    opacity 0.34s ease;
+  transition: left 0.58s cubic-bezier(0.22,1,0.36,1), top 0.58s cubic-bezier(0.22,1,0.36,1),
+    width 0.58s cubic-bezier(0.22,1,0.36,1), height 0.58s cubic-bezier(0.22,1,0.36,1),
+    transform 0.58s cubic-bezier(0.22,1,0.36,1), background 0.58s ease, box-shadow 0.58s ease,
+    opacity 0.46s ease;
 }
 /* Content reveal is a clip-path wipe now, not an opacity fade: is-current
    holds the real incoming project's data from the very first frame (see
    the early setActiveProject in ProyectosDesktop.js), so this box can
-   open the same instant is-current itself starts growing, at the same
-   0.38s/easing, instead of waiting for a separate fade once everything
-   has already settled. That's the whole point of this pass -- Victoria
-   wants the real text/elements visible WHILE the card expands. */
+   open the same instant is-current itself starts growing, instead of
+   waiting for a separate fade once everything has already settled.
+   That's the whole point of this pass -- Victoria wants the real
+   text/elements visible WHILE the card expands.
+   Deliberately a touch SLOWER than the box's own 0.58s grow (0.64s) and
+   started a beat later (0.05s delay): the box visibly leads and the
+   content trails just behind it, still gently unfurling for a moment
+   after the box itself has basically arrived, rather than both landing
+   in lockstep on the same frame -- that's what keeps it from reading as
+   two things mechanically locked together, closer to how a considered,
+   hand-tuned motion actually feels. Safe to outlast "out" (580ms): once
+   a transition has started, changing the transition declaration at swap
+   doesn't abort it as long as the end value (inset(0)) doesn't change,
+   so it just keeps playing into "in" on its own schedule. */
 .projects-stage.deck-anim .project-card-content {
-  transition: clip-path 0.38s cubic-bezier(0.16,1,0.3,1);
+  transition: clip-path 0.64s cubic-bezier(0.22,1,0.36,1) 0.05s;
 }
 .projects-stage.deck-anim .project-card-lg-tag { transition: opacity 0.2s ease; }
 .projects-stage.deck-instant .project-card-lg,

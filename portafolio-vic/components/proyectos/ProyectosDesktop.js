@@ -1160,6 +1160,11 @@ function ProyectosDesktopInner() {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         setDeckPhase('out');
+        // 580/460ms: matches the 0.58s box grow and 0.46s ghost fade in
+        // proyectos.css exactly -- slowed from 380/340ms and switched to
+        // a gentler curve there (Victoria: the original felt too fast
+        // and "forced"). Keep these two numbers in lockstep with that
+        // CSS if either changes again.
         deckT1Ref.current = setTimeout(() => {
           setDeckPhase('swap');
           setDeckDir(null);
@@ -1170,10 +1175,10 @@ function ProyectosDesktopInner() {
               deckT2Ref.current = setTimeout(() => {
                 setDeckPhase(null);
                 deckBusyRef.current = false;
-              }, 340);
+              }, 460);
             });
           });
-        }, 380);
+        }, 580);
       });
     });
   }
@@ -1434,7 +1439,7 @@ function ProyectosDesktopInner() {
   // in runDeckTransition), so IT is the one that grows from the clicked
   // side slot into its own centred rest position -- carrying its real
   // text/visual content the whole way, revealed via a clip-path wipe
-  // that opens in the exact same 0.38s motion (see proyectos.css:
+  // that opens in step with that same grow motion (see proyectos.css:
   // deck-hide-content + .project-card-content). That's what makes the
   // content visible WHILE expanding instead of only once settled.
   // The ghost takes over the OPPOSITE job it used to have: it starts

@@ -872,31 +872,24 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
     transform 0.38s cubic-bezier(0.16,1,0.3,1), background 0.38s ease, box-shadow 0.38s ease,
     opacity 0.34s ease;
 }
-/* Stepped, not eased: the colour build reads as a few discrete jolts
-   (closer to the grain/glitch bursts used elsewhere on this page -- see
-   .undp-grain/.undp-glitch-scan -- than a smooth gradient fade), which is
-   what actually reads as this site's own grunge language instead of a
-   generic soft-glow transition. */
-.projects-stage.deck-anim .deck-ghost::before { transition: opacity 0.38s steps(5, end); }
 .projects-stage.deck-anim .project-card-content {
-  transition: opacity 0.16s linear, transform 0.16s cubic-bezier(0.34,1.56,0.64,1);
+  transition: opacity 0.3s ease-out, transform 0.3s cubic-bezier(0.16,1,0.3,1);
 }
 .projects-stage.deck-anim .project-card-lg-tag { transition: opacity 0.2s ease; }
 .projects-stage.deck-instant .project-card-lg,
-.projects-stage.deck-instant .deck-ghost,
-.projects-stage.deck-instant .deck-ghost::before { transition: none !important; }
+.projects-stage.deck-instant .deck-ghost { transition: none !important; }
 .projects-stage.deck-anim, .projects-stage.deck-instant { pointer-events: none; }
 
 /* Keeps the incoming content/label hidden through "out" and the instant
-   "swap" relabel, so it only ever appears via the "in" fade. Was a soft
-   blur(8px)+ease "settling into focus" reveal -- a generic motion-library
-   default (Victoria's call: reads as generic AI/SaaS polish, not this
-   site's grunge). No blur now: content snaps up a short 6px with a quick
-   back-eased overshoot (0.16s, see the transition rule above) -- a hit,
-   not a soft fade-up. */
+   "swap" relabel, so it only ever appears via the "in" fade: a plain,
+   sober rise + fade (no blur, no bounce/overshoot -- both read as
+   effects for their own sake, not what Victoria asked for here), using
+   the same ease-out-expo curve as the ghost's own grow so the content
+   settling in feels like one continuous motion with the card that
+   carried it there, not a separate, disconnected effect layered on top. */
 .projects-stage.deck-hide-content .project-card-lg.is-current .project-card-content {
   opacity: 0;
-  transform: translateY(6px);
+  transform: translateY(10px);
 }
 .projects-stage.deck-hide-content .project-card-lg.is-prev .project-card-lg-tag,
 .projects-stage.deck-hide-content .project-card-lg.is-next .project-card-lg-tag { opacity: 0; }
@@ -932,26 +925,17 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
   background: #202020 !important; box-shadow: 0 30px 70px -20px rgba(0,0,0,0.6);
 }
 
-/* The ghost: a plain colour box standing in for the clicked card. It
-   starts parked exactly on that card's spot, then grows into the centre
-   box -- see deckStageClass / ghostClass in renderVals(). A glow in that
-   project's own colour (set as --ghost-glow, see ghostStyle in
-   renderVals()) sits under the flat colour and BUILDS as the ghost grows
-   in a few discrete, stepped jolts (not an eased fade -- see the
-   steps(5,end) transition above), peaking right as it reaches full size.
-   It then holds through the instant data-swap (deck-ghost-at-center stays
-   applied in the 'swap' phase too -- see ProyectosDesktop.js) and only
-   cross-fades out, as a whole, once the real content starts fading in
-   (.deck-ghost-fade-out, 'in' phase), so the colour reads as the backdrop
-   the content visibly emerges from rather than a flash that's already
-   gone by the time anything else is on screen.
-   ::after lays the same grain texture this page already uses for UNDP's
-   demo (.undp-grain, /undp-grain-texture.png, mix-blend-mode: overlay)
-   over that colour, so the hit reads as a grimy printed/photocopied
-   patch, not a clean gradient wash -- Victoria's call on the first pass
-   (too close to a generic AI/SaaS soft-glow) was specifically the
-   smoothness of the colour itself, not the build-then-hold timing, which
-   stays. */
+/* The ghost: a plain NEUTRAL box standing in for the clicked card -- no
+   brand colour, no texture (Victoria's call: the goal here is a sober,
+   legible "this side card is becoming the centre one" grow, not a colour
+   moment). It starts parked exactly on the clicked card's spot, then
+   grows into the centre box -- see deckStageClass / ghostClass in
+   ProyectosDesktop.js. Its flat background (#202020 at the side, #181818
+   centred) always matches the tone of whatever it's standing in for or
+   growing into, so there's no seam to hide and nothing needs to hold or
+   cross-fade for colour-continuity reasons the way an earlier, coloured
+   version of this did -- it's free to fade out on its own schedule once
+   the real content starts appearing (.deck-ghost-fade-out, 'in' phase). */
 .deck-ghost {
   all: unset;
   box-sizing: border-box;
@@ -971,51 +955,14 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
   opacity: 0;
   pointer-events: none;
 }
-.deck-ghost::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  display: block;
-  background: var(--ghost-glow, linear-gradient(135deg,#2A2A2A,#181818));
-  opacity: 0;
-}
-/* Grain texture riding on top of the colour -- a fixed value, not
-   animated on its own: it just rides along with .deck-ghost's own
-   opacity (deck-ghost-show / deck-ghost-fade-out), same as any other
-   child, so it needs no separate transition/keyframes here.
-   NOT /undp-grain-texture.png -- that file is UNDP's own photo-grain
-   asset (it has actual imagery baked in, not neutral noise), so reusing
-   it here would flash a piece of UNDP's art over every other project's
-   transition. This is a generated feTurbulence noise pattern instead
-   (fractalNoise -> desaturated via feColorMatrix), tiled, so it's pure
-   grain with nothing project-specific in it. */
-.deck-ghost::after {
-  content: '';
-  position: absolute;
-  inset: -10%;
-  width: 120%;
-  height: 120%;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch' result='t'/%3E%3CfeColorMatrix in='t' type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-repeat: repeat;
-  background-size: 140px 140px;
-  mix-blend-mode: overlay;
-  opacity: 0.3;
-  pointer-events: none;
-}
 .deck-ghost.deck-ghost-show { opacity: 1; }
-/* Cross-fades the whole ghost (flat colour + glow) out once the real
-   content starts revealing -- see the 'in'-phase comment above. Written
-   after .deck-ghost-show so it wins the tie on equal specificity. */
+/* Fades the ghost out once the real content starts revealing -- see the
+   'in'-phase comment in ProyectosDesktop.js. Written after
+   .deck-ghost-show so it wins the tie on equal specificity. */
 .deck-ghost.deck-ghost-fade-out { opacity: 0; }
 .deck-ghost.deck-ghost-at-prev { left: calc(-390px - var(--peek-extra, 0px)); width: 320px; height: calc(70% + 16px); transform: translateY(-50%) scale(0.94); background: #202020; box-shadow: 0 30px 70px -20px rgba(0,0,0,0.6); }
 .deck-ghost.deck-ghost-at-next { left: calc(1620px + var(--peek-extra, 0px)); width: 320px; height: calc(70% + 16px); transform: translateY(-50%) scale(0.94); background: #202020; box-shadow: 0 30px 70px -20px rgba(0,0,0,0.6); }
 .deck-ghost.deck-ghost-at-center { left: 50%; top: 0; width: 1550px; height: calc(96% + 16px); transform: translateX(-50%); background: #181818; box-shadow: 0 50px 100px -20px rgba(0,0,0,0.7), 0 20px 34px rgba(0,0,0,0.5); }
-.deck-ghost.deck-ghost-at-prev::before,
-.deck-ghost.deck-ghost-at-next::before { opacity: 0.5; }
-/* Was 0 (colour fully gone by the time the ghost reached full size) --
-   now it peaks here instead, so the brand colour's strongest moment lines
-   up with the card reaching its open, full-size state. */
-.deck-ghost.deck-ghost-at-center::before { opacity: 0.78; }
 
 .project-card-lg-tag {
   position: relative;

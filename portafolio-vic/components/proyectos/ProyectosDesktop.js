@@ -1381,7 +1381,16 @@ function ProyectosDesktopInner() {
   const phantomBarExpense = pct(phantomResult || 0);
   const phantomBarSafe = pct(Math.max(0, phantomSafeBalance));
 
-  // Deck-slide morph view-model.
+  // Deck-slide morph view-model. Sober-by-design, per Victoria: no brand
+  // colour or texture on the ghost at all -- it's a plain neutral box
+  // (#202020 at the side, #181818 centred, same tones .project-card-lg
+  // already rests at) whose whole job is to make the side-to-centre GROW
+  // itself unmistakable, so the horizontal "which card am I moving to"
+  // geometry reads clearly. Because the ghost's flat colour always matches
+  // what it's sitting in front of/behind, there's no seam to manage across
+  // phases the way the colour version needed (no hold-through-swap,
+  // no cross-fade-out) -- it can just show through 'out'+'swap' and fade
+  // on its own schedule once real content starts appearing in 'in'.
   let deckStageClass = '';
   let ghostClass = '';
   if (deckPhase === 'pre-out') {
@@ -1391,29 +1400,14 @@ function ProyectosDesktopInner() {
     deckStageClass = 'deck-anim deck-hide-content deck-anim-current ' + (deckDir === 'next' ? 'deck-dir-next' : 'deck-dir-prev');
     ghostClass = 'deck-ghost-show deck-ghost-at-center';
   } else if (deckPhase === 'swap') {
-    // Keep the ghost sitting exactly where 'out' left it (full size, centred,
-    // colour at its peak) instead of snapping it away the instant the real
-    // data swaps in -- previously ghostClass reset to '' here, so the brand
-    // colour vanished a full beat before any content appeared, leaving a
-    // flat dark box with nothing behind it. Still `deck-instant` (no new
-    // transition should fire: nothing about the ghost's box actually moves
-    // between 'out' ending and 'swap' starting, so forcing transitions off
-    // here is correct, not a workaround).
     deckStageClass = 'deck-instant deck-hide-content';
     ghostClass = 'deck-ghost-show deck-ghost-at-center';
   } else if (deckPhase === 'in') {
-    // Cross-fade the ghost's colour OUT while the real content fades IN
-    // (deck-ghost-fade-out, same ~340ms as the content reveal below) instead
-    // of the two happening back-to-back -- the colour becomes the backdrop
-    // the new project's content visibly emerges from, rather than a flash
-    // that's already gone before anything else is on screen.
     deckStageClass = 'deck-anim';
     ghostClass = 'deck-ghost-show deck-ghost-at-center deck-ghost-fade-out';
   }
   const prevSlotIdx = deckDir === 'prev' && deckTargetIdx != null ? deckTargetIdx : prevIdx;
   const nextSlotIdx = deckDir === 'next' && deckTargetIdx != null ? deckTargetIdx : nextIdx;
-  const ghostTargetIdx = deckTargetIdx != null ? deckTargetIdx : deckDir === 'next' ? nextIdx : prevIdx;
-  const ghostStyle = { '--ghost-glow': GRADIENTS[ghostTargetIdx] || GRADIENTS[0] };
 
   const pills = PILL_LABELS.map((label, i) => ({ label, current: i === active, activeClass: i === active ? 'is-active' : '', onClick: () => selectProject(i) }));
 
@@ -1902,7 +1896,7 @@ function ProyectosDesktopInner() {
                   <span className="project-card-lg-tag">{PILL_LABELS[nextSlotIdx]}</span>
                 </button>
 
-                <div className={'deck-ghost ' + ghostClass} style={ghostStyle} aria-hidden="true" />
+                <div className={'deck-ghost ' + ghostClass} aria-hidden="true" />
               </div>
             </section>
           </div>

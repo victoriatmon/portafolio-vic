@@ -796,8 +796,8 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
    additions are mirrored on every other selector that shares these two
    magic numbers (70%/96%) for the deck-slide-morph choreography below --
    .deck-ghost and its -at-prev/-at-next/-at-center variants, and the
-   deck-dir-*.deck-anim-current shrink states -- so nothing jumps size
-   mid-transition. */
+   deck-instant.deck-dir-* grow-start states on is-current -- so nothing
+   jumps size mid-transition. */
 .project-card-lg.is-current {
   left: 50%;
   top: 0;
@@ -846,49 +846,104 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
 .project-card-lg.is-prev:active, .project-card-lg.is-next:active { filter: brightness(0.82); }
 
 /* Deck-slide morph: clicking a side card grows it, continuously, into the
-   open centre card. The 3 on-screen cards are fixed DOM roles (is-prev /
-   is-current / is-next) that just get re-filled with whichever project's
-   data belongs there, so the clicked card's own slot can't literally
-   become the centre slot -- instead a plain .deck-ghost box starts right
-   on top of the clicked card and grows into the centre box, while the
-   real clicked card hides underneath it (same spot, same colour, no
-   visible seam). At the same time the old centre card shrinks down into
-   the slot it's vacating, fading its own content out on the way so it
-   lands as a flat colour box, and the far side card just fades out in
-   place (its project is leaving the view). The instant everything has
-   reached those exact positions we swap in the real new data with
-   transitions off (.deck-instant) -- the boxes already match, so nothing
-   jumps -- then fade the fresh content/labels in. See _runDeckTransition
-   for the full 4-phase choreography (pre-out, out, swap, in). */
+   open centre card -- and, as of this pass, with its own real content
+   visible the whole time it's growing, not just once it's settled. The
+   3 on-screen cards are fixed DOM roles (is-prev / is-current / is-next)
+   that just get re-filled with whichever project's data belongs there,
+   so the clicked card's own slot can't literally become the centre slot.
+   ProyectosDesktop.js now swaps the real data into is-current the
+   INSTANT you click (not 380ms later), so is-current itself is the thing
+   that grows from the clicked side slot into its centre rest position,
+   its real text/elements revealed via a clip-path wipe in the same
+   motion (see deck-hide-content + .project-card-content below). The
+   clicked card's own slot (is-prev/is-next) hides underneath it, same
+   spot/colour, no visible seam. The OLD centre card's departure is now
+   the .deck-ghost's job instead: a plain flat box (no real content
+   needed) that starts over the vacated centre spot and shrinks away to
+   the side being vacated, while the far side card just fades out in
+   place. The instant everything has reached those exact positions we
+   drop the transition-affecting classes (.deck-instant at "swap") so
+   nothing jumps -- is-current is already fully grown and fully
+   revealed by then; only the ghost still has a touch of fade-out left
+   to do. See runDeckTransition for the full 4-phase choreography
+   (pre-out, out, swap, in). */
+/* Pacing/feel pass: Victoria found the original 0.38s/0.34s timings with
+   a hard ease-out-expo curve (cubic-bezier(0.16,1,0.3,1), which snaps
+   fast off the start then decelerates very abruptly) too quick and
+   "forced". Slowed to 0.58s and switched to the gentler, well-known
+   ease-out-quint curve (cubic-bezier(0.22,1,0.36,1) -- smoother
+   take-off, longer unhurried settle) everywhere in this choreography so
+   it reads as one deliberate, considered motion rather than a snap.
+   See runDeckTransition in ProyectosDesktop.js for the matching
+   setTimeout values -- they now run a bit LONGER than these durations
+   on purpose (so the box genuinely finishes its own transition before
+   anything snaps at "swap"), not matched to the exact millisecond the
+   way they used to be; see the comment there for why. */
+/* background/box-shadow now share the SAME ease-out-quint curve as
+   left/top/width/height/transform (they used to run on plain `ease`,
+   which ramps up far more slowly than ease-out-quint does -- quint
+   front-loads almost all of its motion in the opening portion of the
+   duration, so the box itself LOOKS arrived well before `ease`'s more
+   gradual color blend is actually done, reading as the grey fill
+   lagging behind / taking "too long" after the box has already settled.
+   Matching curves means the tone finishes arriving at the same visual
+   pace as the box itself, not trailing it. */
 .projects-stage.deck-anim .project-card-lg {
-  transition: left 0.38s cubic-bezier(0.16,1,0.3,1), top 0.38s cubic-bezier(0.16,1,0.3,1),
-    width 0.38s cubic-bezier(0.16,1,0.3,1), height 0.38s cubic-bezier(0.16,1,0.3,1),
-    transform 0.38s cubic-bezier(0.16,1,0.3,1), background 0.38s ease,
-    box-shadow 0.38s ease, opacity 0.22s ease;
+  transition: left 0.58s cubic-bezier(0.22,1,0.36,1), top 0.58s cubic-bezier(0.22,1,0.36,1),
+    width 0.58s cubic-bezier(0.22,1,0.36,1), height 0.58s cubic-bezier(0.22,1,0.36,1),
+    transform 0.58s cubic-bezier(0.22,1,0.36,1), background 0.58s cubic-bezier(0.22,1,0.36,1),
+    box-shadow 0.58s cubic-bezier(0.22,1,0.36,1), opacity 0.3s ease;
 }
 .projects-stage.deck-anim .deck-ghost {
-  transition: left 0.38s cubic-bezier(0.16,1,0.3,1), top 0.38s cubic-bezier(0.16,1,0.3,1),
-    width 0.38s cubic-bezier(0.16,1,0.3,1), height 0.38s cubic-bezier(0.16,1,0.3,1),
-    transform 0.38s cubic-bezier(0.16,1,0.3,1), background 0.38s ease, box-shadow 0.38s ease;
+  transition: left 0.58s cubic-bezier(0.22,1,0.36,1), top 0.58s cubic-bezier(0.22,1,0.36,1),
+    width 0.58s cubic-bezier(0.22,1,0.36,1), height 0.58s cubic-bezier(0.22,1,0.36,1),
+    transform 0.58s cubic-bezier(0.22,1,0.36,1), background 0.58s cubic-bezier(0.22,1,0.36,1),
+    box-shadow 0.58s cubic-bezier(0.22,1,0.36,1), opacity 0.46s ease;
 }
-.projects-stage.deck-anim .deck-ghost::before { transition: opacity 0.38s ease; }
+/* Content reveal is a clip-path wipe now, not an opacity fade: is-current
+   holds the real incoming project's data from the very first frame (see
+   the early setActiveProject in ProyectosDesktop.js), so this box can
+   open the same instant is-current itself starts growing, instead of
+   waiting for a separate fade once everything has already settled.
+   That's the whole point of this pass -- Victoria wants the real
+   text/elements visible WHILE the card expands.
+   Deliberately a touch SLOWER than the box's own 0.58s grow (0.64s) and
+   started a beat later (0.05s delay): the box visibly leads and the
+   content trails just behind it, still gently unfurling for a moment
+   after the box itself has basically arrived, rather than both landing
+   in lockstep on the same frame -- that's what keeps it from reading as
+   two things mechanically locked together, closer to how a considered,
+   hand-tuned motion actually feels. Safe to outlast "out" (650ms in JS,
+   padded past this 0.58s so the box fully settles before swap -- see
+   ProyectosDesktop.js): once a transition has started, changing the
+   transition declaration at swap
+   doesn't abort it as long as the end value (inset(0)) doesn't change,
+   so it just keeps playing into "in" on its own schedule. */
 .projects-stage.deck-anim .project-card-content {
-  transition: opacity 0.32s ease, filter 0.32s ease, transform 0.32s cubic-bezier(0.16,1,0.3,1);
+  transition: clip-path 0.64s cubic-bezier(0.22,1,0.36,1) 0.05s;
 }
 .projects-stage.deck-anim .project-card-lg-tag { transition: opacity 0.2s ease; }
 .projects-stage.deck-instant .project-card-lg,
-.projects-stage.deck-instant .deck-ghost,
-.projects-stage.deck-instant .deck-ghost::before { transition: none !important; }
+.projects-stage.deck-instant .deck-ghost { transition: none !important; }
 .projects-stage.deck-anim, .projects-stage.deck-instant { pointer-events: none; }
 
-/* Keeps the incoming content/label hidden through "out" and the instant
-   "swap" relabel, so it only ever appears via the "in" fade. The new card's
-   content blurs in and rises slightly instead of a flat opacity pop, so it
-   reads as settling into focus rather than switching on. */
-.projects-stage.deck-hide-content .project-card-lg.is-current .project-card-content {
-  opacity: 0;
-  filter: blur(8px);
-  transform: translateY(14px);
+/* Resting state: fully revealed. A plain inset(0) is a no-op visually
+   (it just clips to the box's own edges), so this costs nothing outside
+   a transition. */
+.project-card-content { clip-path: inset(0 0 0 0); }
+
+/* Clipped fully shut, instantly (pre-out only, no transition is active
+   yet) -- from whichever edge the incoming project is arriving from, so
+   the wipe below has a real edge to open from and tracks the same side
+   is-current itself is growing in from. Only applies for this one
+   instant frame: 'out' drops deck-hide-content, and the resulting
+   change back to the resting inset(0) above is what the transition on
+   .project-card-content (just above) actually animates. */
+.projects-stage.deck-hide-content.deck-dir-next .project-card-lg.is-current .project-card-content {
+  clip-path: inset(0 0 0 100%);
+}
+.projects-stage.deck-hide-content.deck-dir-prev .project-card-lg.is-current .project-card-content {
+  clip-path: inset(0 100% 0 0);
 }
 .projects-stage.deck-hide-content .project-card-lg.is-prev .project-card-lg-tag,
 .projects-stage.deck-hide-content .project-card-lg.is-next .project-card-lg-tag { opacity: 0; }
@@ -903,34 +958,58 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
 .projects-stage.deck-dir-next .project-card-lg.is-prev,
 .projects-stage.deck-dir-prev .project-card-lg.is-next { opacity: 0; }
 
-/* The old centre card shrinks into the slot the clicked card came from --
-   but only once deck-anim-current joins deck-dir-*, one phase later than
-   the hide rules above (see renderVals()). Until then the centre card is
-   left alone at its normal full-size resting look, so this is a genuine
-   eased move starting from "big and centred", running in parallel with the
-   ghost growing in from the side. Folding this into deck-dir-* from the
-   very first (transition-less) frame used to mean it was already sitting
-   at the small side position before the animated phase even began -- no
-   motion to see, just an instant swap that read as a flicker or a jump
-   backward right before the ghost's own forward grow. */
-.projects-stage.deck-dir-next.deck-anim-current .project-card-lg.is-current {
-  left: calc(-390px - var(--peek-extra, 0px)); top: 50%; width: 320px; height: calc(70% + 16px);
-  transform: translateY(-50%) scale(0.94);
-  background: #202020 !important; box-shadow: 0 30px 70px -20px rgba(0,0,0,0.6);
-}
-.projects-stage.deck-dir-prev.deck-anim-current .project-card-lg.is-current {
+/* is-current now holds the real incoming project's data from the very
+   first frame (see the early setActiveProject in ProyectosDesktop.js),
+   so IT is the one that grows from the clicked side slot into its own
+   normal centred rest position -- not a content-less ghost standing in
+   for it. Parked here instantly in pre-out, exactly on the clicked
+   card's own spot (same 320px/70%+16/-390/1620 numbers used everywhere
+   else on this page for that spot -- see the Fix #21 comment above).
+   This override only matches while deck-instant is present (pre-out);
+   'out' drops deck-instant for deck-anim, so there is nothing left
+   overriding the box's position and it simply transitions back to its
+   own base .is-current rule below (left:50%, 1550px, centred) -- THAT
+   transition is the grow, with the clip-path content-reveal above
+   opening in the same motion. */
+.projects-stage.deck-instant.deck-dir-next .project-card-lg.is-current {
   left: calc(1620px + var(--peek-extra, 0px)); top: 50%; width: 320px; height: calc(70% + 16px);
   transform: translateY(-50%) scale(0.94);
-  background: #202020 !important; box-shadow: 0 30px 70px -20px rgba(0,0,0,0.6);
+  background: #202020; box-shadow: 0 30px 70px -20px rgba(0,0,0,0.6);
+}
+.projects-stage.deck-instant.deck-dir-prev .project-card-lg.is-current {
+  left: calc(-390px - var(--peek-extra, 0px)); top: 50%; width: 320px; height: calc(70% + 16px);
+  transform: translateY(-50%) scale(0.94);
+  background: #202020; box-shadow: 0 30px 70px -20px rgba(0,0,0,0.6);
+}
+/* Translucency while is-current itself is actually in motion -- the
+   real-content counterpart of the ghost's own transit rgba below, same
+   values, same reasoning: only the flat fill reads as see-through,
+   border/shadow and the real text on top stay fully legible the whole
+   time. Only set for the pre-out INSTANT start, on purpose: earlier
+   this pass also pinned it translucent for the whole of 'out', which
+   meant it could only turn solid with a hard snap the instant
+   deck-dir-* dropped at swap -- visible as the card's grey suddenly
+   changing tone right as it finished settling (Victoria caught this).
+   Leaving it unset for 'out' lets it fall through to the base
+   .is-current background (#181818) instead, which IS covered by the
+   0.58s transition below -- so it crossfades from translucent to solid
+   gradually, over the same motion as the grow itself, and has already
+   finished by the time swap happens (nothing left to snap). */
+.projects-stage.deck-instant.deck-dir-next .project-card-lg.is-current,
+.projects-stage.deck-instant.deck-dir-prev .project-card-lg.is-current {
+  background: rgba(32,32,32,0.45);
 }
 
-/* The ghost: a plain colour box standing in for the clicked card. It
-   starts parked exactly on that card's spot, then grows into the centre
-   box -- see deckStageClass / ghostClass in renderVals(). A soft glow in
-   that project's own colour (set as --ghost-glow, see ghostStyle in
-   renderVals()) sits under the flat colour and fades out as the ghost
-   reaches the centre, so the grow reads as "this card is becoming the
-   open one" instead of a plain dark shape with nothing behind it. */
+/* The ghost: a plain NEUTRAL box standing in for the OLD centre card as
+   it leaves -- no brand colour, no real content needed for that (the
+   REAL incoming card is is-current itself now, see above). It starts
+   parked exactly over the vacated centre spot, matching is-current's
+   own rest colour, then shrinks away to the side being vacated -- see
+   deckStageClass / ghostClass in ProyectosDesktop.js. Its flat
+   background (#181818 centred, #202020 at the side) always matches the
+   tone of whatever it's standing in for, so there's no seam to hide --
+   it's free to fade out on its own schedule once it's done shrinking
+   (.deck-ghost-fade-out, 'in' phase). */
 .deck-ghost {
   all: unset;
   box-sizing: border-box;
@@ -950,21 +1029,62 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
   opacity: 0;
   pointer-events: none;
 }
-.deck-ghost::before {
+/* Grain -- generated feTurbulence noise, desaturated (feColorMatrix
+   saturate 0), so it's pure grey texture with no colour in it at all.
+   `screen`, not `overlay`: overlay barely moves a base this dark
+   (#181818/#202020) -- it leans toward multiply on dark values, which is
+   why it was invisible. `screen` only ever lightens, so the grain speckle
+   actually shows up against near-black.
+   Second visibility fix (Victoria still couldn't see it after the
+   overlay->screen change): raw fractalNoise output is low-contrast,
+   mostly mid-grey -- there wasn't much real light/dark speckle for
+   `screen` to work with in the first place. The feComponentTransfer
+   below pushes contrast hard (slope 3, intercept -1) so the noise
+   actually clips toward black/white into distinct specks instead of a
+   grey wash; only the white specks matter under `screen` (dark ones
+   contribute nothing), so this is what turns "faint uniform haze" into
+   visible grain. Opacity raised too (0.16 -> 0.3) now that there's
+   real contrast to show. Fixed opacity, no transition needed -- it's
+   not tied to deck-ghost-transit (see below): it's meant to read the
+   whole time the ghost is up, not just mid-motion. */
+.deck-ghost::after {
   content: '';
   position: absolute;
-  inset: 0;
-  display: block;
-  background: var(--ghost-glow, linear-gradient(135deg,#2A2A2A,#181818));
-  opacity: 0;
+  inset: -10%;
+  width: 120%;
+  height: 120%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='2' stitchTiles='stitch' result='t'/%3E%3CfeColorMatrix in='t' type='saturate' values='0' result='g'/%3E%3CfeComponentTransfer in='g'%3E%3CfeFuncR type='linear' slope='3' intercept='-1'/%3E%3CfeFuncG type='linear' slope='3' intercept='-1'/%3E%3CfeFuncB type='linear' slope='3' intercept='-1'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 160px 160px;
+  mix-blend-mode: screen;
+  opacity: 0.3;
+  pointer-events: none;
 }
 .deck-ghost.deck-ghost-show { opacity: 1; }
+/* Fades the ghost out once the real content starts revealing -- see the
+   'in'-phase comment in ProyectosDesktop.js. Written after
+   .deck-ghost-show so it wins the tie on equal specificity. */
+.deck-ghost.deck-ghost-fade-out { opacity: 0; }
 .deck-ghost.deck-ghost-at-prev { left: calc(-390px - var(--peek-extra, 0px)); width: 320px; height: calc(70% + 16px); transform: translateY(-50%) scale(0.94); background: #202020; box-shadow: 0 30px 70px -20px rgba(0,0,0,0.6); }
 .deck-ghost.deck-ghost-at-next { left: calc(1620px + var(--peek-extra, 0px)); width: 320px; height: calc(70% + 16px); transform: translateY(-50%) scale(0.94); background: #202020; box-shadow: 0 30px 70px -20px rgba(0,0,0,0.6); }
 .deck-ghost.deck-ghost-at-center { left: 50%; top: 0; width: 1550px; height: calc(96% + 16px); transform: translateX(-50%); background: #181818; box-shadow: 0 50px 100px -20px rgba(0,0,0,0.7), 0 20px 34px rgba(0,0,0,0.5); }
-.deck-ghost.deck-ghost-at-prev::before,
-.deck-ghost.deck-ghost-at-next::before { opacity: 0.5; }
-.deck-ghost.deck-ghost-at-center::before { opacity: 0; }
+/* No translucency on the ghost at all (removed after Victoria's report
+   that the grey-tone snap was STILL visible on the ghost even after the
+   matching is-current fix below). The earlier version pinned a
+   translucent rgba(24,24,24,0.45) fill only for the pre-out instant
+   (deck-ghost-at-center), meaning to crossfade it to solid gradually
+   over 'out' via the .deck-anim .deck-ghost background transition --
+   mathematically that crossfade IS smooth (verified frame-by-frame),
+   but the ghost is a flat, content-less box the whole time, so any
+   brightness change in its fill reads as a visible tone shift with
+   nothing else on screen to distract the eye from it -- unlike
+   is-current, where the same kind of fade happens underneath real
+   content revealing via clip-path, which masks it. Simplest fix:
+   give the ghost no alpha dip to crossfade out of in the first place.
+   It now stays flatly solid (#181818 centred, #202020 at the side,
+   both set on the .deck-ghost-at-* rules above) for its entire
+   lifecycle -- parked, shrinking, and settled -- so there is no fill
+   value left to change, smoothly or otherwise. */
 
 .project-card-lg-tag {
   position: relative;

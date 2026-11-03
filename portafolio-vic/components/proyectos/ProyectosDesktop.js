@@ -1391,13 +1391,14 @@ function ProyectosDesktopInner() {
   // phases the way the colour version needed (no hold-through-swap,
   // no cross-fade-out) -- it can just show through 'out'+'swap' and fade
   // on its own schedule once real content starts appearing in 'in'.
-  // deck-ghost-transit (pre-out + out only): the ghost sits slightly
-  // translucent while it's actually in motion toward the centre, then
-  // becomes fully solid the instant it arrives (swap) -- "materialising"
-  // into the open card rather than being a flat opaque box the whole way,
-  // which is also just literally what a ghost does. Dropped once it's
-  // settled (swap/in) so the real content it's about to hand off to never
-  // reads through it.
+  // deck-ghost-transit (pre-out + out only): the ghost's FILL (not its
+  // border/shadow -- see the rgba background rules in proyectos.css) sits
+  // visibly translucent while it's actually in motion toward the centre,
+  // then becomes fully solid the instant it arrives (swap) --
+  // "materialising" into the open card rather than being a flat opaque
+  // box the whole way, which is also just literally what a ghost does.
+  // Dropped once it's settled (swap/in) so the real content it's about to
+  // hand off to never reads through it.
   let deckStageClass = '';
   let ghostClass = '';
   if (deckPhase === 'pre-out') {

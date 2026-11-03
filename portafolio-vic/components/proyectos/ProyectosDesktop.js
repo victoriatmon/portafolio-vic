@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { startTransition, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { consumeEnterFlag, playEnterContentFade } from '@/lib/pageTransitions';
 import { VictorAIChatProvider, useChatContext } from '@/components/chat/ChatContext';
@@ -1137,8 +1137,21 @@ function ProyectosDesktopInner() {
     // opposite role it used to: it starts at the vacated centre spot and
     // shrinks away to the side, standing in for the OLD card leaving
     // (flat colour, no real content needed for that).
-    setActiveProject(targetIdx);
-    setActiveMapfreSection('meta');
+    //
+    // Wrapped in startTransition: the heaviest project layouts (mapfre's
+    // funnel demo, the hand-drawn Pulso illustration) are expensive
+    // enough to mount that doing it as an ordinary synchronous setState
+    // here froze the click itself for the better part of a second before
+    // anything on screen even moved -- measured via the Vercel toolbar's
+    // own INP warning on this exact button. startTransition tells React
+    // this update isn't urgent, so it can keep the click responsive (the
+    // deck-phase updates right below, which ARE urgent, still commit and
+    // paint immediately) while the heavy content mount happens in the
+    // background instead of blocking the main thread outright.
+    startTransition(() => {
+      setActiveProject(targetIdx);
+      setActiveMapfreSection('meta');
+    });
     const sc0 = document.querySelector('.proj-card-scroll');
     if (sc0) sc0.scrollTop = 0;
     setDeckDir(dir);

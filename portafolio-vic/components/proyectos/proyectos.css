@@ -872,9 +872,14 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
     transform 0.38s cubic-bezier(0.16,1,0.3,1), background 0.38s ease, box-shadow 0.38s ease,
     opacity 0.34s ease;
 }
-.projects-stage.deck-anim .deck-ghost::before { transition: opacity 0.38s ease; }
+/* Stepped, not eased: the colour build reads as a few discrete jolts
+   (closer to the grain/glitch bursts used elsewhere on this page -- see
+   .undp-grain/.undp-glitch-scan -- than a smooth gradient fade), which is
+   what actually reads as this site's own grunge language instead of a
+   generic soft-glow transition. */
+.projects-stage.deck-anim .deck-ghost::before { transition: opacity 0.38s steps(5, end); }
 .projects-stage.deck-anim .project-card-content {
-  transition: opacity 0.32s ease, filter 0.32s ease, transform 0.32s cubic-bezier(0.16,1,0.3,1);
+  transition: opacity 0.16s linear, transform 0.16s cubic-bezier(0.34,1.56,0.64,1);
 }
 .projects-stage.deck-anim .project-card-lg-tag { transition: opacity 0.2s ease; }
 .projects-stage.deck-instant .project-card-lg,
@@ -883,13 +888,15 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
 .projects-stage.deck-anim, .projects-stage.deck-instant { pointer-events: none; }
 
 /* Keeps the incoming content/label hidden through "out" and the instant
-   "swap" relabel, so it only ever appears via the "in" fade. The new card's
-   content blurs in and rises slightly instead of a flat opacity pop, so it
-   reads as settling into focus rather than switching on. */
+   "swap" relabel, so it only ever appears via the "in" fade. Was a soft
+   blur(8px)+ease "settling into focus" reveal -- a generic motion-library
+   default (Victoria's call: reads as generic AI/SaaS polish, not this
+   site's grunge). No blur now: content snaps up a short 6px with a quick
+   back-eased overshoot (0.16s, see the transition rule above) -- a hit,
+   not a soft fade-up. */
 .projects-stage.deck-hide-content .project-card-lg.is-current .project-card-content {
   opacity: 0;
-  filter: blur(8px);
-  transform: translateY(14px);
+  transform: translateY(6px);
 }
 .projects-stage.deck-hide-content .project-card-lg.is-prev .project-card-lg-tag,
 .projects-stage.deck-hide-content .project-card-lg.is-next .project-card-lg-tag { opacity: 0; }
@@ -927,17 +934,24 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
 
 /* The ghost: a plain colour box standing in for the clicked card. It
    starts parked exactly on that card's spot, then grows into the centre
-   box -- see deckStageClass / ghostClass in renderVals(). A soft glow in
-   that project's own colour (set as --ghost-glow, see ghostStyle in
-   renderVals()) sits under the flat colour and BUILDS as the ghost grows,
-   peaking right as it reaches full size -- the colour hit lands on the
-   "this is becoming the open project" beat instead of being spent before
-   it. It then holds through the instant data-swap (deck-ghost-at-center
-   stays applied in the 'swap' phase too -- see ProyectosDesktop.js) and
-   only cross-fades out, as a whole, once the real content starts fading
-   in (.deck-ghost-fade-out, 'in' phase), so the colour reads as the
-   backdrop the content visibly emerges from rather than a flash that's
-   already gone by the time anything else is on screen. */
+   box -- see deckStageClass / ghostClass in renderVals(). A glow in that
+   project's own colour (set as --ghost-glow, see ghostStyle in
+   renderVals()) sits under the flat colour and BUILDS as the ghost grows
+   in a few discrete, stepped jolts (not an eased fade -- see the
+   steps(5,end) transition above), peaking right as it reaches full size.
+   It then holds through the instant data-swap (deck-ghost-at-center stays
+   applied in the 'swap' phase too -- see ProyectosDesktop.js) and only
+   cross-fades out, as a whole, once the real content starts fading in
+   (.deck-ghost-fade-out, 'in' phase), so the colour reads as the backdrop
+   the content visibly emerges from rather than a flash that's already
+   gone by the time anything else is on screen.
+   ::after lays the same grain texture this page already uses for UNDP's
+   demo (.undp-grain, /undp-grain-texture.png, mix-blend-mode: overlay)
+   over that colour, so the hit reads as a grimy printed/photocopied
+   patch, not a clean gradient wash -- Victoria's call on the first pass
+   (too close to a generic AI/SaaS soft-glow) was specifically the
+   smoothness of the colour itself, not the build-then-hold timing, which
+   stays. */
 .deck-ghost {
   all: unset;
   box-sizing: border-box;
@@ -964,6 +978,23 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
   display: block;
   background: var(--ghost-glow, linear-gradient(135deg,#2A2A2A,#181818));
   opacity: 0;
+}
+/* Grain texture riding on top of the colour -- a fixed value, not
+   animated on its own: it just rides along with .deck-ghost's own
+   opacity (deck-ghost-show / deck-ghost-fade-out), same as any other
+   child, so it needs no separate transition/keyframes here. */
+.deck-ghost::after {
+  content: '';
+  position: absolute;
+  inset: -10%;
+  width: 120%;
+  height: 120%;
+  background-image: url(/undp-grain-texture.png);
+  background-size: cover;
+  background-position: center;
+  mix-blend-mode: overlay;
+  opacity: 0.3;
+  pointer-events: none;
 }
 .deck-ghost.deck-ghost-show { opacity: 1; }
 /* Cross-fades the whole ghost (flat colour + glow) out once the real

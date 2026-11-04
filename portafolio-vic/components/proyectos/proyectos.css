@@ -931,22 +931,6 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
 .projects-stage.deck-anim .project-card-lg-tag { transition: opacity 0.2s ease; }
 .projects-stage.deck-instant .project-card-lg,
 .projects-stage.deck-instant .deck-ghost { transition: none !important; }
-/* ...except is-prev/is-next's own opacity: this used to be masked by the
-   ghost (still fully opaque right up through swap in the old timing), so
-   nobody could see that their deck-dir-* opacity:0 override drops exactly
-   at swap -- deck-instant's transition:none above then snapped them from
-   invisible to visible in the very same frame. Making the ghost fade out
-   earlier (see ghostClass in ProyectosDesktop.js) uncovered that snap:
-   Victoria saw it as the real peek card "reappearing" right after the
-   ghost had just "disappeared". Re-enabling their own ordinary opacity
-   transition (same 0.2s ease every .project-card-lg already has at rest)
-   here, at equal !important + higher selector specificity so it wins over
-   the blanket rule above, lets them fade back in instead of popping. Safe
-   at pre-out too: is-current (z-index 3) sits fully opaque right on top of
-   these (z-index 2) at that moment regardless of their own opacity, so
-   whether THEY fade or snap there is invisible either way. */
-.projects-stage.deck-instant .project-card-lg.is-prev,
-.projects-stage.deck-instant .project-card-lg.is-next { transition: opacity 0.2s ease !important; }
 .projects-stage.deck-anim, .projects-stage.deck-instant { pointer-events: none; }
 
 /* Resting state: fully revealed. A plain inset(0) is a no-op visually

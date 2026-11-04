@@ -1474,23 +1474,10 @@ function ProyectosDesktopInner() {
     ghostClass = 'deck-ghost-show deck-ghost-transit deck-ghost-at-center';
   } else if (deckPhase === 'out') {
     deckStageClass = 'deck-anim ' + (deckDir === 'next' ? 'deck-dir-next' : 'deck-dir-prev');
-    // deck-ghost-fade-out now starts right here, not after swap: Victoria
-    // found the ghost still reading as a light, unsettled patch for about
-    // a second AFTER the centre card had already finished arriving -- the
-    // old sequence shrank the ghost fully opaque for the whole of 'out',
-    // THEN only began fading it once everything else had already stopped
-    // moving, so that trailing fade was the one thing still visibly
-    // changing on screen. Fading it in lockstep with the shrink instead
-    // (same 0.58s duration as the move, see proyectos.css) means it's
-    // already transparent by the time the shrink itself finishes, with
-    // nothing left to fade afterwards.
-    ghostClass = 'deck-ghost-show deck-ghost-transit deck-ghost-fade-out ' + (deckDir === 'next' ? 'deck-ghost-at-prev' : 'deck-ghost-at-next');
+    ghostClass = 'deck-ghost-show deck-ghost-transit ' + (deckDir === 'next' ? 'deck-ghost-at-prev' : 'deck-ghost-at-next');
   } else if (deckPhase === 'swap') {
     deckStageClass = 'deck-instant';
-    // Keep deck-ghost-fade-out through swap (deck-instant, transition:none)
-    // so opacity stays pinned at 0 instead of snapping back to 1 the
-    // instant deck-ghost-transit drops -- it's already invisible by now.
-    ghostClass = 'deck-ghost-show deck-ghost-fade-out ' + (deckLastDirRef.current === 'next' ? 'deck-ghost-at-prev' : 'deck-ghost-at-next');
+    ghostClass = 'deck-ghost-show ' + (deckLastDirRef.current === 'next' ? 'deck-ghost-at-prev' : 'deck-ghost-at-next');
   } else if (deckPhase === 'in') {
     deckStageClass = 'deck-anim';
     ghostClass = 'deck-ghost-show deck-ghost-fade-out ' + (deckLastDirRef.current === 'next' ? 'deck-ghost-at-prev' : 'deck-ghost-at-next');

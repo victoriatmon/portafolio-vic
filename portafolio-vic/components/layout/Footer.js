@@ -2,6 +2,7 @@
 
 import './footer.css';
 import { CopyIcon, CheckIcon } from './copyEmailIcons';
+import { ArrowIcon } from './ArrowIcon';
 import { useCopyEmail } from './useCopyEmail';
 import EmailButtonContent from './EmailButtonContent';
 
@@ -13,7 +14,7 @@ export default function Footer() {
   // checkmark, with the button growing/shrinking to fit the new label, then
   // reverting on its own. Shared logic lives in useCopyEmail (also used by
   // the mobile menu sheet's Email button in Navbar.js).
-  const { copied, idleRef, copiedRef, width, handleCopyEmail } = useCopyEmail();
+  const { copied, leaving, idleRef, copiedRef, width, handleCopyEmail } = useCopyEmail();
 
   return (
     <footer className="site-footer" data-site-footer>
@@ -37,12 +38,13 @@ export default function Footer() {
       </span>
       <nav className="footer-links" aria-label="Contact links">
         <a
-          className="footer-btn"
+          className="footer-btn footer-btn-linkedin"
           href="https://www.linkedin.com/in/victoria-talamantes-montanez"
           target="_blank"
           rel="noopener noreferrer"
         >
-          LinkedIn
+          <span>LinkedIn</span>
+          <ArrowIcon size={16} />
         </a>
         <button
           type="button"
@@ -52,6 +54,7 @@ export default function Footer() {
         >
           <EmailButtonContent
             copied={copied}
+            leaving={leaving}
             size={16}
             contentClassName="footer-btn-email-content"
             iconClassName="footer-btn-email-icon"

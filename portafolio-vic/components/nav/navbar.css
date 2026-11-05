@@ -183,6 +183,15 @@
 .menu-link:active { color: #0066FF; }
 .menu-link.is-current { color: #0066FF; }
 
+/* LinkedIn gets an external-link arrow to the right of the label, same
+   treatment on desktop (see .footer-btn-linkedin in footer.css) and here. */
+.menu-link-linkedin {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.menu-link-linkedin svg { display: block; flex: none; }
+
 /* Email in the mobile menu sheet -- same copy-to-clipboard treatment as the
    desktop footer's Email button (see footer.css): a <button> that copies
    instead of navigating, animates its width to fit the confirmation label,
@@ -219,7 +228,12 @@
   align-items: center;
   gap: 10px;
   animation: email-content-in 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: opacity 0.18s ease;
 }
+/* Fade the "Email copied!" content out in place (no layout/width change --
+   see useCopyEmail's leaving state) just before it's swapped back to the
+   idle label, instead of it being unmounted instantly. */
+.menu-link-email-content.is-leaving { opacity: 0; }
 .menu-link-email-icon { display: inline-flex; flex: none; }
 .menu-link-email-icon svg { display: block; }
 /* Hidden off-screen; only used to measure natural width per label/icon pair

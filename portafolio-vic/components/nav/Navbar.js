@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import ChatTriggerButton from '../chat/ChatTriggerButton';
 import { attachNavTransition } from '@/lib/pageTransitions';
 import { CopyIcon, CheckIcon } from '../layout/copyEmailIcons';
+import { ArrowIcon } from '../layout/ArrowIcon';
 import { useCopyEmail } from '../layout/useCopyEmail';
 import EmailButtonContent from '../layout/EmailButtonContent';
 import './navbar.css';
@@ -151,12 +152,13 @@ export default function Navbar({ current, variant = 'desktop' }) {
           <ul className="menu-links menu-links-contact">
             <li style={{ '--i': 3 }}>
               <a
-                className="menu-link"
+                className="menu-link menu-link-linkedin"
                 href="https://www.linkedin.com/in/victoria-talamantes-montanez"
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                LinkedIn
+                <span>LinkedIn</span>
+                <ArrowIcon size={36} />
               </a>
             </li>
             <li style={{ '--i': 4 }}>
@@ -168,6 +170,7 @@ export default function Navbar({ current, variant = 'desktop' }) {
               >
                 <EmailButtonContent
                   copied={copyEmail.copied}
+                  leaving={copyEmail.leaving}
                   size={36}
                   contentClassName="menu-link-email-content"
                   iconClassName="menu-link-email-icon"

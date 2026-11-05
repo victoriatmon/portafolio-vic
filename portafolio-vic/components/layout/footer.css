@@ -50,6 +50,15 @@
 .footer-btn:active { color: #0066FF; }
 .footer-btn:focus-visible { outline: 2px solid #F5F5F5; outline-offset: 4px; border-radius: 4px; }
 
+/* LinkedIn gets an external-link arrow to the right of the label, same
+   treatment in the mobile menu sheet (see .menu-link-linkedin in navbar.css). */
+.footer-btn-linkedin {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.footer-btn-linkedin svg { display: block; flex: none; }
+
 /* Email is a <button>, not an <a>, since it copies instead of navigating --
    reset the button chrome back down to plain text so it reads identically
    to the LinkedIn/Resume links either side of it. Icon sits to the RIGHT of
@@ -84,7 +93,12 @@
   align-items: center;
   gap: 6px;
   animation: email-content-in 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: opacity 0.18s ease;
 }
+/* Fade the "Email copied!" content out in place (no layout/width change --
+   see useCopyEmail's leaving state) just before it's swapped back to the
+   idle label, instead of it being unmounted instantly. */
+.footer-btn-email-content.is-leaving { opacity: 0; }
 @keyframes email-content-in {
   from { opacity: 0; transform: translateY(3px); }
   to { opacity: 1; transform: none; }

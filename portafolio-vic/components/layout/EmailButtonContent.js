@@ -7,9 +7,12 @@ import { CopyIcon, CheckIcon } from './copyEmailIcons';
 // in footer.css/navbar.css, the label and icon ease in together rather than
 // popping instantly, which is what made the swap feel abrupt/"forced"
 // especially at the mobile menu's larger 32px type size.
-export default function EmailButtonContent({ copied, size, contentClassName, iconClassName }) {
+export default function EmailButtonContent({ copied, leaving, size, contentClassName, iconClassName }) {
   return (
-    <span key={copied ? 'copied' : 'idle'} className={contentClassName}>
+    <span
+      key={copied ? 'copied' : 'idle'}
+      className={contentClassName + (leaving ? ' is-leaving' : '')}
+    >
       <span>{copied ? 'Email copied!' : 'Email'}</span>
       <span className={iconClassName}>
         {copied ? <CheckIcon size={size} /> : <CopyIcon size={size} />}

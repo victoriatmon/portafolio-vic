@@ -5,9 +5,16 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 const EMAIL = 'victoria.tmon@gmail.com';
 
 // Timing for the copy confirmation: grow to fit the confirmation label, hold
-// so it's readable, then shrink back and swap the label/icon back to the
-// idle "Email" state. REVERT_MS covers the full grow + hold + shrink window.
-const REVERT_MS = 2200;
+// so it's readable, fade the "Email copied!" content out in place, THEN
+// swap the label/icon back to idle (shrinking + fading the new content in).
+// Without that fade-out step the old content was unmounted instantly (React
+// doesn't animate unmounts on its own) right as the new content faded in --
+// a hard, unprompted cut that read as the least natural part of the whole
+// sequence, since (unlike the click) nothing the visitor did cued it.
+// HOLD_MS is from click to the start of that fade-out; LEAVE_MS is the
+// fade-out's own duration, after which the real swap happens.
+const HOLD_MS = 2020;
+const LEAVE_MS = 180;
 
 // Shared by the desktop footer's Email button and the mobile menu sheet's
 // Email button: copies EMAIL to the clipboard instead of opening a mail
@@ -18,6 +25,7 @@ const REVERT_MS = 2200;
 // animate its width between the two states instead of snapping instantly.
 export function useCopyEmail() {
   const [copied, setCopied] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const [widths, setWidths] = useState({ idle: null, copied: null });
   const idleRef = useRef(null);
   const copiedRef = useRef(null);
@@ -67,10 +75,24 @@ export function useCopyEmail() {
 
     timersRef.current.forEach(clearTimeout);
     timersRef.current = [];
+    setLeaving(false);
     setCopied(true);
 
-    timersRef.current.push(setTimeout(() => setCopied(false), REVERT_MS));
+    timersRef.current.push(setTimeout(() => setLeaving(true), HOLD_MS));
+    timersRef.current.push(
+      setTimeout(() => {
+        setCopied(false);
+        setLeaving(false);
+      }, HOLD_MS + LEAVE_MS)
+    );
   }
 
-  return { copied, idleRef, copiedRef, width: copied ? widths.copied : widths.idle, handleCopyEmail };
+  return {
+    copied,
+    leaving,
+    idleRef,
+    copiedRef,
+    width: copied ? widths.copied : widths.idle,
+    handleCopyEmail,
+  };
 }

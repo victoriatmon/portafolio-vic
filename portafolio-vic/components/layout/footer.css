@@ -50,14 +50,15 @@
 .footer-btn:active { color: #0066FF; }
 .footer-btn:focus-visible { outline: 2px solid #F5F5F5; outline-offset: 4px; border-radius: 4px; }
 
-/* LinkedIn gets an external-link arrow to the right of the label, same
-   treatment in the mobile menu sheet (see .menu-link-linkedin in navbar.css). */
-.footer-btn-linkedin {
+/* LinkedIn and Resume both get an arrow icon to the right of the label,
+   same treatment in the mobile menu sheet (see .menu-link-icon in
+   navbar.css). */
+.footer-btn-icon {
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
-.footer-btn-linkedin svg { display: block; flex: none; }
+.footer-btn-icon svg { display: block; flex: none; }
 
 /* Email is a <button>, not an <a>, since it copies instead of navigating --
    reset the button chrome back down to plain text so it reads identically

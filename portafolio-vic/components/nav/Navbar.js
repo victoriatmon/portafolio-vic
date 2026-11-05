@@ -152,7 +152,7 @@ export default function Navbar({ current, variant = 'desktop' }) {
           <ul className="menu-links menu-links-contact">
             <li style={{ '--i': 3 }}>
               <a
-                className="menu-link menu-link-linkedin"
+                className="menu-link menu-link-icon"
                 href="https://www.linkedin.com/in/victoria-talamantes-montanez"
                 target="_blank"
                 rel="noopener noreferrer"
@@ -189,8 +189,9 @@ export default function Navbar({ current, variant = 'desktop' }) {
               </span>
             </li>
             <li style={{ '--i': 5 }}>
-              <a className="menu-link" href="/resume.pdf" target="_blank" rel="noopener noreferrer">
-                Resume
+              <a className="menu-link menu-link-icon" href="/resume.pdf" target="_blank" rel="noopener noreferrer">
+                <span>Resume</span>
+                <ArrowIcon size={36} />
               </a>
             </li>
           </ul>

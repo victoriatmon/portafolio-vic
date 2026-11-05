@@ -183,14 +183,14 @@
 .menu-link:active { color: #0066FF; }
 .menu-link.is-current { color: #0066FF; }
 
-/* LinkedIn gets an external-link arrow to the right of the label, same
-   treatment on desktop (see .footer-btn-linkedin in footer.css) and here. */
-.menu-link-linkedin {
+/* LinkedIn and Resume both get an arrow icon to the right of the label,
+   same treatment on desktop (see .footer-btn-icon in footer.css) and here. */
+.menu-link-icon {
   display: inline-flex;
   align-items: center;
   gap: 10px;
 }
-.menu-link-linkedin svg { display: block; flex: none; }
+.menu-link-icon svg { display: block; flex: none; }
 
 /* Email in the mobile menu sheet -- same copy-to-clipboard treatment as the
    desktop footer's Email button (see footer.css): a <button> that copies

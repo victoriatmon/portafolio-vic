@@ -38,7 +38,7 @@ export default function Footer() {
       </span>
       <nav className="footer-links" aria-label="Contact links">
         <a
-          className="footer-btn footer-btn-linkedin"
+          className="footer-btn footer-btn-icon"
           href="https://www.linkedin.com/in/victoria-talamantes-montanez"
           target="_blank"
           rel="noopener noreferrer"
@@ -71,8 +71,9 @@ export default function Footer() {
           <span>Email copied!</span>
           <span className="footer-btn-email-icon"><CheckIcon size={16} /></span>
         </span>
-        <a className="footer-btn" href="/resume.pdf" target="_blank" rel="noopener noreferrer">
-          Resume
+        <a className="footer-btn footer-btn-icon" href="/resume.pdf" target="_blank" rel="noopener noreferrer">
+          <span>Resume</span>
+          <ArrowIcon size={16} />
         </a>
       </nav>
     </footer>

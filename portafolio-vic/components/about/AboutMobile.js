@@ -5,6 +5,7 @@ import { consumeEnterFlag, playEnterContentFade } from '@/lib/pageTransitions';
 import { VictorAIChatProvider } from '@/components/chat/ChatContext';
 import ChatPanel from '@/components/chat/ChatPanel';
 import Navbar from '@/components/nav/Navbar';
+import { ArrowIcon } from '@/components/layout/ArrowIcon';
 import { TOPICS, STARTERS } from '@/content/chatTopics';
 import './about-mobile.css';
 
@@ -473,10 +474,8 @@ export default function AboutMobile() {
             </div>
             {!isPersonal && (
               <a className="resume-btn" href="/resume.pdf" target="_blank" rel="noopener noreferrer">
-                <span>Download Resume</span>
-                <svg fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                </svg>
+                <span>Open Resume</span>
+                <ArrowIcon size={16} />
               </a>
             )}
           </div>
@@ -682,10 +681,8 @@ export default function AboutMobile() {
             <div className="resume-bottom">
               {/* TODO(Vic): swap for the real file once it's in /public (same resume asset Footer links to). */}
               <a className="resume-btn" href="/resume.pdf" target="_blank" rel="noopener noreferrer">
-                <span>Download Resume</span>
-                <svg fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                </svg>
+                <span>Open Resume</span>
+                <ArrowIcon size={16} />
               </a>
             </div>
           </>

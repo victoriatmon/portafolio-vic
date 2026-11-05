@@ -3,6 +3,7 @@
 import './footer.css';
 import { CopyIcon, CheckIcon } from './copyEmailIcons';
 import { useCopyEmail } from './useCopyEmail';
+import EmailButtonContent from './EmailButtonContent';
 
 // Shared across all 3 routes.
 export default function Footer() {
@@ -49,10 +50,12 @@ export default function Footer() {
           onClick={handleCopyEmail}
           style={width != null ? { width: `${width}px` } : undefined}
         >
-          <span>{copied ? 'Email copied!' : 'Email'}</span>
-          <span className="footer-btn-email-icon">
-            {copied ? <CheckIcon size={16} /> : <CopyIcon size={16} />}
-          </span>
+          <EmailButtonContent
+            copied={copied}
+            size={16}
+            contentClassName="footer-btn-email-content"
+            iconClassName="footer-btn-email-icon"
+          />
         </button>
         {/* Off-screen measurers: same markup as the two button states, used only to
             read their natural (text + gap + icon) width so the button can animate

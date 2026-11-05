@@ -62,7 +62,6 @@
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 6px;
   color: #CCCCCC;
   font-weight: 600;
   font-size: 14px;
@@ -71,11 +70,25 @@
   cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
-  transition: color 0.15s ease, width 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: color 0.15s ease, width 0.32s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .footer-btn-email:hover { color: #9E9E9E; }
 .footer-btn-email:active { color: #0066FF; }
 .footer-btn-email:focus-visible { outline: 2px solid #F5F5F5; outline-offset: 4px; border-radius: 4px; }
+/* Label+icon wrapper -- keyed by state in EmailButtonContent.js so React
+   remounts it on every click/revert instead of mutating the text/icon in
+   place. Replaying this fade+rise animation on each mount is what makes the
+   label and icon ease in together instead of popping instantly. */
+.footer-btn-email-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  animation: email-content-in 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes email-content-in {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: none; }
+}
 .footer-btn-email-icon { display: inline-flex; flex: none; }
 .footer-btn-email-icon svg { display: block; }
 /* Hidden off-screen; only used to measure natural width per label/icon pair

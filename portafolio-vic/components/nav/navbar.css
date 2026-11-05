@@ -195,7 +195,6 @@
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 10px;
   color: #E8E8E8;
   font-weight: 600;
   font-size: 32px;
@@ -206,10 +205,21 @@
   white-space: nowrap;
   overflow: hidden;
   -webkit-tap-highlight-color: transparent;
-  transition: color 0.15s ease, width 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: color 0.15s ease, width 0.32s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .menu-link-email:hover { color: #9E9E9E; }
 .menu-link-email:active { color: #0066FF; }
+/* Label+icon wrapper -- keyed by state in EmailButtonContent.js so React
+   remounts it on every click/revert instead of mutating the text/icon in
+   place; replaying this fade+rise animation on each mount is what makes the
+   swap feel natural instead of popping instantly (more noticeable here than
+   on the desktop footer, at this 32px type size). */
+.menu-link-email-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  animation: email-content-in 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+}
 .menu-link-email-icon { display: inline-flex; flex: none; }
 .menu-link-email-icon svg { display: block; }
 /* Hidden off-screen; only used to measure natural width per label/icon pair
@@ -232,6 +242,10 @@
 }
 .menu-link-email.is-copied,
 .menu-link-email.is-copied:hover { color: #22C55E; }
+@keyframes email-content-in {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: none; }
+}
 
 /* Contact links (LinkedIn/Email/Resume) + credit line, ported from
    MainMobile.dc.html -- see the comment in Navbar.js. Same .menu-link

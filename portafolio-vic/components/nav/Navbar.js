@@ -5,6 +5,7 @@ import ChatTriggerButton from '../chat/ChatTriggerButton';
 import { attachNavTransition } from '@/lib/pageTransitions';
 import { CopyIcon, CheckIcon } from '../layout/copyEmailIcons';
 import { useCopyEmail } from '../layout/useCopyEmail';
+import EmailButtonContent from '../layout/EmailButtonContent';
 import './navbar.css';
 
 // Shared navbar for all 3 routes. `current` picks which link gets
@@ -165,21 +166,23 @@ export default function Navbar({ current, variant = 'desktop' }) {
                 onClick={copyEmail.handleCopyEmail}
                 style={copyEmail.width != null ? { width: `${copyEmail.width}px` } : undefined}
               >
-                <span>{copyEmail.copied ? 'Email copied!' : 'Email'}</span>
-                <span className="menu-link-email-icon">
-                  {copyEmail.copied ? <CheckIcon size={24} /> : <CopyIcon size={24} />}
-                </span>
+                <EmailButtonContent
+                  copied={copyEmail.copied}
+                  size={18}
+                  contentClassName="menu-link-email-content"
+                  iconClassName="menu-link-email-icon"
+                />
               </button>
               {/* Off-screen measurers: same markup as the two button states, used
                   only to read their natural width so the button can animate
                   between fixed px widths instead of snapping on label change. */}
               <span className="menu-link-email-measure" aria-hidden="true" ref={copyEmail.idleRef}>
                 <span>Email</span>
-                <span className="menu-link-email-icon"><CopyIcon size={24} /></span>
+                <span className="menu-link-email-icon"><CopyIcon size={18} /></span>
               </span>
               <span className="menu-link-email-measure" aria-hidden="true" ref={copyEmail.copiedRef}>
                 <span>Email copied!</span>
-                <span className="menu-link-email-icon"><CheckIcon size={24} /></span>
+                <span className="menu-link-email-icon"><CheckIcon size={18} /></span>
               </span>
             </li>
             <li style={{ '--i': 5 }}>

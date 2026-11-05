@@ -168,7 +168,7 @@ export default function Navbar({ current, variant = 'desktop' }) {
               >
                 <EmailButtonContent
                   copied={copyEmail.copied}
-                  size={18}
+                  size={36}
                   contentClassName="menu-link-email-content"
                   iconClassName="menu-link-email-icon"
                 />
@@ -178,11 +178,11 @@ export default function Navbar({ current, variant = 'desktop' }) {
                   between fixed px widths instead of snapping on label change. */}
               <span className="menu-link-email-measure" aria-hidden="true" ref={copyEmail.idleRef}>
                 <span>Email</span>
-                <span className="menu-link-email-icon"><CopyIcon size={18} /></span>
+                <span className="menu-link-email-icon"><CopyIcon size={36} /></span>
               </span>
               <span className="menu-link-email-measure" aria-hidden="true" ref={copyEmail.copiedRef}>
                 <span>Email copied!</span>
-                <span className="menu-link-email-icon"><CheckIcon size={18} /></span>
+                <span className="menu-link-email-icon"><CheckIcon size={36} /></span>
               </span>
             </li>
             <li style={{ '--i': 5 }}>

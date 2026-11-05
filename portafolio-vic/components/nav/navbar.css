@@ -183,6 +183,56 @@
 .menu-link:active { color: #0066FF; }
 .menu-link.is-current { color: #0066FF; }
 
+/* Email in the mobile menu sheet -- same copy-to-clipboard treatment as the
+   desktop footer's Email button (see footer.css): a <button> that copies
+   instead of navigating, animates its width to fit the confirmation label,
+   with the icon on the right. Typography duplicated from .menu-link rather
+   than relying on that class's cascade, since `all: unset` (needed to strip
+   default button chrome) would wipe it out again. */
+.menu-link-email {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  color: #E8E8E8;
+  font-weight: 600;
+  font-size: 32px;
+  line-height: 1.1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.15s ease, width 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.menu-link-email:hover { color: #9E9E9E; }
+.menu-link-email:active { color: #0066FF; }
+.menu-link-email-icon { display: inline-flex; flex: none; }
+.menu-link-email-icon svg { display: block; }
+/* Hidden off-screen; only used to measure natural width per label/icon pair
+   (see .menu-link-email-measure spans in Navbar.js). */
+.menu-link-email-measure {
+  position: absolute;
+  visibility: hidden;
+  top: -9999px;
+  left: -9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  font-size: 32px;
+  line-height: 1.1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.menu-link-email.is-copied,
+.menu-link-email.is-copied:hover { color: #22C55E; }
+
 /* Contact links (LinkedIn/Email/Resume) + credit line, ported from
    MainMobile.dc.html -- see the comment in Navbar.js. Same .menu-link
    typography/colors/hover/active as the site-nav list above; the extra

@@ -1,9 +1,30 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import './footer.css';
 
 const EMAIL = 'victoria.tmon@gmail.com';
+
+// Timing for the copy confirmation: grow to fit the confirmation label, let
+// the checkmark pop once the width has settled, hold so it's readable, then
+// shrink back and swap the label/icon back to the idle "Email" state.
+const GROW_MS = 300;
+const POP_DELAY_MS = GROW_MS + 40;
+const POP_MS = 380;
+const HOLD_MS = 1500;
+
+const CopyIcon = () => (
+  // Filled (not outline) copy icon per Victoria's request.
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true">
+    <path d="M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1Zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Zm0 16H8V7h11v14Z"></path>
+  </svg>
+);
+
+const CheckIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <polyline points="20 6 9 17 4 12"></polyline>
+  </svg>
+);
 
 // Shared across all 3 routes.
 export default function Footer() {
@@ -11,11 +32,36 @@ export default function Footer() {
   // client (mailto: assumes the visitor has one configured, which a lot
   // of people checking a portfolio from a work laptop or phone don't) --
   // click copies EMAIL to the clipboard and swaps the button's label/icon
-  // to a green "Email copied!" checkmark for a couple seconds, then
-  // reverts on its own.
+  // (icon on the right of the text) to a green "Email copied!" checkmark,
+  // with the button growing/shrinking to fit and a small pop on the
+  // checkmark once it settles, then reverts on its own.
   const [copied, setCopied] = useState(false);
-  const revertTRef = useRef(null);
-  useEffect(() => () => clearTimeout(revertTRef.current), []);
+  const [popping, setPopping] = useState(false);
+  const [widths, setWidths] = useState({ idle: null, copied: null });
+  const idleRef = useRef(null);
+  const copiedRef = useRef(null);
+  const timersRef = useRef([]);
+
+  useLayoutEffect(() => {
+    const measure = () => {
+      if (idleRef.current && copiedRef.current) {
+        setWidths({
+          idle: idleRef.current.getBoundingClientRect().width,
+          copied: copiedRef.current.getBoundingClientRect().width,
+        });
+      }
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    // Fonts finishing their load after first paint can shift these widths --
+    // remeasure once they're ready rather than locking in a wrong value.
+    if (typeof document !== 'undefined' && document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(measure);
+    }
+    return () => window.removeEventListener('resize', measure);
+  }, []);
+
+  useEffect(() => () => timersRef.current.forEach(clearTimeout), []);
 
   async function handleCopyEmail() {
     try {
@@ -37,10 +83,18 @@ export default function Footer() {
         return; // Genuinely couldn't copy -- don't claim success.
       }
     }
+
+    timersRef.current.forEach(clearTimeout);
+    timersRef.current = [];
+    setPopping(false);
     setCopied(true);
-    clearTimeout(revertTRef.current);
-    revertTRef.current = setTimeout(() => setCopied(false), 2200);
+
+    timersRef.current.push(setTimeout(() => setPopping(true), POP_DELAY_MS));
+    timersRef.current.push(setTimeout(() => setPopping(false), POP_DELAY_MS + POP_MS));
+    timersRef.current.push(setTimeout(() => setCopied(false), POP_DELAY_MS + POP_MS + HOLD_MS));
   }
+
+  const width = copied ? widths.copied : widths.idle;
 
   return (
     <footer className="site-footer" data-site-footer>
@@ -75,19 +129,24 @@ export default function Footer() {
           type="button"
           className={'footer-btn footer-btn-email' + (copied ? ' is-copied' : '')}
           onClick={handleCopyEmail}
+          style={width != null ? { width: `${width}px` } : undefined}
         >
-          {copied ? (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>
-          ) : (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <rect x="9" y="9" width="12" height="12" rx="2"></rect>
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-            </svg>
-          )}
           <span>{copied ? 'Email copied!' : 'Email'}</span>
+          <span className={'footer-btn-email-icon' + (popping ? ' is-popping' : '')}>
+            {copied ? <CheckIcon /> : <CopyIcon />}
+          </span>
         </button>
+        {/* Off-screen measurers: same markup as the two button states, used only to
+            read their natural (text + gap + icon) width so the button can animate
+            between fixed px widths instead of snapping instantly on label change. */}
+        <span className="footer-btn-email-measure" aria-hidden="true" ref={idleRef}>
+          <span>Email</span>
+          <span className="footer-btn-email-icon"><CopyIcon /></span>
+        </span>
+        <span className="footer-btn-email-measure" aria-hidden="true" ref={copiedRef}>
+          <span>Email copied!</span>
+          <span className="footer-btn-email-icon"><CheckIcon /></span>
+        </span>
         <a className="footer-btn" href="/resume.pdf" target="_blank" rel="noopener noreferrer">
           Resume
         </a>

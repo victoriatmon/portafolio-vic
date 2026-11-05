@@ -52,11 +52,16 @@
 
 /* Email is a <button>, not an <a>, since it copies instead of navigating --
    reset the button chrome back down to plain text so it reads identically
-   to the LinkedIn/Resume links either side of it. */
+   to the LinkedIn/Resume links either side of it. Icon sits to the RIGHT of
+   the label (text first in the markup, icon after). Width is set inline in
+   JS from the two measurers below and transitions, so the button visibly
+   grows/shrinks to fit "Email" vs "Email copied!" instead of snapping. */
 .footer-btn-email {
   all: unset;
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 6px;
   color: #CCCCCC;
   font-weight: 600;
@@ -64,18 +69,48 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: color 0.15s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  transition: color 0.15s ease, width 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .footer-btn-email:hover { color: #9E9E9E; }
 .footer-btn-email:active { color: #0066FF; }
 .footer-btn-email:focus-visible { outline: 2px solid #F5F5F5; outline-offset: 4px; border-radius: 4px; }
-.footer-btn-email svg { display: block; flex: none; }
+.footer-btn-email-icon { display: inline-flex; flex: none; }
+.footer-btn-email-icon svg { display: block; }
+/* Hidden off-screen; only used to measure natural width per label/icon pair
+   (see footer-btn-email-measure spans in Footer.js). */
+.footer-btn-email-measure {
+  position: absolute;
+  visibility: hidden;
+  top: -9999px;
+  left: -9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+}
 /* Copied state: a deliberately different, affirmative green (not the
    site's own #0066FF active-blue, which already means "pressed" elsewhere
-   on this button) so the two states can't be confused, with a quick
-   color+icon swap rather than a layout-shifting badge or toast. */
+   on this button) so the two states can't be confused. */
 .footer-btn-email.is-copied,
 .footer-btn-email.is-copied:hover { color: #22C55E; }
+/* Checkmark micro-interaction: once the button has finished growing to fit
+   "Email copied!", the icon gets a quick pop so the confirmation reads as
+   an event rather than just a color swap. */
+@keyframes footer-email-icon-pop {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.4); }
+  100% { transform: scale(1); }
+}
+.footer-btn-email-icon.is-popping {
+  animation: footer-email-icon-pop 0.38s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
 
 @media (max-width: 480px) {
   .site-footer { padding: 0 20px; height: auto; flex-direction: column; gap: 12px; padding-top: 16px; padding-bottom: 16px; }

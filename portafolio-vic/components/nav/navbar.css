@@ -183,6 +183,84 @@
 .menu-link:active { color: #0066FF; }
 .menu-link.is-current { color: #0066FF; }
 
+/* LinkedIn and Resume both get an arrow icon to the right of the label,
+   same treatment on desktop (see .footer-btn-icon in footer.css) and here. */
+.menu-link-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.menu-link-icon svg { display: block; flex: none; }
+
+/* Email in the mobile menu sheet -- same copy-to-clipboard treatment as the
+   desktop footer's Email button (see footer.css): a <button> that copies
+   instead of navigating, animates its width to fit the confirmation label,
+   with the icon on the right. Typography duplicated from .menu-link rather
+   than relying on that class's cascade, since `all: unset` (needed to strip
+   default button chrome) would wipe it out again. */
+.menu-link-email {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  color: #E8E8E8;
+  font-weight: 600;
+  font-size: 32px;
+  line-height: 1.1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.15s ease, width 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.menu-link-email:hover { color: #9E9E9E; }
+.menu-link-email:active { color: #0066FF; }
+/* Label+icon wrapper -- keyed by state in EmailButtonContent.js so React
+   remounts it on every click/revert instead of mutating the text/icon in
+   place; replaying this fade+rise animation on each mount is what makes the
+   swap feel natural instead of popping instantly (more noticeable here than
+   on the desktop footer, at this 32px type size). */
+.menu-link-email-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  animation: email-content-in 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: opacity 0.18s ease;
+}
+/* Fade the "Email copied!" content out in place (no layout/width change --
+   see useCopyEmail's leaving state) just before it's swapped back to the
+   idle label, instead of it being unmounted instantly. */
+.menu-link-email-content.is-leaving { opacity: 0; }
+.menu-link-email-icon { display: inline-flex; flex: none; }
+.menu-link-email-icon svg { display: block; }
+/* Hidden off-screen; only used to measure natural width per label/icon pair
+   (see .menu-link-email-measure spans in Navbar.js). */
+.menu-link-email-measure {
+  position: absolute;
+  visibility: hidden;
+  top: -9999px;
+  left: -9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  font-size: 32px;
+  line-height: 1.1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.menu-link-email.is-copied,
+.menu-link-email.is-copied:hover { color: #22C55E; }
+@keyframes email-content-in {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: none; }
+}
+
 /* Contact links (LinkedIn/Email/Resume) + credit line, ported from
    MainMobile.dc.html -- see the comment in Navbar.js. Same .menu-link
    typography/colors/hover/active as the site-nav list above; the extra

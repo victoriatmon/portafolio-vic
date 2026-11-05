@@ -50,6 +50,85 @@
 .footer-btn:active { color: #0066FF; }
 .footer-btn:focus-visible { outline: 2px solid #F5F5F5; outline-offset: 4px; border-radius: 4px; }
 
+/* LinkedIn and Resume both get an arrow icon to the right of the label,
+   same treatment in the mobile menu sheet (see .menu-link-icon in
+   navbar.css). */
+.footer-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.footer-btn-icon svg { display: block; flex: none; }
+
+/* Email is a <button>, not an <a>, since it copies instead of navigating --
+   reset the button chrome back down to plain text so it reads identically
+   to the LinkedIn/Resume links either side of it. Icon sits to the RIGHT of
+   the label (text first in the markup, icon after). Width is set inline in
+   JS from the two measurers below and transitions, so the button visibly
+   grows/shrinks to fit "Email" vs "Email copied!" instead of snapping. */
+.footer-btn-email {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  color: #CCCCCC;
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  transition: color 0.15s ease, width 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.footer-btn-email:hover { color: #9E9E9E; }
+.footer-btn-email:active { color: #0066FF; }
+.footer-btn-email:focus-visible { outline: 2px solid #F5F5F5; outline-offset: 4px; border-radius: 4px; }
+/* Label+icon wrapper -- keyed by state in EmailButtonContent.js so React
+   remounts it on every click/revert instead of mutating the text/icon in
+   place. Replaying this fade+rise animation on each mount is what makes the
+   label and icon ease in together instead of popping instantly. */
+.footer-btn-email-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  animation: email-content-in 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: opacity 0.18s ease;
+}
+/* Fade the "Email copied!" content out in place (no layout/width change --
+   see useCopyEmail's leaving state) just before it's swapped back to the
+   idle label, instead of it being unmounted instantly. */
+.footer-btn-email-content.is-leaving { opacity: 0; }
+@keyframes email-content-in {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: none; }
+}
+.footer-btn-email-icon { display: inline-flex; flex: none; }
+.footer-btn-email-icon svg { display: block; }
+/* Hidden off-screen; only used to measure natural width per label/icon pair
+   (see footer-btn-email-measure spans in Footer.js). */
+.footer-btn-email-measure {
+  position: absolute;
+  visibility: hidden;
+  top: -9999px;
+  left: -9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+}
+/* Copied state: a deliberately different, affirmative green (not the
+   site's own #0066FF active-blue, which already means "pressed" elsewhere
+   on this button) so the two states can't be confused. */
+.footer-btn-email.is-copied,
+.footer-btn-email.is-copied:hover { color: #22C55E; }
+
 @media (max-width: 480px) {
   .site-footer { padding: 0 20px; height: auto; flex-direction: column; gap: 12px; padding-top: 16px; padding-bottom: 16px; }
 }

@@ -1,7 +1,21 @@
+'use client';
+
 import './footer.css';
+import { CopyIcon, CheckIcon } from './copyEmailIcons';
+import { ArrowIcon } from './ArrowIcon';
+import { useCopyEmail } from './useCopyEmail';
+import EmailButtonContent from './EmailButtonContent';
 
 // Shared across all 3 routes.
 export default function Footer() {
+  // Victoria wants Email to copy the address instead of opening a mail
+  // client -- click copies to the clipboard and swaps the button's
+  // label/icon (icon on the right of the text) to a green "Email copied!"
+  // checkmark, with the button growing/shrinking to fit the new label, then
+  // reverting on its own. Shared logic lives in useCopyEmail (also used by
+  // the mobile menu sheet's Email button in Navbar.js).
+  const { copied, leaving, idleRef, copiedRef, width, handleCopyEmail } = useCopyEmail();
+
   return (
     <footer className="site-footer" data-site-footer>
       <span className="footer-credit">
@@ -24,18 +38,42 @@ export default function Footer() {
       </span>
       <nav className="footer-links" aria-label="Contact links">
         <a
-          className="footer-btn"
+          className="footer-btn footer-btn-icon"
           href="https://www.linkedin.com/in/victoria-talamantes-montanez"
           target="_blank"
           rel="noopener noreferrer"
         >
-          LinkedIn
+          <span>LinkedIn</span>
+          <ArrowIcon size={16} />
         </a>
-        <a className="footer-btn" href="mailto:victoria.tmon@gmail.com">
-          Email
-        </a>
-        <a className="footer-btn" href="/resume.pdf" target="_blank" rel="noopener noreferrer">
-          Resume
+        <button
+          type="button"
+          className={'footer-btn footer-btn-email' + (copied ? ' is-copied' : '')}
+          onClick={handleCopyEmail}
+          style={width != null ? { width: `${width}px` } : undefined}
+        >
+          <EmailButtonContent
+            copied={copied}
+            leaving={leaving}
+            size={16}
+            contentClassName="footer-btn-email-content"
+            iconClassName="footer-btn-email-icon"
+          />
+        </button>
+        {/* Off-screen measurers: same markup as the two button states, used only to
+            read their natural (text + gap + icon) width so the button can animate
+            between fixed px widths instead of snapping instantly on label change. */}
+        <span className="footer-btn-email-measure" aria-hidden="true" ref={idleRef}>
+          <span>Email</span>
+          <span className="footer-btn-email-icon"><CopyIcon size={16} /></span>
+        </span>
+        <span className="footer-btn-email-measure" aria-hidden="true" ref={copiedRef}>
+          <span>Email copied!</span>
+          <span className="footer-btn-email-icon"><CheckIcon size={16} /></span>
+        </span>
+        <a className="footer-btn footer-btn-icon" href="/resume.pdf" target="_blank" rel="noopener noreferrer">
+          <span>Resume</span>
+          <ArrowIcon size={16} />
         </a>
       </nav>
     </footer>

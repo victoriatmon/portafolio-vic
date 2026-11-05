@@ -8,6 +8,7 @@ import ChatPanel from '@/components/chat/ChatPanel';
 import Navbar from '@/components/nav/Navbar';
 import Footer from '@/components/layout/Footer';
 import CursorDot from '@/components/layout/CursorDot';
+import { NextArrowIcon } from '@/components/layout/ArrowIcon';
 import { TOPICS, STARTERS } from '@/content/chatTopics';
 import './proyectos.css';
 
@@ -1830,7 +1831,7 @@ function ProyectosDesktopInner() {
 
                               <button className="mapfre-next-case" type="button" onClick={nextProject}>
                                 <span>See next case</span>
-                                <span aria-hidden="true">&rarr;</span>
+                                <span aria-hidden="true"><NextArrowIcon size={20} /></span>
                               </button>
                             </div>
                           </div>
@@ -1916,7 +1917,7 @@ function ProyectosDesktopInner() {
 
                               <button className="mapfre-next-case" type="button" onClick={nextProject}>
                                 <span>See next case</span>
-                                <span aria-hidden="true">&rarr;</span>
+                                <span aria-hidden="true"><NextArrowIcon size={20} /></span>
                               </button>
                             </div>
                           </div>

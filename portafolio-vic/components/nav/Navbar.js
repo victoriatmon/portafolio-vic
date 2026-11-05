@@ -3,6 +3,10 @@
 import { useEffect, useRef, useState } from 'react';
 import ChatTriggerButton from '../chat/ChatTriggerButton';
 import { attachNavTransition } from '@/lib/pageTransitions';
+import { CopyIcon, CheckIcon } from '../layout/copyEmailIcons';
+import { ArrowIcon } from '../layout/ArrowIcon';
+import { useCopyEmail } from '../layout/useCopyEmail';
+import EmailButtonContent from '../layout/EmailButtonContent';
 import './navbar.css';
 
 // Shared navbar for all 3 routes. `current` picks which link gets
@@ -31,6 +35,10 @@ export default function Navbar({ current, variant = 'desktop' }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [navHidden, setNavHidden] = useState(false);
   const lastYRef = useRef(0);
+  // Same copy-to-clipboard Email behavior as the desktop footer (see
+  // Footer.js / useCopyEmail.js) -- Victoria asked for the mobile menu
+  // sheet's Email entry to match, same animation and all.
+  const copyEmail = useCopyEmail();
 
   // Ported from Main.dc.html's XT.mount() -- a single delegated click
   // listener (one per page, Navbar being the one component every route
@@ -144,22 +152,46 @@ export default function Navbar({ current, variant = 'desktop' }) {
           <ul className="menu-links menu-links-contact">
             <li style={{ '--i': 3 }}>
               <a
-                className="menu-link"
+                className="menu-link menu-link-icon"
                 href="https://www.linkedin.com/in/victoria-talamantes-montanez"
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                LinkedIn
+                <span>LinkedIn</span>
+                <ArrowIcon size={36} />
               </a>
             </li>
             <li style={{ '--i': 4 }}>
-              <a className="menu-link" href="mailto:victoria.tmon@gmail.com">
-                Email
-              </a>
+              <button
+                type="button"
+                className={'menu-link-email' + (copyEmail.copied ? ' is-copied' : '')}
+                onClick={copyEmail.handleCopyEmail}
+                style={copyEmail.width != null ? { width: `${copyEmail.width}px` } : undefined}
+              >
+                <EmailButtonContent
+                  copied={copyEmail.copied}
+                  leaving={copyEmail.leaving}
+                  size={36}
+                  contentClassName="menu-link-email-content"
+                  iconClassName="menu-link-email-icon"
+                />
+              </button>
+              {/* Off-screen measurers: same markup as the two button states, used
+                  only to read their natural width so the button can animate
+                  between fixed px widths instead of snapping on label change. */}
+              <span className="menu-link-email-measure" aria-hidden="true" ref={copyEmail.idleRef}>
+                <span>Email</span>
+                <span className="menu-link-email-icon"><CopyIcon size={36} /></span>
+              </span>
+              <span className="menu-link-email-measure" aria-hidden="true" ref={copyEmail.copiedRef}>
+                <span>Email copied!</span>
+                <span className="menu-link-email-icon"><CheckIcon size={36} /></span>
+              </span>
             </li>
             <li style={{ '--i': 5 }}>
-              <a className="menu-link" href="/resume.pdf" target="_blank" rel="noopener noreferrer">
-                Resume
+              <a className="menu-link menu-link-icon" href="/resume.pdf" target="_blank" rel="noopener noreferrer">
+                <span>Resume</span>
+                <ArrowIcon size={36} />
               </a>
             </li>
           </ul>

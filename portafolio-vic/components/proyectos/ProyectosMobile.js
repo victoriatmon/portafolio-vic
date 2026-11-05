@@ -6,6 +6,7 @@ import { consumeEnterFlag, playEnterContentFade } from '@/lib/pageTransitions';
 import { VictorAIChatProvider, useChatContext } from '@/components/chat/ChatContext';
 import ChatPanel from '@/components/chat/ChatPanel';
 import Navbar from '@/components/nav/Navbar';
+import { NextArrowIcon } from '@/components/layout/ArrowIcon';
 import { TOPICS, STARTERS } from '@/content/chatTopics';
 import {
   PHANTOM_PROMPTS,
@@ -1212,7 +1213,7 @@ function ProyectosMobileInner() {
 
             <button className="proj-next-case" type="button" onClick={nextProject}>
               <span>See next case</span>
-              <span aria-hidden="true">&rarr;</span>
+              <span aria-hidden="true"><NextArrowIcon size={16} /></span>
             </button>
           </article>
         </section>

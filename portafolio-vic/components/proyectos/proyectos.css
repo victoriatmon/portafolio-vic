@@ -3678,6 +3678,7 @@ html.arrive .project-card-lg.is-current .project-card-content { animation: xfade
   transition: background 0.15s ease;
 }
 .mapfre-next-case:hover { background: #333333; }
+.mapfre-next-case svg { display: block; flex: none; }
 
 /* --- Flow demo box (search -> buy -> thank you + confetti) --- */
 .mapfre-flow-box {

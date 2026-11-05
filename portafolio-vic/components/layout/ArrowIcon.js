@@ -12,3 +12,20 @@ export const ArrowIcon = ({ size = 16 }) => (
     ></path>
   </svg>
 );
+
+// Straight horizontal arrow for the "See next case" button on the Projects
+// page (ProyectosDesktop.js / ProyectosMobile.js), replacing the plain
+// "&rarr;" glyph that was there before. Also Victoria's SVG, currentColor
+// so it keeps picking up .mapfre-next-case/.proj-next-case's own color
+// (including the mobile button's :active color change) with no extra CSS.
+export const NextArrowIcon = ({ size = 20 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path
+      d="M4 12H20M20 12L14 6M20 12L14 18"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    ></path>
+  </svg>
+);

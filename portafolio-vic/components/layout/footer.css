@@ -50,6 +50,33 @@
 .footer-btn:active { color: #0066FF; }
 .footer-btn:focus-visible { outline: 2px solid #F5F5F5; outline-offset: 4px; border-radius: 4px; }
 
+/* Email is a <button>, not an <a>, since it copies instead of navigating --
+   reset the button chrome back down to plain text so it reads identically
+   to the LinkedIn/Resume links either side of it. */
+.footer-btn-email {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #CCCCCC;
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+.footer-btn-email:hover { color: #9E9E9E; }
+.footer-btn-email:active { color: #0066FF; }
+.footer-btn-email:focus-visible { outline: 2px solid #F5F5F5; outline-offset: 4px; border-radius: 4px; }
+.footer-btn-email svg { display: block; flex: none; }
+/* Copied state: a deliberately different, affirmative green (not the
+   site's own #0066FF active-blue, which already means "pressed" elsewhere
+   on this button) so the two states can't be confused, with a quick
+   color+icon swap rather than a layout-shifting badge or toast. */
+.footer-btn-email.is-copied,
+.footer-btn-email.is-copied:hover { color: #22C55E; }
+
 @media (max-width: 480px) {
   .site-footer { padding: 0 20px; height: auto; flex-direction: column; gap: 12px; padding-top: 16px; padding-bottom: 16px; }
 }

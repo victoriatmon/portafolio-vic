@@ -5,18 +5,18 @@ import './footer.css';
 
 const EMAIL = 'victoria.tmon@gmail.com';
 
-// Timing for the copy confirmation: grow to fit the confirmation label, let
-// the checkmark pop once the width has settled, hold so it's readable, then
-// shrink back and swap the label/icon back to the idle "Email" state.
-const GROW_MS = 300;
-const POP_DELAY_MS = GROW_MS + 40;
-const POP_MS = 380;
-const HOLD_MS = 1500;
+// Timing for the copy confirmation: grow to fit the confirmation label, hold
+// so it's readable, then shrink back and swap the label/icon back to the
+// idle "Email" state. REVERT_MS covers the full grow + hold + shrink window.
+const REVERT_MS = 2200;
 
 const CopyIcon = () => (
-  // Filled (not outline) copy icon per Victoria's request.
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true">
-    <path d="M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1Zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Zm0 16H8V7h11v14Z"></path>
+  // Same two-square "copy" silhouette as before, now filled instead of
+  // outline -- the front square gets a thin bg-colored stroke so the two
+  // squares still read as separate shapes instead of merging into one blob.
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <rect x="3" y="3" width="12" height="12" rx="2"></rect>
+    <rect x="9" y="9" width="12" height="12" rx="2" stroke="#151414" strokeWidth="1.5"></rect>
   </svg>
 );
 
@@ -33,10 +33,9 @@ export default function Footer() {
   // of people checking a portfolio from a work laptop or phone don't) --
   // click copies EMAIL to the clipboard and swaps the button's label/icon
   // (icon on the right of the text) to a green "Email copied!" checkmark,
-  // with the button growing/shrinking to fit and a small pop on the
-  // checkmark once it settles, then reverts on its own.
+  // with the button growing/shrinking to fit the new label, then reverts
+  // on its own.
   const [copied, setCopied] = useState(false);
-  const [popping, setPopping] = useState(false);
   const [widths, setWidths] = useState({ idle: null, copied: null });
   const idleRef = useRef(null);
   const copiedRef = useRef(null);
@@ -86,12 +85,9 @@ export default function Footer() {
 
     timersRef.current.forEach(clearTimeout);
     timersRef.current = [];
-    setPopping(false);
     setCopied(true);
 
-    timersRef.current.push(setTimeout(() => setPopping(true), POP_DELAY_MS));
-    timersRef.current.push(setTimeout(() => setPopping(false), POP_DELAY_MS + POP_MS));
-    timersRef.current.push(setTimeout(() => setCopied(false), POP_DELAY_MS + POP_MS + HOLD_MS));
+    timersRef.current.push(setTimeout(() => setCopied(false), REVERT_MS));
   }
 
   const width = copied ? widths.copied : widths.idle;
@@ -132,7 +128,7 @@ export default function Footer() {
           style={width != null ? { width: `${width}px` } : undefined}
         >
           <span>{copied ? 'Email copied!' : 'Email'}</span>
-          <span className={'footer-btn-email-icon' + (popping ? ' is-popping' : '')}>
+          <span className="footer-btn-email-icon">
             {copied ? <CheckIcon /> : <CopyIcon />}
           </span>
         </button>
